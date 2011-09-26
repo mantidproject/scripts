@@ -1,0 +1,7 @@
+DATA_PATH 		/Users/jon/mprogs/mari_data/RAW/
+Instname 		MAR
+rawfile_extenstion 	.raw
+DAE 			ndxmari
+mon1			1
+mon2			2
+mon3			3

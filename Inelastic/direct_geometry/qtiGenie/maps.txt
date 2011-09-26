@@ -1,0 +1,7 @@
+DATA_PATH 		somepath
+Instname 		map
+rawfile_extenstion 	.RAW
+DAE 			ndxmerlin
+mon1			1
+mon2			2
+mon3			3
