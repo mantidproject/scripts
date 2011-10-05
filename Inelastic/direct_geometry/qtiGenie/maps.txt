@@ -1,4 +1,3 @@
-DATA_PATH 		somepath
 Instname 		map
 rawfile_extenstion 	.RAW
 DAE 			ndxmerlin

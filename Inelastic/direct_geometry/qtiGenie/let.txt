@@ -1,4 +1,3 @@
-DATA_PATH 		/home/let/let_data_share/
 Instname 		LET
 rawfile_extenstion 	.raw
 DAE 			ndxlet

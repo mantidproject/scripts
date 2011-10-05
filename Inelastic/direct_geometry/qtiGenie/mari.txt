@@ -1,4 +1,3 @@
-DATA_PATH 		/Users/jon/mprogs/mari_data/RAW/
 Instname 		MAR
 rawfile_extenstion 	.raw
 DAE 			ndxmari

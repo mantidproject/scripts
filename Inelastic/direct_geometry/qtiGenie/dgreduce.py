@@ -73,19 +73,32 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	dgreduce.arb_units(1000,10001,80,'-10,.1,70','mari_res', additional keywords as required)
 	
 	dgreduce.arb_units(1000,10001,80,'-10,.1,70','mari_res',fixei=True)
-	available keywords
-	norm_method =[monitor-1],[monitor-2][uamph]
-	background=False , True
-	fixei =False , True
-	save_format=['.spe'],['.nxspe']
-	bkgd_range=[15000,19000]
-	detector_van_range=[20,40] in mev
-	diag_sigma=3.0
-	sum=True , sum multiple files
+	
+	Available keywords
+	norm_method =[monitor-1],[monitor-2][Current]
+	background  =False , True
+	fixei 		=False , True
+	save_format	=['.spe'],['.nxspe']
+	bkgd_range	=[15000,19000]
+	
+	detector_van_range	=[20,40] in mev
+	diag_sigma			=3.0
+	diag_remove_zero	=True, False (default):Diag zero counts in background range
 	bleed=True , turn bleed correction on and off on by default for Merlin and LET
+	
+	sum	=True,False(default) , sum multiple files
+
 	det_cal_file= a valid detector block file and path or a raw file. Setting this
 				  will use the detector calibraion from the specified file NOT the
 				  input raw file
+	mask_run = RunNumber to use for diag instead of the input run number
+	
+	one2one =True, False :Reduction will not use a mapping file
+	
+	hardmaskPlus=Filename :load a hardmarkfile and apply together with diag mask
+	
+	hardmaskOnly=Filename :load a hardmask and use as only mask
+	
 	"""
 	global reducer, rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
 	print 'DGreduce run for ',inst_name,'run number ',sample_run
@@ -159,6 +172,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		print 'Setting diag to reject zero backgrounds '
 	else:
 		rm_zero =False
+	
 	if kwargs.has_key('bleed'):
 		bleed_switch = kwargs.get('bleed')
 		print 'Setting bleed ', kwargs.get('bleed')
@@ -207,19 +221,29 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		RenameWorkspace(accum,inst_name+str(sample_run[0])+'.raw')
 		sample_run=sample_run[0]
 	
-			
-	if inst_name == 'MAR' or inst_name == 'MAP':
-		masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
-			tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
-			bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1)
-	elif inst_name == 'MER' or inst_name =='LET':
-		masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
-			tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
-			bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,bleed_test=bleed_switch,bleed_maxrate=rate,bleed_pixels=pixels)
+	if kwargs.has_key('hardmaskOnly'):
+		hardmask = kwargs.get('hardmaskOnly')
+		print 'Use hardmask from ', hardmask
+		masking=hardmask
 	else:
-		print 'Instrument not defined'
-		return
 	
+		if inst_name == 'MAR' or inst_name == 'MAP':
+			masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
+				tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
+				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1)
+		elif inst_name == 'MER' or inst_name =='LET':
+			masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
+				tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
+				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,bleed_test=bleed_switch,bleed_maxrate=rate,bleed_pixels=pixels)
+		else:
+			print 'Instrument not defined'
+			return
+	
+	if kwargs.has_key('hardmaskPlus'):
+		hardmask = kwargs.get('hardmaskPlus')
+		print 'Use hardmask from ', hardmask
+		masking=masking+hardmask
+		
 	reducer.spectra_masks=masking
 	fail_list=get_failed_spectra_list(masking)
 	
@@ -247,20 +271,32 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,**kwargs):
 	"""	
 	dgreduce.abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,keyword arguments)
-	norm_method =[monitor-1],[monitor-2][uamph]
-	background=False , True
-	fixei =False , True
-	save_format=['.spe'],['.nxspe']
-	bkgd_range=[15000,19000]
-	detector_van_range=[20,40] in mev
-	diag_sigma=3.0
-	sum=True , sum multiple files
-	use_sam_msk_on_monovan=False This will set the total mask to be that of the sample run
 	
-	abs_units_van_range=[-40,40] integral range for absolute vanadium data
+	Available keywords
+	norm_method =[monitor-1],[monitor-2][Current]
+	background  =False , True
+	fixei 		=False , True
+	save_format	=['.spe'],['.nxspe']
+	bkgd_range	=[15000,19000]
+	
+	detector_van_range	=[20,40] in mev
+	diag_sigma			=3.0
+	diag_remove_zero	=True, False (default):Diag zero counts in background range
+	bleed=True , turn bleed correction on and off on by default for Merlin and LET
+	
+	sum	=True,False(default) , sum multiple files
+
 	det_cal_file= a valid detector block file and path or a raw file. Setting this
 				  will use the detector calibraion from the specified file NOT the
 				  input raw file
+	mask_run = RunNumber to use for diag instead of the input run number
+	
+	one2one =True, False :Reduction will not use a mapping file
+	
+	use_sam_msk_on_monovan=False This will set the total mask to be that of the sample run
+	
+	abs_units_van_range=[-40,40] integral range for absolute vanadium data
+	
 	"""	
 	#available keywords
 	#abs_units_van_range
