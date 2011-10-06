@@ -79,11 +79,17 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	background  =False , True
 	fixei 		=False , True
 	save_format	=['.spe'],['.nxspe']
-	bkgd_range	=[15000,19000]
+	detector_van_range			=[20,40] in mev
 	
-	detector_van_range	=[20,40] in mev
-	diag_sigma			=3.0
-	diag_remove_zero	=True, False (default):Diag zero counts in background range
+	bkgd_range	=[15000,19000]	:integration range for background tests
+
+	diag_median_rate_limit_hi	=3.0	:reject if integral is n times from the median
+	diag_median_rate_limit_lo	=0.1	:reject if integral is n times less than the median
+	bkgd_median_rate_limit		=5.0	:reject if integral in bkgd region is n times away from median
+	tiny						=1e-10 	:reject if integral is below value
+	large						=1e10	:reject if integral is above value
+	
+	diag_remove_zero			=True, False (default):Diag zero counts in background range
 	bleed=True , turn bleed correction on and off on by default for Merlin and LET
 	
 	sum	=True,False(default) , sum multiple files
@@ -192,10 +198,39 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		print 'For data input type: workspace detector calibration must be specified'
 		print 'use Keyword det_cal_file with a valid detctor file or run number'
 		return
-		
-	diag_median_rate_limit_lo=0.1
-	bkgd_median_rate_limit=5.0
 	
+	
+	
+	if kwargs.has_key('diag_median_rate_limit_hi'):
+		diag_median_rate_limit_hi = kwargs.get('diag_median_rate_limit_hi')
+		print 'Setting diag_median_rate_limit_hi to ', kwargs.get('diag_median_rate_limit_hi')
+	else:
+		diag_median_rate_limit_hi=3.0
+	
+	if kwargs.has_key('diag_median_rate_limit_lo'):
+		diag_median_rate_limit_lo = kwargs.get('diag_median_rate_limit_lo')
+		print 'Setting diag_median_rate_limit_lo to ', kwargs.get('diag_median_rate_limit_lo')
+	else:
+		diag_median_rate_limit_lo=.1
+	
+	if kwargs.has_key('bkgd_median_rate_limit'):
+		bkgd_median_rate_limit = kwargs.get('bkgd_median_rate_limit')
+		print 'Setting bkgd_median_rate_limit to ', kwargs.get('bkgd_median_rate_limit')
+	else:
+		bkgd_median_rate_limit=5
+	
+	
+	if kwargs.has_key('tiny'):
+		tinyval = kwargs.get('tiny')
+		print 'Setting tiny ratelimit to ', kwargs.get('tiny')
+	else:
+		tinyval=1e-10
+		
+	if kwargs.has_key('large'):
+		largeval = kwargs.get('large')
+		print 'Setting large limit to ', kwargs.get('large')
+	else:
+		largeval=1e10
 	
 	if kwargs.has_key('one2one'):
 		reducer.map_file =None
@@ -229,11 +264,11 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	
 		if inst_name == 'MAR' or inst_name == 'MAP':
 			masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
-				tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
+				tiny=tinyval, large=largeval, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
 				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1)
 		elif inst_name == 'MER' or inst_name =='LET':
 			masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
-				tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
+				tiny=tinyval, large=largeval, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
 				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,bleed_test=bleed_switch,bleed_maxrate=rate,bleed_pixels=pixels)
 		else:
 			print 'Instrument not defined'
