@@ -82,7 +82,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	detector_van_range			=[20,40] in mev
 	
 	bkgd_range	=[15000,19000]	:integration range for background tests
-
+	diag_sigma					=3.0	:keep any spectrum where the integral is nsigma from the median
 	diag_median_rate_limit_hi	=3.0	:reject if integral is n times from the median
 	diag_median_rate_limit_lo	=0.1	:reject if integral is n times less than the median
 	bkgd_median_rate_limit		=5.0	:reject if integral in bkgd region is n times away from median
@@ -168,10 +168,10 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		reducer.wb_integr_range=[20,100]
 	
 	if kwargs.has_key('diag_sigma'):
-		diag_median_rate_limit_hi = kwargs.get('diag_sigma')
+		nsigma = kwargs.get('diag_sigma')
 		print 'Setting diag sigma to ', kwargs.get('diag_sigma')
 	else:
-		diag_median_rate_limit_hi=3.0
+		signif=3.0
 	
 	if kwargs.has_key('diag_remove_zero'):
 		rm_zero = kwargs.get('diag_remove_zero')
@@ -198,8 +198,6 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		print 'For data input type: workspace detector calibration must be specified'
 		print 'use Keyword det_cal_file with a valid detctor file or run number'
 		return
-	
-	
 	
 	if kwargs.has_key('diag_median_rate_limit_hi'):
 		diag_median_rate_limit_hi = kwargs.get('diag_median_rate_limit_hi')
@@ -264,11 +262,11 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	
 		if inst_name == 'MAR' or inst_name == 'MAP':
 			masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
-				tiny=tinyval, large=largeval, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
+				tiny=tinyval, large=largeval, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=nsigma, 
 				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1)
 		elif inst_name == 'MER' or inst_name =='LET':
 			masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
-				tiny=tinyval, large=largeval, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
+				tiny=tinyval, large=largeval, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=nsigma, 
 				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,bleed_test=bleed_switch,bleed_maxrate=rate,bleed_pixels=pixels)
 		else:
 			print 'Instrument not defined'
@@ -312,11 +310,17 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	background  =False , True
 	fixei 		=False , True
 	save_format	=['.spe'],['.nxspe']
-	bkgd_range	=[15000,19000]
+	detector_van_range			=[20,40] in mev
 	
-	detector_van_range	=[20,40] in mev
-	diag_sigma			=3.0
-	diag_remove_zero	=True, False (default):Diag zero counts in background range
+	bkgd_range	=[15000,19000]	:integration range for background tests
+	diag_sigma					=3.0	:keep any spectrum where the integral is nsigma from the median
+	diag_median_rate_limit_hi	=3.0	:reject if integral is n times from the median
+	diag_median_rate_limit_lo	=0.1	:reject if integral is n times less than the median
+	bkgd_median_rate_limit		=5.0	:reject if integral in bkgd region is n times away from median
+	tiny						=1e-10 	:reject if integral is below value
+	large						=1e10	:reject if integral is above value
+	
+	diag_remove_zero			=True, False (default):Diag zero counts in background range
 	bleed=True , turn bleed correction on and off on by default for Merlin and LET
 	
 	sum	=True,False(default) , sum multiple files
@@ -327,6 +331,10 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	mask_run = RunNumber to use for diag instead of the input run number
 	
 	one2one =True, False :Reduction will not use a mapping file
+	
+	hardmaskPlus=Filename :load a hardmarkfile and apply together with diag mask
+	
+	hardmaskOnly=Filename :load a hardmask and use as only mask
 	
 	use_sam_msk_on_monovan=False This will set the total mask to be that of the sample run
 	
@@ -353,12 +361,16 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		print 'Deleteing previous instance of temp data'
 		DeleteWorkspace(inst_name+'00000.raw')
 	
-	#repopulate defualts
 	if kwargs.has_key('norm_method'):
 		reducer.normalise_method = kwargs.get('norm_method')
 		print 'Setting normalisation method to ', kwargs.get('norm_method')
 	else:
 		reducer.normalise_method = 'monitor-1'
+	if kwargs.has_key('mask_run'):
+		mask_run = kwargs.get('mask_run')
+		print 'Using run ', kwargs.get('mask_run'),' for diag'
+	else:
+		mask_run=sample_run
 	
 	if kwargs.has_key('background'):
 		reducer.background = kwargs.get('background')
@@ -391,16 +403,22 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		reducer.wb_integr_range=[20,100]
 	
 	if kwargs.has_key('diag_sigma'):
-		diag_median_rate_limit_hi = kwargs.get('diag_sigma')
-		print 'Setting detector van int range to ', kwargs.get('diag_sigma')
+		nsigma = kwargs.get('diag_sigma')
+		print 'Setting diag sigma to ', kwargs.get('diag_sigma')
 	else:
-		diag_median_rate_limit_hi=3.0
-		
+		signif=3.0
+	
 	if kwargs.has_key('diag_remove_zero'):
 		rm_zero = kwargs.get('diag_remove_zero')
 		print 'Setting diag to reject zero backgrounds '
 	else:
-		rm_zero=False
+		rm_zero =False
+	
+	if kwargs.has_key('bleed'):
+		bleed_switch = kwargs.get('bleed')
+		print 'Setting bleed ', kwargs.get('bleed')
+	else:
+		print 'bleed set to default'
 	
 	if kwargs.has_key('det_cal_file'):
 		reducer.det_cal_file = kwargs.get('det_cal_file')
@@ -411,18 +429,41 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		reducer.det_cal_file =None
 		reducer.relocate_dets = False
 	
-	if float(str.split(rebin,',')[2])>=float(ei_guess):
-		print 'error rebin range exceeds ei'
-		return
-	
 	if mtd.workspaceExists(str(sample_run))==True and kwargs.has_key('det_cal_file')==False:
 		print 'For data input type: workspace detector calibration must be specified'
 		print 'use Keyword det_cal_file with a valid detctor file or run number'
 		return
 	
-	#Set parameters for the run
-	diag_median_rate_limit_lo=0.1
-	bkgd_median_rate_limit=5.0
+	if kwargs.has_key('diag_median_rate_limit_hi'):
+		diag_median_rate_limit_hi = kwargs.get('diag_median_rate_limit_hi')
+		print 'Setting diag_median_rate_limit_hi to ', kwargs.get('diag_median_rate_limit_hi')
+	else:
+		diag_median_rate_limit_hi=3.0
+	
+	if kwargs.has_key('diag_median_rate_limit_lo'):
+		diag_median_rate_limit_lo = kwargs.get('diag_median_rate_limit_lo')
+		print 'Setting diag_median_rate_limit_lo to ', kwargs.get('diag_median_rate_limit_lo')
+	else:
+		diag_median_rate_limit_lo=.1
+	
+	if kwargs.has_key('bkgd_median_rate_limit'):
+		bkgd_median_rate_limit = kwargs.get('bkgd_median_rate_limit')
+		print 'Setting bkgd_median_rate_limit to ', kwargs.get('bkgd_median_rate_limit')
+	else:
+		bkgd_median_rate_limit=5
+	
+	
+	if kwargs.has_key('tiny'):
+		tinyval = kwargs.get('tiny')
+		print 'Setting tiny ratelimit to ', kwargs.get('tiny')
+	else:
+		tinyval=1e-10
+		
+	if kwargs.has_key('large'):
+		largeval = kwargs.get('large')
+		print 'Setting large limit to ', kwargs.get('large')
+	else:
+		largeval=1e10
 	
 	if kwargs.has_key('one2one'):
 		reducer.map_file =None
