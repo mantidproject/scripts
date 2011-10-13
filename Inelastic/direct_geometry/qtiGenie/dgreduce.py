@@ -171,7 +171,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		nsigma = kwargs.get('diag_sigma')
 		print 'Setting diag sigma to ', kwargs.get('diag_sigma')
 	else:
-		signif=3.0
+		nsigma=3.0
 	
 	if kwargs.has_key('diag_remove_zero'):
 		rm_zero = kwargs.get('diag_remove_zero')
