@@ -30,6 +30,8 @@ ReplaceSpecialValues(InputWorkspace='normalised_sample',OutputWorkspace='normali
 #3 CopySample -- Copy the sample off the peaks workspace and onto your original MatrixWorkspace
 #4 ConvertToDiffractionMDWorkspace -- using Q HKL
 #----------
+
+#Split into and split threshold parameters have been set-up to favour peak finding in Q-space.
 ConvertToDiffractionMDWorkspace(InputWorkspace='normalised_sample',SplitInto=2,SplitThreshold=100,OutputWorkspace='md', Extents='-4,4,-4,4,-4,4')
 
 
