@@ -275,7 +275,8 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	if kwargs.has_key('hardmaskPlus'):
 		hardmask = kwargs.get('hardmaskPlus')
 		print 'Use hardmask from ', hardmask
-		masking=masking+hardmask
+		hardMaskSpec=common.load_mask(hardmask)
+		MaskDetectors(Workspace='masking',SpectraList=hardMaskSpec)
 		
 	reducer.spectra_masks=masking
 	fail_list=get_failed_spectra_list(masking)
