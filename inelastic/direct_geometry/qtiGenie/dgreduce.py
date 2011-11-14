@@ -254,6 +254,14 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		RenameWorkspace(accum,inst_name+str(sample_run[0])+'.raw')
 		sample_run=sample_run[0]
 	
+	if kwargs.has_key('hardmaskPlus'):
+		HardMaskFile = kwargs.get('hardmaskPlus')
+		print 'Use hardmask from ', HardMaskFile
+		#hardMaskSpec=common.load_mask(HardMaskFile)
+		#MaskDetectors(Workspace='masking',SpectraList=hardMaskSpec)
+	else:
+		HardMaskFile=None
+	
 	if kwargs.has_key('hardmaskOnly'):
 		hardmask = kwargs.get('hardmaskOnly')
 		print 'Use hardmask from ', hardmask
@@ -263,20 +271,16 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		if inst_name == 'MAR' or inst_name == 'MAP':
 			masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
 				tiny=tinyval, large=largeval, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=nsigma, 
-				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1)
+				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,hard_mask=HardMaskFile)
 		elif inst_name == 'MER' or inst_name =='LET':
 			masking = reducer.diagnose(wb_run, mask_run,other_white = None, remove_zero=rm_zero, 
 				tiny=tinyval, large=largeval, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=nsigma, 
-				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,bleed_test=bleed_switch,bleed_maxrate=rate,bleed_pixels=pixels)
+				bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,bleed_test=bleed_switch,bleed_maxrate=rate,bleed_pixels=pixels,hard_mask=HardMaskFile)
 		else:
 			print 'Instrument not defined'
 			return
 	
-	if kwargs.has_key('hardmaskPlus'):
-		hardmask = kwargs.get('hardmaskPlus')
-		print 'Use hardmask from ', hardmask
-		hardMaskSpec=common.load_mask(hardmask)
-		MaskDetectors(Workspace='masking',SpectraList=hardMaskSpec)
+	
 		
 	reducer.spectra_masks=masking
 	fail_list=get_failed_spectra_list(masking)
@@ -472,7 +476,14 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		
 	else:
 		reducer.map_file = map_file+'.map'
-		
+	
+	if kwargs.has_key('hardmaskPlus'):
+		HardMaskFile = kwargs.get('hardmaskPlus')
+		print 'Use hardmask from ', HardMaskFile
+		#hardMaskSpec=common.load_mask(HardMaskFile)
+		#MaskDetectors(Workspace='masking',SpectraList=hardMaskSpec)
+	else:
+		HardMaskFile=None
 		
 	reducer.energy_bins = rebin
 	#monovan info
@@ -503,18 +514,18 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	if inst_name == 'MAR' or inst_name =='MAP':
 		masking = reducer.diagnose(wb_run, sample_run,other_white = None, remove_zero=rm_zero, 
             tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
-          	bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1)
+          	bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,hard_mask=HardMaskFile)
 		masking2 = reducer.diagnose(wb_mono, mono_van,other_white = None, remove_zero=rm_zero, 
             tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
-          	bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1)
+          	bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,hard_mask=HardMaskFile)
 		total_mask=masking+masking2
 	elif inst_name == 'MER' or inst_name =='LET':
 		masking = reducer.diagnose(wb_run, sample_run,other_white = None, remove_zero=rm_zero, 
             tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
-          	bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,bleed_test=bleed_switch,bleed_maxrate=rate,bleed_pixels=pixels)
+          	bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,bleed_test=bleed_switch,bleed_maxrate=rate,bleed_pixels=pixels,hard_mask=HardMaskFile)
 		masking2 = reducer.diagnose(wb_mono, mono_van,other_white = None, remove_zero=rm_zero, 
             tiny=1e-10, large=1e10, median_lo=diag_median_rate_limit_lo, median_hi=diag_median_rate_limit_hi, signif=diag_median_rate_limit_hi, 
-          	bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1)
+          	bkgd_threshold=bkgd_median_rate_limit, bkgd_range=background_range, variation=1.1,hard_mask=HardMaskFile)
 		total_mask=masking+masking2
 	else:
 		print 'Instrument not defined'
