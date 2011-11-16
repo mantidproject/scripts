@@ -34,7 +34,7 @@ def setup(instname):
 		inst_name='MAP'
 		reducer = setup_reducer('MAPS')
 		bleed_switch=False
-		van_mass=32.58
+		van_mass=30.1
 	elif instname=='LET' or instname=='let':
 		print 'setup let'
 		inst_name='LET'
