@@ -695,11 +695,12 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	print 'Elapsed time =',end_time-start_time, 's'
 	#get the name that convert to energy will use
 	
-	if mtd.workspaceExists(results_name)==True:
+	if mtd.workspaceExists(results_name)==False:
 		RenameWorkspace(deltaE_wkspace,results_name)
 	RenameWorkspace(results_name,wksp_out)
 	
 	return mtd[wksp_out]
+
 
 def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
 	"""
