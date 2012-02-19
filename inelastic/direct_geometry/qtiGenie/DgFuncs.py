@@ -130,4 +130,5 @@ def bose(wkspin,T):
 	Err=Err*bosegrid
 	wkspOut=CreateWorkspace(x,y,Err,Nspec=len(en)-1,VerticalAxisUnit='DeltaE',VerticalAxisValues=energy,UnitX='|Q|',YUnitLabel='T corrected',WorkSpaceTitle='Bose factor corrected')
 	return wkspOut
+
 #ww=gofe('w2',1,1)

@@ -46,6 +46,38 @@ def setup(instname):
 		rate=0.01
 		pixels=80
 		van_mass=32.58
+	elif instname=='ARCS' or instname=='arcs':
+		print 'setup Arcs'
+		inst_name='ARC'
+		reducer = setup_reducer('ARCS')
+		bleed_switch=False
+		rate=0.01
+		pixels=80
+		van_mass=32.58
+	elif instname=='SEQ' or instname=='seq':
+		print 'setup Sequoia'
+		inst_name='SEQ'
+		reducer = setup_reducer('SEQUOIA')
+		bleed_switch=False
+		rate=0.01
+		pixels=80
+		van_mass=32.58
+	elif instname=='CNCS' or instname=='cncs':
+		print 'setup cncs'
+		inst_name='SEQ'
+		reducer = setup_reducer('CNCS')
+		bleed_switch=False
+		rate=0.01
+		pixels=80
+		van_mass=32.58
+	elif instname=='HYSPEC' or instname=='hyspec':
+		print 'setup hyspec'
+		inst_name='SEQ'
+		reducer = setup_reducer('HYSPEC')
+		bleed_switch=False
+		rate=0.01
+		pixels=80
+		van_mass=32.58
 	else:
 		print 'Instrument name not defined'
 		return
@@ -81,7 +113,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	norm_method =[monitor-1],[monitor-2][Current]
 	background  =False , True
 	fixei 		=False , True
-	save_format	=['.spe'],['.nxspe']
+	save_format	=['.spe'],['.nxspe'],'none'
 	detector_van_range			=[20,40] in mev
 	
 	bkgd_range	=[15000,19000]	:integration range for background tests
@@ -140,7 +172,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		if kwargs.has_key('sum') and kwargs.get('sum')==True:
 			wksp_out=inst_name+str(sample_run[0])+'sum'+'.spe'
 		
-	start_time=time.clock()
+	start_time=time.time()
 	
 	if sample_run=='00000' and mtd.workspaceExists(inst_name+'00000.raw')==True:
 		print 'Deleteing previous instance of temp data'
@@ -344,7 +376,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	
 	#Run the conversion
 	deltaE_wkspace = reducer.convert_to_energy(sample_run, ei_guess, wb_run)
-	end_time=time.clock()
+	end_time=time.time()
 	results_name=str(sample_run)+'.spe'
 	
 	ei= (deltaE_wkspace.getSampleDetails().getLogData("Ei").value)
@@ -364,7 +396,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	
 	return mtd[wksp_out]
 	
-def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,**kwargs):
+def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,**kwargs):
 	"""	
 	dgreduce.abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,keyword arguments)
 	
@@ -437,7 +469,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 			sample_run='00000'
 		wksp_out=str(sample_run)+'.spe'
 	
-	start_time=time.clock()
+	start_time=time.time()
 	
 	if sample_run=='00000' and mtd.workspaceExists(inst_name+'00000.raw')==True:
 		print 'Deleteing previous instance of temp data'
@@ -683,7 +715,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	
 	#Run the conversion
 	deltaE_wkspace = reducer.convert_to_energy(sample_run, ei_guess, wb_run, mono_van,ei_guess,wb_mono)
-	end_time=time.clock()
+	end_time=time.time()
 	results_name=str(sample_run)+'.spe'
 	ei= (deltaE_wkspace.getSampleDetails().getLogData("Ei").value)
 	
@@ -701,6 +733,422 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	
 	return mtd[wksp_out]
 
+def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,**kwargs):
+	"""	
+	dgreduce.abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,keyword arguments)
+	
+	Available keywords
+	norm_method =[monitor-1],[monitor-2][Current]
+	background  =False , True
+	fixei 		=False , True
+	save_format	=['.spe'],['.nxspe'],'none'
+	detector_van_range			=[20,40] in mev
+	
+	bkgd_range	=[15000,19000]	:integration range for background tests
+	
+	second_white	- If provided an additional set of tests is performed on this. (default = None)
+	hard_mask  		- A file specifying those spectra that should be masked without testing (default=None)
+	tiny        	- Minimum threshold for acceptance (default = 1e-10)
+	large        	- Maximum threshold for acceptance (default = 1e10)
+	bkgd_range 		- A list of two numbers indicating the background range (default=instrument defaults)
+	diag_van_median_rate_limit_lo  	- Lower bound defining outliers as fraction of median value (default = 0.01)
+	diag_van_median_rate_limit_hi 	- Upper bound defining outliers as fraction of median value (default = 100.)
+	diag_van_median_sigma_lo      	- Fraction of median to consider counting low for the white beam diag (default = 0.1)
+	diag_van_median_sigma_hi      	- Fraction of median to consider counting high for the white beam diag (default = 1.5)
+	diag_van_sig  - Error criterion as a multiple of error bar i.e. to fail the test, the magnitude of the
+			  		difference with respect to the median value must also exceed this number of error bars (default=0.0)
+	diag_remove_zero 				- If true then zeroes in the vanadium data will count as failed (default = True)
+	diag_samp_samp_median_sigma_lo  - Fraction of median to consider counting low for the white beam diag (default = 0)
+	diag_samp_samp_median_sigma_hi  - Fraction of median to consider counting high for the white beam diag (default = 2.0)
+	diag_samp_sig  					- Error criterion as a multiple of error bar i.e. to fail the test, the magnitude of the"
+			  						  difference with respect to the median value must also exceed this number of error bars (default=3.3)
+	variation  		-The number of medians the ratio of the first/second white beam can deviate from
+			   		the average by (default=1.1)
+	bleed_test 		- If true then the CreatePSDBleedMask algorithm is run
+	bleed_maxrate 	- If the bleed test is on then this is the maximum framerate allowed in a tube
+	bleed_pixels 	- If the bleed test is on then this is the number of pixels ignored within the
+				 	bleed test diagnostic
+	print_results - If True then the results are printed to the screen
+	
+	diag_remove_zero =True, False (default):Diag zero counts in background range
+	
+	bleed=True , turn bleed correction on and off on by default for Merlin and LET
+	
+	sum	=True,False(default) , sum multiple files
+
+	det_cal_file= a valid detector block file and path or a raw file. Setting this
+				  will use the detector calibraion from the specified file NOT the
+				  input raw file
+	mask_run = RunNumber to use for diag instead of the input run number
+	
+	one2one =True, False :Reduction will not use a mapping file
+	
+	hardmaskPlus=Filename :load a hardmarkfile and apply together with diag mask
+	
+	hardmaskOnly=Filename :load a hardmask and use as only mask
+	
+	use_sam_msk_on_monovan=False This will set the total mask to be that of the sample run
+	
+	abs_units_van_range=[-40,40] integral range for absolute vanadium data
+	
+	mono_correction_factor=float User specified correction factor for absolute units normalisation
+	"""	
+	#available keywords
+	#abs_units_van_range
+	global reducer, rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
+	print 'DGreduce run for ',inst_name,'run number ',sample_run
+	print 'Output will be in absolute units of mb/str/mev/fu'
+	try:
+		n,r=lhs('both')
+		wksp_out=r[0]
+	except:
+		if sample_run == 0:
+			#deal with the current run being parsed as 0 rather than 00000
+			sample_run='00000'
+		wksp_out=str(sample_run)+'.spe'
+	
+	start_time=time.time()
+	
+	if sample_run=='00000' and mtd.workspaceExists(inst_name+'00000.raw')==True:
+		print 'Deleteing previous instance of temp data'
+		DeleteWorkspace(inst_name+'00000.raw')
+	
+	if kwargs.has_key('norm_method'):
+		reducer.normalise_method = kwargs.get('norm_method')
+		print 'Setting normalisation method to ', kwargs.get('norm_method')
+	else:
+		reducer.normalise_method = 'monitor-1'
+		
+	if kwargs.has_key('mask_run'):
+		mask_run = kwargs.get('mask_run')
+		print 'Using run ', kwargs.get('mask_run'),' for diag'
+	else:
+		mask_run=sample_run
+	
+	if kwargs.has_key('background'):
+		reducer.background = kwargs.get('background')
+		print 'Setting background option to ', kwargs.get('background')
+	else:
+		reducer.background = False
+	
+	if kwargs.has_key('fixei'):
+		reducer.fix_ei = kwargs.get('fixei')
+		print 'Setting fixei to ', kwargs.get('fixei')
+	else:
+		reducer.fix_ei = False
+	
+	if kwargs.has_key('save_format'):
+		reducer.save_formats = kwargs.get('save_format')
+		print 'Setting save format to ', kwargs.get('save_format')
+	else:
+		reducer.save_formats = ['.spe']
+	#Set parameters for the run
+	
+	if kwargs.has_key('detector_van_range'):
+		reducer.wb_integr_range = kwargs.get('detector_van_range')
+		print 'Setting detector van int range to ', kwargs.get('detector_van_range')
+	else:
+		reducer.wb_integr_range=[20,100]
+	
+	#######DIAG###########
+	if kwargs.has_key('bkgd_range'):
+		background_range = kwargs.get('bkgd_range')
+		print 'Setting background intergration to ', kwargs.get('bkgd_range')
+	else:
+		background_range=[15000,19000]
+	
+	if kwargs.has_key('tiny'):
+		tinyval = kwargs.get('tiny')
+		print 'Setting tiny ratelimit to ', kwargs.get('tiny')
+	else:
+		tinyval=1e-10
+		
+	if kwargs.has_key('large'):
+		largeval = kwargs.get('large')
+		print 'Setting large limit to ', kwargs.get('large')
+	else:
+		largeval=1e10
+	
+	if kwargs.has_key('diag_remove_zero'):
+		sampzero = kwargs.get('diag_remove_zero')
+		print 'Setting diag to reject zero backgrounds '
+	else:
+		sampzero =False
+		
+	if kwargs.has_key('diag_van_median_rate_limit_hi'):
+		vanouthi = kwargs.get('diag_van_median_rate_limit_hi')
+		print 'Setting diag_van_median_rate_limit_hi to ', kwargs.get('diag_van_median_rate_limit_hi')
+	else:
+		vanouthi=100
+	
+	if kwargs.has_key('diag_van_median_rate_limit_lo'):
+		vanoutlo = kwargs.get('diag_van_median_rate_limit_lo')
+		print 'Setting diag_van_median_rate_limit_lo to ', kwargs.get('diag_van_median_rate_limit_lo')
+	else:
+		vanoutlo=0.01
+		
+	if kwargs.has_key('diag_van_median_sigma_lo'):
+		vanlo = kwargs.get('diag_van_median_sigma_lo')
+		print 'Setting diag_van_median_sigma_lo to ', kwargs.get('diag_van_median_sigma_lo')
+	else:
+		vanlo=0.1
+		
+	if kwargs.has_key('diag_van_median_sigma_hi'):
+		vanhi = kwargs.get('diag_van_median_sigma_hi')
+		print 'Setting diag_van_median_sigma_hi to ', kwargs.get('diag_van_median_sigma_hi')
+	else:
+		vanhi=1.5
+		
+	if kwargs.has_key('diag_van_median_sigma'):
+		vansig = kwargs.get('diag_van_median_sigma')
+		print 'Setting diag_van_median_sigma to ', kwargs.get('diag_van_median_sigma')
+	else:
+		vansig=0.0
+		
+	if kwargs.has_key('diag_samp_median_sigma_lo'):
+		samplo = kwargs.get('diag_samp_median_sigma_lo')
+		print 'Setting diag_samp_median_sigma_lo to ', kwargs.get('diag_samp_median_sigma_lo')
+	else:
+		samplo=0.0
+		
+	if kwargs.has_key('diag_samp_median_sigma_hi'):
+		samphi = kwargs.get('diag_samp_median_sigma_hi')
+		print 'Setting diag_samp_median_sigma_hi to ', kwargs.get('diag_samp_median_sigma_hi')
+	else:
+		samphi=2.0
+		
+	if kwargs.has_key('diag_samp_median_sigma'):
+		sampsig = kwargs.get('diag_samp_median_sigma')
+		print 'Setting diag_samp_median_sigma to ', kwargs.get('diag_samp_median_sigma')
+	else:
+		sampsig=3.0
+	
+	if kwargs.has_key('bleed'):
+		bleed_switch = kwargs.get('bleed')
+		print 'Setting bleed ', kwargs.get('bleed')
+	else:
+		print 'bleed set to default'
+	#####diad end########
+	
+	if kwargs.has_key('det_cal_file'):
+		reducer.det_cal_file = kwargs.get('det_cal_file')
+		reducer.relocate_dets = True
+		print 'Setting detector calibration file to ', kwargs.get('det_cal_file')
+	else:
+		print 'Setting detector calibration to detector block info from ', sample_run
+		reducer.det_cal_file =None
+		reducer.relocate_dets = False
+	
+	if mtd.workspaceExists(str(sample_run))==True and kwargs.has_key('det_cal_file')==False:
+		print 'For data input type: workspace detector calibration must be specified'
+		print 'use Keyword det_cal_file with a valid detctor file or run number'
+		return
+	
+	
+	if kwargs.has_key('one2one'):
+		reducer.map_file =None
+		print 'one2one selected'
+		
+	else:
+		reducer.map_file = map_file+'.map'
+	
+	if kwargs.has_key('hardmaskPlus'):
+		HardMaskFile = kwargs.get('hardmaskPlus')
+		print 'Use hardmask from ', HardMaskFile
+		#hardMaskSpec=common.load_mask(HardMaskFile)
+		#MaskDetectors(Workspace='masking',SpectraList=hardMaskSpec)
+	else:
+		HardMaskFile=None
+		
+	reducer.energy_bins = rebin
+	#monovan info
+	reducer.abs_map_file=monovan_mapfile+'.map'
+	if kwargs.has_key('abs_units_van_range'):
+		reducer.monovan_integr_range = kwargs.get('abs_units_van_range')
+		print 'Setting absolute units van range int range to ', kwargs.get('abs_units_van_range')
+	else:
+		reducer.monovan_integr_range=[-40,40]
+	
+	#reducer.van_rmm =50.94
+	reducer.van_mass=van_mass
+	#sample info
+	reducer.sample_mass=samp_mass
+	reducer.sample_rmm =samp_rmm
+	
+	print 'output will be normalised to', reducer.normalise_method
+	if (numpy.size(sample_run)) > 1 and kwargs.has_key('sum') and kwargs.get('sum')==True:
+		#this sums the runs together before passing the summed file to the rest of the reduction
+		#this circumvents the inbuilt method of summing which fails to sum the files for diag
+		
+		sumfilename=str(sample_run[0])+'sum'
+		accum=sum_files(sumfilename, sample_run)
+		#the D.E.C. tries to be too clever so we have to fool it into thinking the raw file is already exists as a workpsace
+		RenameWorkspace(accum,inst_name+str(sample_run[0])+'.raw')
+		sample_run=sample_run[0]
+	
+	if kwargs.has_key('hardmaskOnly'):
+		hardmask = kwargs.get('hardmaskOnly')
+		print 'Use hardmask from ', hardmask
+		masking=hardmask
+	else:
+		print '########### Run diagnose for sample run ##############'
+		masking = reducer.diagnose(wb_run, 
+			sample=mask_run,
+			second_white = None,
+			tiny=tinyval, 
+			huge=largeval, 
+			van_out_lo=vanoutlo,
+			van_out_hi=vanouthi,
+			van_lo=vanlo,
+			van_hi=vanhi,
+			van_sig=vansig,
+			samp_zero=sampzero,
+			samp_lo=samplo,
+			samp_hi=samphi,
+			samp_sig=sampsig,
+			bkgd_range=background_range, 
+			variation=1.1,
+			print_results=True,
+			bleed_test=bleed_switch,
+			bleed_maxrate=rate,
+			bleed_pixels=pixels,
+			hard_mask=HardMaskFile)
+		print '########### Run diagnose for monochromatic vanadium run ##############'
+		masking2 = reducer.diagnose(wb_mono, 
+			sample=mono_van,
+			second_white = None,
+			tiny=tinyval, 
+			huge=largeval, 
+			van_out_lo=vanoutlo,
+			van_out_hi=vanouthi,
+			van_lo=vanlo,
+			van_hi=vanhi,
+			van_sig=vansig,
+			samp_zero=sampzero,
+			samp_lo=samplo,
+			samp_hi=samphi,
+			samp_sig=sampsig,
+			bkgd_range=background_range, 
+			variation=1.1,
+			print_results=True,
+			bleed_test=bleed_switch,
+			bleed_maxrate=rate,
+			bleed_pixels=pixels,
+			hard_mask=HardMaskFile)
+		
+		total_mask=masking+masking2
+	
+	
+	if kwargs.has_key('use_sam_msk_on_monovan') and kwargs.get('use_sam_msk_on_monovan')==True:
+		print 'applying sample run mask to mono van'
+		reducer.spectra_masks=masking
+	else:
+		reducer.spectra_masks=total_mask
+		
+	fail_list=get_failed_spectra_list('total_mask')
+	
+	
+	print 'Diag found ', len(fail_list),'bad spectra'
+	
+	
+	
+	#Run the conversion first on the sample
+	deltaE_wkspace_sample = reducer.convert_to_energy(sample_run, ei_guess, wb_run)
+	#now on the mono_vanadium run swap the mapping file
+	reducer.map_file = monovan_mapfile+'.map'
+	deltaE_wkspace_monovan = reducer.convert_to_energy(mono_van, ei_guess, wb_mono)
+
+	
+	if kwargs.has_key('mono_correction_factor'):
+		absnorm_factor=kwargs.get('mono_correction_factor')
+		print 'Using supplied correction factor for absolute units'
+	else:
+		print '##### Evaluate the integral from the monovan run and calculate the correction factor ######'
+		
+		Integration(InputWorkspace=deltaE_wkspace_monovan,OutputWorkspace='van_int',RangeLower=str(reducer.monovan_integr_range[0]),RangeUpper=str(reducer.monovan_integr_range[1]),IncludePartialBins='1')
+		DeleteWorkspace(deltaE_wkspace_monovan)
+		data_ws=mtd['van_int']
+		#data_ws=ConvertToMatrixWorkspace(data_ws)
+		nhist = data_ws.getNumberHistograms()
+		#ConvertFromDistribution(data_ws)
+
+		#print nhist
+
+		average_value = 0.0
+		weight_sum = 0.0
+
+		for i in range(nhist):
+			try:
+		
+				det = data_ws.getDetector(i)
+	
+			except Exception:
+		
+				continue
+			if det.isMasked():
+				continue
+	
+			y_value = data_ws.readY(i)[0]
+	
+			#print 'ydat= ', y_value
+	
+			if y_value != y_value:
+		
+				continue
+	
+			weight = 1.0/data_ws.readE(i)[0]
+	
+			#print 'error value =' ,data_ws.readE(i)[0]
+	
+			average_value += y_value * weight
+	
+			#print 'average ',average_value
+	
+			weight_sum += weight
+	
+			#print 'weight ', weight
+		integral_monovan=average_value / weight_sum
+		#print 'output' ,integral_monovan
+		
+		absnorm_factor = integral_monovan * (float(reducer.van_rmm)/float(van_mass)) 
+		ei_monovan = (deltaE_wkspace_monovan.getSampleDetails().getLogData("Ei").value)
+		
+		if ei_monovan >= 200.0:
+	
+			xsection = 421.0
+
+		else:
+	
+			xsection = 400.0 + (ei_monovan/10.0)
+
+		
+		absnorm_factor /= xsection
+		#print absnorm_factor
+
+		
+		absnorm_factor= absnorm_factor *(float(reducer.sample_mass)/float(reducer.sample_rmm))
+	print 'Absolute correction factor =',absnorm_factor
+	DeleteWorkspace(data_ws)
+	CreateSingleValuedWorkspace(OutputWorkspace='AbsFactor',DataValue=absnorm_factor)
+	end_time=time.time()
+	results_name=str(sample_run)+'.spe'
+	ei= (deltaE_wkspace_sample.getSampleDetails().getLogData("Ei").value)
+	
+	if mtd.workspaceExists('_wksp.spe-white')==True:
+		DeleteWorkspace('_wksp.spe-white')
+	
+	
+	print 'Incident energy found for sample run ',ei,' meV'
+	print 'Incident energy found for mono vanadium run ',ei,' meV'
+	print 'Elapsed time =',end_time-start_time, 's'
+	#get the name that convert to energy will use
+	
+	if mtd.workspaceExists(results_name)==False:
+		RenameWorkspace(deltaE_wkspace,results_name)
+	RenameWorkspace(results_name,wksp_out)
+	Divide(LHSWorkspace=wksp_out,RHSWorkspace='AbsFactor',OutputWorkspace=wksp_out)
+	DeleteWorkspace('AbsFactor')
+	return mtd[wksp_out]
 
 def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
 	"""
@@ -736,7 +1184,7 @@ def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
 		if kwargs.has_key('sum') and kwargs.get('sum')==True:
 			wksp_out=inst_name+str(sample_run[0])+'sum'+'.spe'
 		
-	start_time=time.clock()
+	start_time=time.time()
 	
 	if sample_run=='00000' and mtd.workspaceExists(inst_name+'00000.raw')==True:
 		print 'Deleteing previous instance of temp data'
@@ -884,7 +1332,7 @@ def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
 
 	
 	
-	print 'Elapsed time =',time.clock()-start_time, 's'
+	print 'Elapsed time =',time.time()-start_time, 's'
 	return mtd[wksp_out]
 
 
