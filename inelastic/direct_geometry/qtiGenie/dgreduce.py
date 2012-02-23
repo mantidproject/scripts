@@ -1144,7 +1144,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	#get the name that convert to energy will use
 	
 	if mtd.workspaceExists(results_name)==False:
-		RenameWorkspace(deltaE_wkspace,results_name)
+		RenameWorkspace(deltaE_wkspace_sample,results_name)
 	RenameWorkspace(results_name,wksp_out)
 	Divide(LHSWorkspace=wksp_out,RHSWorkspace='AbsFactor',OutputWorkspace=wksp_out)
 	DeleteWorkspace('AbsFactor')
