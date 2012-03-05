@@ -1,5 +1,10 @@
 from mantid.simpleapi import *
 from numpy import *
+try:
+	from scipy import signal
+except:
+	print 'Scipy module not in scope'
+	
 #uses the new api all input workpsaces are expected to have |Q| along X and Energy Transfer along Y
 def gofe(wkspin,T,dbwfac):
 	dat=mtd[wkspin]
@@ -68,6 +73,7 @@ def byE(wkspin):
 	return wkspOut
 	
 def gaussSmooth(wkspin,n):
+	ReplaceSpecialValues(InputWorkspace=wkspin,OutputWorkspace=wkspin,NaNValue='0',InfinityValue='0')
 	dat=mtd[wkspin]
 	print 'Smoothing workspace' , dat.name(), 'by Gaussian convolution ',n,' times'
 	
@@ -84,7 +90,12 @@ def gaussSmooth(wkspin,n):
 	energy=(en[1:len(en)]+en[0:len(en)-1])/2
 	
 	y=blur_image(y,n)
-	wkspOut=CreateWorkspace(x,y,Err,Nspec=len(en)-1,VerticalAxisUnit='DeltaE',VerticalAxisValues=energy,UnitX='|Q|',YUnitLabel='byE',WorkSpaceTitle='smoothed '+n+'times')
+	try:	
+		wkspOut=CreateWorkspace(x,y,Err,Nspec=len(en)-1,VerticalAxisUnit='DeltaE',VerticalAxisValues=energy,UnitX='|Q|',YUnitLabel='byE',WorkSpaceTitle='smoothed '+str(n)+'times')
+	except:
+
+		wkspOut=CreateWorkspace(x,y,Err,Nspec=len(en),VerticalAxisUnit='DeltaE',VerticalAxisValues=en,UnitX='|Q|',YUnitLabel='byE',WorkSpaceTitle='smoothed '+str(n)+'times')
+
 	return wkspOut
 	
 def gauss_kern(size, sizey=None):
@@ -130,5 +141,39 @@ def bose(wkspin,T):
 	Err=Err*bosegrid
 	wkspOut=CreateWorkspace(x,y,Err,Nspec=len(en)-1,VerticalAxisUnit='DeltaE',VerticalAxisValues=energy,UnitX='|Q|',YUnitLabel='T corrected',WorkSpaceTitle='Bose factor corrected')
 	return wkspOut
-
+	
+def perCm(wkspin):
+	dat=mtd[wkspin]
+	print 'converting energy units to per cm' 
+	x=dat.extractX()
+		
+	y=dat.extractY()
+	Err=dat.extractE()
+	axis=dat.getAxis(0)
+	
+	
+	#deal with the energy axis
+	axis=dat.getAxis(1)
+	en=axis.extractValues()
+	energy=(en[1:len(en)]+en[0:len(en)-1])/2
+	energy=energy*8.0654
+	wkspOut=CreateWorkspace(x,y,Err,Nspec=len(en)-1,VerticalAxisUnit='DeltaE',VerticalAxisValues=energy,UnitX='|Q|',YUnitLabel='cm^-1')
+	return wkspOut
+def meV(wkspin):
+	dat=mtd[wkspin]
+	print 'converting energy units to meV' 
+	x=dat.extractX()
+		
+	y=dat.extractY()
+	Err=dat.extractE()
+	axis=dat.getAxis(0)
+	
+	
+	#deal with the energy axis
+	axis=dat.getAxis(1)
+	en=axis.extractValues()
+	energy=(en[1:len(en)]+en[0:len(en)-1])/2
+	energy=energy*0.124
+	wkspOut=CreateWorkspace(x,y,Err,Nspec=len(en)-1,VerticalAxisUnit='DeltaE',VerticalAxisValues=energy,UnitX='|Q|',YUnitLabel='meV')
+	return wkspOut
 #ww=gofe('w2',1,1)

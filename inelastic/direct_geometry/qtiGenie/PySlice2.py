@@ -74,7 +74,7 @@ class data2D:
 		except:
 			if n<=2:
 				n=3
-				
+			print "Failure of Gaussian smooth revert to averaging"	
 			SmoothData(InputWorkspace=self.data_disp,OutputWorkspace=self.data_disp,NPoints=n)
 			if len(args)==1:
 				self.display()
@@ -91,6 +91,31 @@ class data2D:
 		ww=bose(name2,T)
 		RenameWorkspace(InputWorkspace=ww,OutputWorkspace=name)
 		Transpose(InputWorkspace=ww,OutputWorkspace=name2)
+		self.data_disp=mtd[name]
+		self.data=mtd[name2]
+	
+	def units(self,unit):
+		from DgFuncs import perCm
+		from DgFuncs import meV
+		
+		if unit =='cm':
+			name=self.wksp_name.getName()+'_SQWdisplay'#self.data_disp.getName()
+			name2=self.wksp_name.getName()+'_SQW'#self.data.getName()
+			#dat=mtd[name]
+			Transpose(InputWorkspace=name2,OutputWorkspace=name2)
+			ww=perCm(name2)
+			RenameWorkspace(InputWorkspace=ww,OutputWorkspace=name)
+			Transpose(InputWorkspace=ww,OutputWorkspace=name2)
+		
+		if unit =='mev':
+			name=self.wksp_name.getName()+'_SQWdisplay'#self.data_disp.getName()
+			name2=self.wksp_name.getName()+'_SQW'#self.data.getName()
+			#dat=mtd[name]
+			Transpose(InputWorkspace=name2,OutputWorkspace=name2)
+			ww=meV(name2)
+			RenameWorkspace(InputWorkspace=ww,OutputWorkspace=name)
+			Transpose(InputWorkspace=ww,OutputWorkspace=name2)
+			
 		self.data_disp=mtd[name]
 		self.data=mtd[name2]
 	
