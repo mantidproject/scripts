@@ -342,9 +342,13 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 		HardMaskFile=None
 	
 	if kwargs.has_key('hardmaskOnly'):
-		hardmask = kwargs.get('hardmaskOnly')
-		print 'Use hardmask from ', hardmask
-		masking=hardmask
+		totalmask = kwargs.get('hardmaskOnly')
+		print 'Using hardmask from ', totalmask
+		#next stable version can replace this with loadmask algoritum
+		specs=diag_load_mask(totalmask)
+		CloneWorkspace(InputWorkspace=sample_run,OutputWorkspace='mask_wksp')
+		MaskDetectors(Workspace='mask_wksp',SpectraList=specs)
+		masking=mtd['mask_wksp']
 	else:
 	
 		masking = reducer.diagnose(wb_run, 
@@ -987,9 +991,13 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		sample_run=sample_run[0]
 	
 	if kwargs.has_key('hardmaskOnly'):
-		hardmask = kwargs.get('hardmaskOnly')
-		print 'Use hardmask from ', hardmask
-		masking=hardmask
+		totalmask = kwargs.get('hardmaskOnly')
+		print 'Using hardmask from ', totalmask
+		#next stable version can replace this with loadmask algoritum
+		specs=diag_load_mask(totalmask)
+		CloneWorkspace(InputWorkspace=sample_run,OutputWorkspace='mask_wksp')
+		MaskDetectors(Workspace='mask_wksp',SpectraList=specs)
+		masking=mtd['mask_wksp']
 	else:
 		print '########### Run diagnose for sample run ##############'
 		masking = reducer.diagnose(wb_run, 
@@ -1378,3 +1386,52 @@ def sum_files(accumulator, files):
 				Multiply(LHSWorkspace=accumulator,RHSWorkspace="tmp",OutputWorkspace=accumulator)
 			Plus(accumulator, temp, accumulator)
 		return accumulator
+
+
+def diag_load_mask(hard_mask):
+    """
+    Load a hard mask file and return the
+    list of spectra numbers it contains as a string
+
+    Each line of the file specifies spectra to be masked by either specifying a range
+    using a hypen or a single spectra number using a space as a delimiter between fields i.e.
+
+    48897 - 49152
+    50000
+    60100-60105
+    """
+   
+    mask_file = open(hard_mask)
+    spectra_list = ""
+    for line in mask_file:
+        numbers = line.split()
+        if len(numbers) == 0:
+            continue
+        # Any non-numeric character at the start of the line marks a comment, 
+        # check the first character of the first word
+        if not numbers[0][0].isdigit():
+            continue
+        num_cols = len(numbers)
+        remainder = num_cols % 3
+        group_end = num_cols - remainder
+        # Jump in steps of 3 where there are whole blocks
+        for index in range(0, group_end, 3):
+            # Can either have a range specified with a "-" or single numbers
+            n_i = numbers[index]
+            n_ip1 = numbers[index+1]
+            n_ip2 = numbers[index+2]
+            # If there is a dash it will have to be the middle value
+            if n_ip1 == '-':
+                spectra_list += n_i + '-' + n_ip2
+            else:
+                spectra_list += n_i + "," + n_ip1 + ',' + n_ip2
+            spectra_list += ","
+        # Now deal with the remainder
+        for index in range(group_end,num_cols):
+            spectra_list += numbers[index] + ","
+            
+    if len(spectra_list) < 1:
+        mantid.sendLogMessage('Only comment lines found in mask file ' + hard_mask)
+        return ''
+    # Return everything after the very first comma we added in the line above
+    return spectra_list.rstrip(',')
