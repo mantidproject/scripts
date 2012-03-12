@@ -149,16 +149,33 @@ class data2D:
 		active_layer.setCurveLineColor(1,col)
 	
 	def ECut(self,Qmin,Qmax,Emin,delE,Emax,**kwargs):
-		if kwargs.has_key('over'):
-			self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True)
-		else:
-			self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e')
+		try:
+			n,r=lhs('both')
+			name=r[0]
+			if kwargs.has_key('over'):
+				self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True,cutName=name)
+			else:
+				self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',cutName=name)
+		except:		
+			if kwargs.has_key('over'):
+				self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True)
+			else:
+				self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e')
 	
 	def QCut(self,Emin,Emax,Qmin,delQ,Qmax,**kwargs):
-		if kwargs.has_key('over'):
-			self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True)
-		else:
-			self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q')
+		try:
+			n,r=lhs('both')
+			name=r[0]
+			if kwargs.has_key('over'):
+				self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True,cutName=name)
+			else:
+				self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',cutName=name)
+		except:
+			if kwargs.has_key('over'):
+				self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True)
+			else:
+				self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q')
+			
 			
 	
 	def xLims(self,*args):
@@ -273,7 +290,11 @@ class data2D:
 		if kwargs.has_key('along') and kwargs.get('along')=='q' or kwargs.has_key('along') and kwargs.get('along')=='Q':
 		
 			#axis2 is |Q|, axis1 is energy transfer
-			cut_name='Cut from '+str(minX)+' to '+str(maxX)+' integrating between '+str(intMin)+' and '+str(intMax)+' meV'
+			if kwargs.has_key('cutName'):
+				cut_name=kwargs.get('cutName')
+			else:
+				cut_name='Cut from '+str(self.wksp_name)+' integrating '+str(intMin)+' and '+str(intMax)+' meV'
+			
 			Rebin2D(InputWorkspace=wksp,OutputWorkspace=cut_name,Axis1Binning=str(intMin)+','+str(intMax-intMin)+','+str(intMax),Axis2Binning=str(minX)+','+str(delX)+','+str(maxX))
 			ReplaceSpecialValues(InputWorkspace=cut_name,OutputWorkspace=cut_name,NaNValue='0',InfinityValue='0')
 			Transpose(InputWorkspace=cut_name,OutputWorkspace=cut_name)
@@ -299,8 +320,11 @@ class data2D:
 				active_layer = graph.activeLayer()
 			
 		if kwargs.has_key('along') and kwargs.get('along')=='e' or kwargs.has_key('along') and kwargs.get('along')=='E':
-		
-			cut_name='Cut from '+str(minX)+' to '+str(maxX)+' integrating between '+str(intMin)+' and '+str(intMax)+' A^-1'
+			if kwargs.has_key('cutName'):
+				cut_name=kwargs.get('cutName')
+			else:
+				cut_name='Cut from '+str(self.wksp_name)+' integrating '+str(intMin)+' and '+str(intMax)+' A^-1'
+			
 			#axis2 is |Q|, axis1 is energy transfer
 			ReplaceSpecialValues(InputWorkspace=wksp,OutputWorkspace='tmp',NaNValue='0',InfinityValue='0')
 			Rebin2D(InputWorkspace='tmp',OutputWorkspace=cut_name,Axis1Binning=str(minX)+','+str(delX)+','+str(maxX),Axis2Binning=str(intMin)+','+str(intMax-intMin)+','+str(intMax))
@@ -324,6 +348,11 @@ class data2D:
 				self.figure_dict.setdefault(self.fignum,plot)
 				
 				active_layer = graph.activeLayer()
+		if kwargs.has_key('cutName'):
+			return mtd[kwargs.get('cutName')]
+		else:
+			return
+			
 				
 
 #def transpose(wksp_in):
