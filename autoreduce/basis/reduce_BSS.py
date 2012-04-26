@@ -19,7 +19,7 @@ autows = "__auto_ws"
 autows_monitor = autows + "_monitor"
 
 
-dave_grp_filename = os.path.join(output_directory, "BASIS_" + run_number + "_run1.dat")
+dave_grp_filename = os.path.join(output_directory, "BASIS_" + run_number + "_1run.dat")
 
 Load(Filename=nexus_file, OutputWorkspace=autows)
 LoadMask(Instrument='BASIS', OutputWorkspace='BASIS_MASK', InputFile='/SNS/BSS/shared/autoreduce/BASIS_Mask.xml')
