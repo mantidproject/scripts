@@ -152,29 +152,54 @@ class data2D:
 		try:
 			n,r=lhs('both')
 			name=r[0]
-			if kwargs.has_key('over'):
-				self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True,cutName=name)
+			if kwargs.has_key('shoelace'):
+				if kwargs.has_key('over'):
+					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True,cutName=name,shoelace=1)
+				else:
+					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',cutName=name,shoelace=1)
 			else:
-				self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',cutName=name)
+				if kwargs.has_key('over'):
+					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True,cutName=name)
+				else:
+					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',cutName=name)
 		except:		
-			if kwargs.has_key('over'):
-				self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True)
+			if kwargs.has_key('shoelace'):
+				if kwargs.has_key('over'):
+					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True,shoelace=1)
+				else:
+					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',shoelace=1)
 			else:
-				self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e')
+				if kwargs.has_key('over'):
+					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True)
+				else:
+					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e')
+			
 	
 	def QCut(self,Emin,Emax,Qmin,delQ,Qmax,**kwargs):
 		try:
 			n,r=lhs('both')
 			name=r[0]
-			if kwargs.has_key('over'):
-				self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True,cutName=name)
+			if kwargs.has_key('shoelace'):
+				if kwargs.has_key('over'):
+					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True,cutName=name,shoelace=1)
+				else:
+					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',cutName=name,shoelace=1)
 			else:
-				self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',cutName=name)
+				if kwargs.has_key('over'):
+					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True,cutName=name)
+				else:
+					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',cutName=name)
 		except:
-			if kwargs.has_key('over'):
-				self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True)
+			if kwargs.has_key('shoelace'):
+				if kwargs.has_key('over'):
+					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True,shoelace=1)
+				else:
+					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',shoelace=1)
 			else:
-				self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q')
+				if kwargs.has_key('over'):
+					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True)
+				else:
+					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q')
 			
 			
 	
@@ -247,20 +272,20 @@ class data2D:
 		wksp_out=r[0]
 		#ei= (wksp_in.getSampleDetails().getLogData("Ei").value)
 		#wksp_in=mtd[wksp_in]
-		SofQW2(InputWorkspace=wksp_in,OutputWorkSpace=wksp_out,QAxisBinning=qbin,EMode="Direct")
+		SofQW3(InputWorkspace=wksp_in,OutputWorkSpace=wksp_out,QAxisBinning=qbin,EMode="Direct")
+		##comment lines were code for correcting interceting area rebin as coded in sofqw2, sofqw3 seems to work correctly
+		#CloneWorkspace(InputWorkspace=wksp_in,OutputWorkspace='tmp')
+		#CreateSingleValuedWorkspace(OutputWorkspace='scale',DataValue='0',ErrorValue='0')
+		#Multiply(LHSWorkspace='tmp',RHSWorkspace='scale',OutputWorkspace='tmp')
+		#CreateSingleValuedWorkspace(OutputWorkspace='scale2',DataValue='1',ErrorValue='0')
+		#Plus(LHSWorkspace='tmp',RHSWorkspace='scale2',OutputWorkspace='tmp')
 		
-		CloneWorkspace(InputWorkspace=wksp_in,OutputWorkspace='tmp')
-		CreateSingleValuedWorkspace(OutputWorkspace='scale',DataValue='0',ErrorValue='0')
-		Multiply(LHSWorkspace='tmp',RHSWorkspace='scale',OutputWorkspace='tmp')
-		CreateSingleValuedWorkspace(OutputWorkspace='scale2',DataValue='1',ErrorValue='0')
-		Plus(LHSWorkspace='tmp',RHSWorkspace='scale2',OutputWorkspace='tmp')
-		
-		SofQW2(InputWorkspace='tmp',OutputWorkspace='tmp',QAxisBinning=qbin,EMode='Direct')
-		SetUncertaintiesToZero(InputWorkSpace='tmp',OutputWorkSpace='tmp')
-		Divide(LHSWorkspace=wksp_out,RHSWorkspace='tmp',OutputWorkspace=wksp_out)
-		DeleteWorkspace('tmp')
-		DeleteWorkspace('scale')
-		DeleteWorkspace('scale2')
+		#SofQW3(InputWorkspace='tmp',OutputWorkspace='tmp',QAxisBinning=qbin,EMode='Direct')
+		#SetUncertainties(InputWorkSpace='tmp',OutputWorkSpace='tmp')
+		#Divide(LHSWorkspace=wksp_out,RHSWorkspace='tmp',OutputWorkspace=wksp_out)
+		#DeleteWorkspace('tmp')
+		#DeleteWorkspace('scale')
+		#DeleteWorkspace('scale2')
 		return mtd[wksp_out]
 		
 	def sqwfast(self,wksp_in,qbin):
@@ -277,7 +302,37 @@ class data2D:
 		except:
 			print 'no output workpsace defined'
 
-
+	def integrate(self,qmin,qmax,emin,emax):
+		'''Integrate a region of S(q,w)
+		'''
+		qbin=str(qmin)+','+str(qmax-qmin)+','+str(qmax)
+		ebin=str(emin)+','+str(emax-emin)+','+str(emax)
+		ReplaceSpecialValues(InputWorkspace=self.data,OutputWorkspace='tmpWksp',NaNValue='0',InfinityValue='0')
+		Rebin2D(InputWorkspace='tmpWksp',OutputWorkspace='tmpWksp',Axis1Binning=ebin,Axis2Binning=qbin)
+		tmpWksp=mtd['tmpWksp']
+		value=zeros(2)
+		value[0]=tmpWksp.extractY()[0]
+		value[1]=tmpWksp.extractE()[0]
+		print 'Integral between ',qmin,' to ',qmax,' A^-1 and ',emin,'to ',emax,'mev =',value[0],'+/-',value[1]
+		DeleteWorkspace('tmpWksp')
+		return value
+		
+	def percentError(self,qmin,qmax,emin,emax):
+		'''
+		integrate a region of sqw and calculate the percentage of the error bar on the integral
+		'''
+		qbin=str(qmin)+','+str(qmax-qmin)+','+str(qmax)
+		ebin=str(emin)+','+str(emax-emin)+','+str(emax)
+		ReplaceSpecialValues(InputWorkspace=self.data,OutputWorkspace='tmpWksp',NaNValue='0',InfinityValue='0')
+		Rebin2D(InputWorkspace='tmpWksp',OutputWorkspace='tmpWksp',Axis1Binning=ebin,Axis2Binning=qbin)
+		tmpWksp=mtd['tmpWksp']
+		y=tmpWksp.extractY()[0]
+		Err=tmpWksp.extractE()[0]
+		value=(Err/y)*100
+		print 'percent error in bin ',qmin,' to ',qmax,' A^-1 and ',emin,'to ',emax,'mev =',value
+		DeleteWorkspace('tmpWksp')
+		return value
+	
 	def cut(self,wksp,intMin,intMax,minX,delX,maxX,**kwargs):
 		'''
 		Take a cut out of a wksp created by sqw
@@ -295,7 +350,10 @@ class data2D:
 			else:
 				cut_name='Cut from '+str(self.wksp_name)+' integrating '+str(intMin)+' and '+str(intMax)+' meV'
 			
-			Rebin2D(InputWorkspace=wksp,OutputWorkspace=cut_name,Axis1Binning=str(intMin)+','+str(intMax-intMin)+','+str(intMax),Axis2Binning=str(minX)+','+str(delX)+','+str(maxX))
+			if kwargs.has_key('shoelace'):
+				Rebin2D(InputWorkspace=wksp,OutputWorkspace=cut_name,Axis1Binning=str(intMin)+','+str(intMax-intMin)+','+str(intMax),Axis2Binning=str(minX)+','+str(delX)+','+str(maxX),UseFractionalArea='1')
+			else:
+				Rebin2D(InputWorkspace=wksp,OutputWorkspace=cut_name,Axis1Binning=str(intMin)+','+str(intMax-intMin)+','+str(intMax),Axis2Binning=str(minX)+','+str(delX)+','+str(maxX))
 			ReplaceSpecialValues(InputWorkspace=cut_name,OutputWorkspace=cut_name,NaNValue='0',InfinityValue='0')
 			Transpose(InputWorkspace=cut_name,OutputWorkspace=cut_name)
 
@@ -327,7 +385,11 @@ class data2D:
 			
 			#axis2 is |Q|, axis1 is energy transfer
 			ReplaceSpecialValues(InputWorkspace=wksp,OutputWorkspace='tmp',NaNValue='0',InfinityValue='0')
-			Rebin2D(InputWorkspace='tmp',OutputWorkspace=cut_name,Axis1Binning=str(minX)+','+str(delX)+','+str(maxX),Axis2Binning=str(intMin)+','+str(intMax-intMin)+','+str(intMax))
+			if kwargs.has_key('shoelace'):
+				Rebin2D(InputWorkspace='tmp',OutputWorkspace=cut_name,Axis1Binning=str(minX)+','+str(delX)+','+str(maxX),Axis2Binning=str(intMin)+','+str(intMax-intMin)+','+str(intMax),UseFractionalArea='1' )
+			else:
+				Rebin2D(InputWorkspace='tmp',OutputWorkspace=cut_name,Axis1Binning=str(minX)+','+str(delX)+','+str(maxX),Axis2Binning=str(intMin)+','+str(intMax-intMin)+','+str(intMax))
+			
 			DeleteWorkspace('tmp')
 			
 			if kwargs.has_key('over'):
