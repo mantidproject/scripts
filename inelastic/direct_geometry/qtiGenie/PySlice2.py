@@ -329,9 +329,9 @@ class data2D:
 		y=tmpWksp.extractY()[0]
 		Err=tmpWksp.extractE()[0]
 		value=(Err/y)*100
-		print 'percent error in bin ',qmin,' to ',qmax,' A^-1 and ',emin,'to ',emax,'mev =',value
+		print 'percent error in bin ',qmin,' to ',qmax,' A^-1 and ',emin,'to ',emax,'mev =',value[0]
 		DeleteWorkspace('tmpWksp')
-		return value
+		return value[0]
 	
 	def cut(self,wksp,intMin,intMax,minX,delX,maxX,**kwargs):
 		'''
