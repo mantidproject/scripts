@@ -1074,6 +1074,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		print '##### Evaluate the integral from the monovan run and calculate the correction factor ######'
 		
 		Integration(InputWorkspace=deltaE_wkspace_monovan,OutputWorkspace='van_int',RangeLower=str(reducer.monovan_integr_range[0]),RangeUpper=str(reducer.monovan_integr_range[1]),IncludePartialBins='1')
+		ei_monovan = (deltaE_wkspace_monovan.getSampleDetails().getLogData("Ei").value)		
 		DeleteWorkspace(deltaE_wkspace_monovan)
 		data_ws=mtd['van_int']
 		#data_ws=ConvertToMatrixWorkspace(data_ws)
@@ -1119,7 +1120,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		#print 'output' ,integral_monovan
 		
 		absnorm_factor = integral_monovan * (float(reducer.van_rmm)/float(van_mass)) 
-		ei_monovan = (deltaE_wkspace_monovan.getSampleDetails().getLogData("Ei").value)
+
 		
 		if ei_monovan >= 200.0:
 	
