@@ -44,6 +44,7 @@ class data2D:
 			self.data_disp=mtd[wksp_newDisp]
 		else:
 			print 'Using intersecting area rebin'
+			#need a method to get max and min angles
 			tmpdat=self.sqw(self.wksp_name,qbin)
 			
 			Transpose(InputWorkspace='tmpdat',OutputWorkspace=wksp_newDisp)
@@ -149,60 +150,101 @@ class data2D:
 		active_layer.setCurveLineColor(1,col)
 	
 	def ECut(self,Qmin,Qmax,Emin,delE,Emax,**kwargs):
+		intmin=Qmin
+		intmax=Qmax
+		cutmin=Emin
+		delcut=delE
+		cutmax=Emax
 		try:
 			n,r=lhs('both')
 			name=r[0]
 			if kwargs.has_key('shoelace'):
 				if kwargs.has_key('over'):
-					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True,cutName=name,shoelace=1)
+					if kwargs.has_key('Handle'):
+						fighandle=kwargs.get('Handle')
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',over=True,cutName=name,shoelace=True,Handle=fighandle)
+					else:
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',over=True,cutName=name,shoelace=True)
 				else:
-					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',cutName=name,shoelace=1)
+					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',cutName=name,shoelace=True)
 			else:
 				if kwargs.has_key('over'):
-					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True,cutName=name)
+					if kwargs.has_key('Handle'):
+						fighandle=kwargs.get('Handle')
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',over=True,cutName=name,Handle=fighandle)
+					else:
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',over=True,cutName=name)
 				else:
-					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',cutName=name)
+					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',cutName=name)
 		except:		
 			if kwargs.has_key('shoelace'):
 				if kwargs.has_key('over'):
-					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True,shoelace=1)
+					if kwargs.has_key('Handle'):
+						fighandle=kwargs.get('Handle')
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',over=True,shoelace=True,Handle=fighandle)
+					else:
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',over=True,shoelace=True)
 				else:
-					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',shoelace=1)
+					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',shoelace=True)
 			else:
 				if kwargs.has_key('over'):
-					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e',over=True)
+					if kwargs.has_key('Handle'):
+						fighandle=kwargs.get('Handle')
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',over=True,Handle=fighandle)
+					else:
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e',over=True)
 				else:
-					self.cut(self.data,Qmin,Qmax,Emin,delE,Emax,along='e')
+					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='e')
 			
 	
 	def QCut(self,Emin,Emax,Qmin,delQ,Qmax,**kwargs):
+		intmin=Emin
+		intmax=Emax
+		cutmin=Qmin
+		delcut=delQ
+		cutmax=Qmax
 		try:
 			n,r=lhs('both')
 			name=r[0]
 			if kwargs.has_key('shoelace'):
 				if kwargs.has_key('over'):
-					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True,cutName=name,shoelace=1)
+					if kwargs.has_key('Handle'):
+						fighandle=kwargs.get_key('Handle')
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,cutName=name,shoelace=True,Handle=fighandle)
+					else:
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,cutName=name,shoelace=True)
 				else:
-					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',cutName=name,shoelace=1)
+					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',cutName=name,shoelace=True)
 			else:
 				if kwargs.has_key('over'):
-					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True,cutName=name)
+					if kwargs.has_key('Handle'):
+						fighandle=kwargs.get_key('Handle')
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,cutName=name,Handle=fighandle)
+					else:
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,cutName=name)
 				else:
-					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',cutName=name)
-		except:
+					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',cutName=name)
+		except:		
 			if kwargs.has_key('shoelace'):
 				if kwargs.has_key('over'):
-					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True,shoelace=1)
+					if kwargs.has_key('Handle'):
+						fighandle=kwargs.get_key('Handle')
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,shoelace=True,Handle=fighandle)
+					else:
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,shoelace=True)
 				else:
-					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',shoelace=1)
+					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,Emax,along='q',shoelace=True)
 			else:
 				if kwargs.has_key('over'):
-					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q',over=True)
+					if kwargs.has_key('Handle'):
+						fighandle=kwargs.get_key('Handle')
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,Handle=fighandle)
+					else:
+						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True)
 				else:
-					self.cut(self.data,Emin,Emax,Qmin,delQ,Qmax,along='q')
-			
-			
-	
+					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q')
+				
+
 	def xLims(self,*args):
 		if len(args) == 2:
 			min=args[0]
@@ -359,15 +401,24 @@ class data2D:
 
 			
 			if kwargs.has_key('over'):
-				plotover=self.fignum #assumes that the plot over will be the last plotted figure
-				print plotover
-				lgr=self.figure_dict.get(self.fignum)[1]#gets the handle of the last fig from the dict
-				
-				self.fignum=self.fignum+1
-				graph=plotSpectrum(cut_name,0,1,1)
-				plot=[cut_name,graph]
-				self.figure_dict.setdefault(self.fignum,plot)
-				mergePlots(graph,lgr)
+				if kwargs.has_key('Handle'):
+					fighandle=kwargs.get('Handle')
+					lgr=fighandle# handle of the fig from the dict to plot over onto
+					self.fignum=self.fignum+1
+					graph=plotSpectrum(cut_name,0,1,1)
+					plot=[cut_name,graph]
+					self.figure_dict.setdefault(self.fignum,plot)
+					mergePlots(graph,lgr)
+				else:				
+					plotover=self.fignum #assumes that the plot over will be the last plotted figure
+					print plotover
+					lgr=self.figure_dict.get(self.fignum)[1]#gets the handle of the last fig from the dict
+					
+					self.fignum=self.fignum+1
+					graph=plotSpectrum(cut_name,0,1,1)
+					plot=[cut_name,graph]
+					self.figure_dict.setdefault(self.fignum,plot)
+					mergePlots(graph,lgr)
 				
 			else:
 				self.fignum=self.fignum+1
@@ -393,15 +444,24 @@ class data2D:
 			DeleteWorkspace('tmp')
 			
 			if kwargs.has_key('over'):
-				plotover=self.fignum #assumes that the plot over will be the last plotted figure
-				print plotover
-				lgr=self.figure_dict.get(self.fignum)[1]#gets the handle of the last fig from the dict
-				
-				self.fignum=self.fignum+1
-				graph=plotSpectrum(cut_name,0,1,1)
-				plot=[cut_name,graph]
-				self.figure_dict.setdefault(self.fignum,plot)
-				mergePlots(graph,lgr)
+				if kwargs.has_key('Handle'):
+					fighandle=kwargs.get('Handle')
+					lgr=fighandle# handle of the fig from the dict to plot over onto
+					self.fignum=self.fignum+1
+					graph=plotSpectrum(cut_name,0,1,1)
+					plot=[cut_name,graph]
+					self.figure_dict.setdefault(self.fignum,plot)
+					mergePlots(graph,lgr)
+				else:				
+					plotover=self.fignum #assumes that the plot over will be the last plotted figure
+					print plotover
+					lgr=self.figure_dict.get(self.fignum)[1]#gets the handle of the last fig from the dict
+					
+					self.fignum=self.fignum+1
+					graph=plotSpectrum(cut_name,0,1,1)
+					plot=[cut_name,graph]
+					self.figure_dict.setdefault(self.fignum,plot)
+					mergePlots(graph,lgr)
 				
 			else:
 				self.fignum=self.fignum+1
