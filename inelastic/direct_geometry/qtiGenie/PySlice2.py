@@ -218,7 +218,7 @@ class data2D:
 			else:
 				if kwargs.has_key('over'):
 					if kwargs.has_key('Handle'):
-						fighandle=kwargs.get_key('Handle')
+						fighandle=kwargs.get('Handle')
 						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,cutName=name,Handle=fighandle)
 					else:
 						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,cutName=name)
@@ -228,16 +228,16 @@ class data2D:
 			if kwargs.has_key('shoelace'):
 				if kwargs.has_key('over'):
 					if kwargs.has_key('Handle'):
-						fighandle=kwargs.get_key('Handle')
+						fighandle=kwargs.get('Handle')
 						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,shoelace=True,Handle=fighandle)
 					else:
 						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,shoelace=True)
 				else:
-					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,Emax,along='q',shoelace=True)
+					self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',shoelace=True)
 			else:
 				if kwargs.has_key('over'):
 					if kwargs.has_key('Handle'):
-						fighandle=kwargs.get_key('Handle')
+						fighandle=kwargs.get('Handle')
 						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True,Handle=fighandle)
 					else:
 						self.cut(self.data,intmin,intmax,cutmin,delcut,cutmax,along='q',over=True)
