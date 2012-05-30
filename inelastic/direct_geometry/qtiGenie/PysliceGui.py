@@ -51,12 +51,14 @@ class MainWindow(QtGui.QMainWindow):
 		self.data_dict={}
 		self.masterFigureDict={}
 		self.fignum=0
+		self.currentWkspNames=[]
+		
 		self.ui.axis.insertItem(1,'|Q|')
 		self.ui.axis.insertItem(2,'E')
 		
-		tmpwkps=mtd.getObjectNames()
-		iter=1
-		for item in tmpwkps: 
+		self.currentWkspNames=mtd.getObjectNames()
+		iter=0
+		for item in self.currentWkspNames: 
 			self.ui.WkspIn.insertItem(iter,item)
 			iter=iter+1
 		
@@ -92,7 +94,7 @@ class MainWindow(QtGui.QMainWindow):
  			self.ui.wkspList.takeItem(row)
  			
 			self.selectedWksp = tmp.split(':')[0]
-			string=tmp+'Bose Factor Applied with T='+str(temp)+'K'
+			string=tmp+'Bose Factor Applied with T='+" %.2f" % temp+'K'
 			self.ui.wkspList.insertItem(row,string)
 			data=self.data_dict.get(str(self.selectedWksp))
 			data.boseFac(temp)
@@ -110,19 +112,21 @@ class MainWindow(QtGui.QMainWindow):
  			row= self.ui.wkspList.currentRow()
  			self.ui.wkspList.takeItem(row)
 			self.selectedWksp = tmp.split(':')[0]
-			string=tmp+'Density of states calculated with T='+str(temp)+'K'
+			string=tmp+'Density of states calculated with T='+" %.2f" % temp+'K'
 			self.ui.wkspList.insertItem(row,string)
 			data=self.data_dict.get(str(self.selectedWksp))
 			data.gofe(temp,dbwfac)	
 		else:
  			print 'Enter temperature in kelvin for run'
  			
- 	def refreshlist(self):
- 		tmpwkps=mtd.getObjectNames()
-		iter=1
-		for item in tmpwkps: 
+ 	def refreshlist(self): 
+		self.ui.WkspIn.clear() 
+ 		self.currentWkspNames=mtd.getObjectNames()
+		iter=0
+		for item in self.currentWkspNames: 
 			self.ui.WkspIn.insertItem(iter,item)
-			iter=iter+1	
+			iter=iter+1
+			
 	def cutMin(self):
 		self.cutMin=self.ui.cutMin.text()
 		#print self.cutMin
@@ -272,6 +276,25 @@ class MainWindow(QtGui.QMainWindow):
 			print 'Select data to display'
 				
 	def calcProj(self):
+	
+		wkspName=str(self.ui.WkspIn.currentText())
+		
+		if self.data_dict.get(str(wkspName)) != None:
+			print 'S(qw) data from ',wkspName,'exists, deleting existing instance'
+			tmpdata=self.data_dict.get(str(wkspName))
+ 			DeleteWorkspace(tmpdata.data)
+ 			DeleteWorkspace(tmpdata.data_disp)
+ 			del self.data_dict[str(wkspName)]
+ 			#now deal with the displayed text
+ 			numLines=self.ui.wkspList.count()
+ 			for i in range(numLines):
+ 				tmp= self.ui.wkspList.item(i).text()
+				wkspExists=tmp.split(':')[0]
+				
+				if wkspExists==wkspName:
+					self.ui.wkspList.takeItem(i)
+					
+				
 		data=mtd[str(self.ui.WkspIn.currentText())]
 		numHist=data.getNumberHistograms()
 		minTheta=data.detectorTwoTheta(data.getDetector(0))
@@ -295,7 +318,7 @@ class MainWindow(QtGui.QMainWindow):
 		
 		deltaQ=(Qmax-Qmin)/numHist
 		text=str(self.ui.WkspIn.currentText())
-		string1=text+': ei= '+str(ei)+'meV qmin= '+str(Qmin)+'qmax = '+str(Qmax)
+		string1=text+': ei= '+" %.2f" % ei+'meV qmin= '+" %.2f" % Qmin+'qmax = '+" %.2f" % Qmax
 		rebin=str(Qmin)+','+str(deltaQ)+','+str(Qmax)
 		self.ui.wkspList.addItem(string1)
 		#print self.ui.WkspIn.currentText()
