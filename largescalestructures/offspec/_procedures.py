@@ -624,7 +624,7 @@ def nrNRFn(runList,nameList,incidentAngles,DBList,specChan,minSpec,maxSpec,gpara
 			if dlist[k] != "none":
 				Divide(i+"norm",dlist[k],i+"norm")
 				ReplaceSpecialValues(i+"norm",i+"norm","0.0","0.0","0.0","0.0")
-				ConvertUnits(i+"norm",i+"RvQ",Target="MomentumTransfer")
+			ConvertUnits(i+"norm",i+"RvQ",Target="MomentumTransfer")
 		else:
 			minSp=int(minSpec)
 			maxSp=int(maxSpec)
@@ -773,12 +773,14 @@ def nrDBFn(runListShort,nameListShort,runListLong,nameListLong,nameListComb,minS
 			if (diagnostics=="0"):
 				DeleteWorkspace(nlistS[i]+"mon")
 				DeleteWorkspace(nlistS[i]+"det")
-				DeleteWorkspace(nlistS[i]+"sum")
+				if nspec != 4:
+					DeleteWorkspace(nlistS[i]+"sum")
 				DeleteWorkspace(nlistS[i]+"norm")
 				DeleteWorkspace(nlistS[i])
 				DeleteWorkspace(nlistL[i]+"mon")
 				DeleteWorkspace(nlistL[i]+"det")
-				DeleteWorkspace(nlistL[i]+"sum")
+				if nspec != 4:
+					DeleteWorkspace(nlistL[i]+"sum")
 				DeleteWorkspace(nlistL[i]+"norm")
 				DeleteWorkspace(nlistL[i])
 		
