@@ -1074,6 +1074,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		print '##### Evaluate the integral from the monovan run and calculate the correction factor ######'
 		
 		Integration(InputWorkspace=deltaE_wkspace_monovan,OutputWorkspace='van_int',RangeLower=str(reducer.monovan_integr_range[0]),RangeUpper=str(reducer.monovan_integr_range[1]),IncludePartialBins='1')
+		ei_monovan = (deltaE_wkspace_monovan.getSampleDetails().getLogData("Ei").value)		
 		DeleteWorkspace(deltaE_wkspace_monovan)
 		data_ws=mtd['van_int']
 		#data_ws=ConvertToMatrixWorkspace(data_ws)
@@ -1119,7 +1120,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		#print 'output' ,integral_monovan
 		
 		absnorm_factor = integral_monovan * (float(reducer.van_rmm)/float(van_mass)) 
-		ei_monovan = (deltaE_wkspace_monovan.getSampleDetails().getLogData("Ei").value)
+
 		
 		if ei_monovan >= 200.0:
 	
@@ -1198,90 +1199,7 @@ def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
 		print 'Deleteing previous instance of temp data'
 		DeleteWorkspace(inst_name+'00000.raw')
 	
-	#repopulate defualts
-	if kwargs.has_key('norm_method'):
-		reducer.normalise_method = kwargs.get('norm_method')
-		print 'Setting normalisation method to ', kwargs.get('norm_method')
-	else:
-		reducer.normalise_method = 'monitor-1'
-	if kwargs.has_key('mask_run'):
-		mask_run = kwargs.get('mask_run')
-		print 'Using run ', kwargs.get('mask_run'),' for diag'
-	else:
-		mask_run=sample_run
 	
-	if kwargs.has_key('background'):
-		reducer.background = kwargs.get('background')
-		print 'Setting background option to ', kwargs.get('background')
-	else:
-		reducer.background = False
-	
-	if kwargs.has_key('fixei'):
-		reducer.fix_ei = kwargs.get('fixei')
-		print 'Setting fixei to ', kwargs.get('fixei')
-	else:
-		reducer.fix_ei = False
-	
-	if kwargs.has_key('save_format'):
-		reducer.save_formats = kwargs.get('save_format')
-		print 'Setting save format to ', kwargs.get('save_format')
-	else:
-		reducer.save_formats = ['.spe']
-	#Set parameters for the run
-	if kwargs.has_key('bkgd_range'):
-		background_range = kwargs.get('bkgd_range')
-		print 'Setting background intergration to ', kwargs.get('bkgd_range')
-	else:
-		background_range=[15000,19000]
-	
-	if kwargs.has_key('detector_van_range'):
-		reducer.wb_integr_range = kwargs.get('detector_van_range')
-		print 'Setting detector van int range to ', kwargs.get('detector_van_range')
-	else:
-		reducer.wb_integr_range=[20,300]
-	
-	if kwargs.has_key('diag_sigma'):
-		diag_median_rate_limit_hi = kwargs.get('diag_sigma')
-		print 'Setting diag sigma to ', kwargs.get('diag_sigma')
-	else:
-		diag_median_rate_limit_hi=3.0
-	
-	if kwargs.has_key('diag_remove_zero'):
-		rm_zero = kwargs.get('diag_remove_zero')
-		print 'Setting diag to reject zero backgrounds '
-	else:
-		rm_zero =False
-	if kwargs.has_key('bleed'):
-		bleed_switch = kwargs.get('bleed')
-		print 'Setting bleed ', kwargs.get('bleed')
-	else:
-		print 'bleed set to default'
-	
-	if kwargs.has_key('det_cal_file'):
-		cal_file = kwargs.get('det_cal_file')
-		
-		
-	else:
-		print 'Setting detector calibration to detector block info from ', sample_run
-		reducer.det_cal_file =None
-		reducer.relocate_dets = False
-	
-	if mtd.workspaceExists(str(sample_run))==True and kwargs.has_key('det_cal_file')==False:
-		print 'For data input type: workspace detector calibration must be specified'
-		print 'use Keyword det_cal_file with a valid detctor file or run number'
-		return
-		
-	diag_median_rate_limit_lo=0.1
-	bkgd_median_rate_limit=5.0
-	
-	
-	if kwargs.has_key('one2one'):
-		reducer.map_file =None
-		print 'one2one selected'
-		
-	else:
-		map_file=mapingfile+'.map'
-
 	reducer.energy_bins = rebin
 	
 	mon_list1=reducer.ei_mon_spectra
@@ -1299,7 +1217,14 @@ def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
 		#number of spectrums per instrument and where the detectors start (i.e. 5 for mari but 1 for merlin)
 		numspec=41472
 		spectrum_start=1
-	print 'output will be normalised to', reducer.normalise_method
+	
+	if kwargs.has_key('det_cal_file'):
+		cal_file = kwargs.get('det_cal_file')	
+	else:
+		print 'Setting detector calibration to detector block info from ', sample_run
+		
+		reducer.det_cal_file =None
+		reducer.relocate_dets = False
 	nums=range(spectrum_start,numspec,nchunk)
 	output_wkspName=wksp_out
 	for i in nums:
@@ -1318,13 +1243,13 @@ def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
 	
 		LoadRaw(Filename=sample_run,OutputWorkspace="run_wksp",LoadLogFiles="0",SpectrumList=speclist)
 	
-		tmp=arb_units("wb_wksp","run_wksp",ei_guess,rebin,'none_for_this_run_type',det_cal_file=cal_file,one2one=True,bleed=False)
+		tmp=arb_units("wb_wksp","run_wksp",ei_guess,rebin,'none_for_this_run_type',one2one=True,bleed=False,**kwargs)
 		
 		
 		DeleteWorkspace("wb_wksp")
 		DeleteWorkspace("run_wksp")
 		#DeleteWorkspace("_wksp.spe")
-		DeleteWorkspace("_wksp.spe-white")
+		#DeleteWorkspace("_wksp.spe-white")
 		
 		if i == spectrum_start:
 			#crop the workspace to remove the monitors, the workpsace seems sorted on specnumber so this is ok for instruments where the monitors are at the end of the 
@@ -1336,7 +1261,7 @@ def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
 		print int(((float(i+endIndex))/float(numspec))*100),'% complete'
 		print '===============================================================================' 
 	
-	GroupDetectors(InputWorkspace=output_wkspName,OutputWorkspace=output_wkspName,MapFile=map_file)
+	GroupDetectors(InputWorkspace=output_wkspName,OutputWorkspace=output_wkspName,MapFile=mapingfile)
 
 	
 	

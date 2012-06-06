@@ -285,6 +285,7 @@ def calculate(ei,frequency,**kwargs):
 		
 			van_el[i],van,flux[i]=calc_chop(ei,freq[i]*(2*math.pi),en_lo,en_hi)
 	else:
+		
 		van_el,van,flux=calc_chop(ei,omega,en_lo,en_hi)
 
 
