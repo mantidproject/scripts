@@ -71,7 +71,15 @@ class MainWindow(QtGui.QMainWindow):
 			string2= 'Resolution of elastic line at '+str(freq)+ 'Hz = '+"%.2f" %van_el+ 'meV = '+"%.2f" % ((van_el/self.ei)*100)+ '%'
 			self.ui.disp.addItem(string1)
 			self.ui.disp.addItem(string2)
-app = QtGui.QApplication(sys.argv)
+
+def qapp():
+	if QtGui.QApplication.instance():
+		app = QtGui.QApplication.instance()
+	else:
+		app = QtGui.QApplication(sys.argv)
+	return app
+ 
+app = qapp()
 reducer = MainWindow()
 reducer.show()
 app.exec_()

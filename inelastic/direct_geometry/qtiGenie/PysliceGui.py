@@ -330,7 +330,14 @@ class MainWindow(QtGui.QMainWindow):
 		data.rebinproj(rebin)
 		self.data_dict.setdefault(instring,data)
 		
-app = QtGui.QApplication(sys.argv)
+def qapp():
+	if QtGui.QApplication.instance():
+		app = QtGui.QApplication.instance()
+	else:
+		app = QtGui.QApplication(sys.argv)
+	return app
+ 
+app = qapp()
 reducer = MainWindow()
 reducer.show()
 app.exec_()
