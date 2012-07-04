@@ -4,7 +4,10 @@ import numpy
 from mantidsimple import *
 import MantidFramework 
 MantidFramework.mtd.initialise()
-from mantidplot import *
+try:
+  from mantidplot import *
+except ImportError:
+  pass
 '''
 chop(inst,ei,chop_type,frequency):
 python implementation of CHOP ver 1.0

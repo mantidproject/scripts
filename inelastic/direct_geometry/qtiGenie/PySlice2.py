@@ -8,12 +8,14 @@ from mantidplotpy import *
 import dgreduce
 import inspect
 import numpy
-from mantidplot import *
+try:
+  from mantidplot import *
+except ImportError:
+  pass
 from mantid import *
 from mantid.simpleapi import *
 import pprint
 from numpy import *
-#import qti
 
 
 
