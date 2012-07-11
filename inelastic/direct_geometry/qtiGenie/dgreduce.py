@@ -628,7 +628,11 @@ def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess
 		
 	reducer.energy_bins = rebin
 	#monovan info
-	reducer.abs_map_file=monovan_mapfile+'.map'
+	fileName, fileExtension = os.path.splitext(monovan_mapfile)
+	if (not fileExtension):
+		monovan_mapfile=monovan_mapfile+'.map'
+	reducer.abs_map_file =monovan_mapfile 
+
 	if kwargs.has_key('abs_units_van_range'):
 		reducer.monovan_integr_range = kwargs.get('abs_units_van_range')
 		print 'Setting absolute units van range int range to ', kwargs.get('abs_units_van_range')
@@ -951,10 +955,14 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	
 	if kwargs.has_key('one2one'):
 		reducer.map_file =None
+		map_file = ""
 		print 'one2one selected'
 		
 	else:
-		reducer.map_file = map_file+'.map'
+		fileName, fileExtension = os.path.splitext(map_file)
+		if (not fileExtension):
+			map_file =  map_file+'.map'
+		reducer.map_file = map_file;
 	
 	if kwargs.has_key('hardmaskPlus'):
 		HardMaskFile = kwargs.get('hardmaskPlus')
@@ -966,7 +974,11 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		
 	reducer.energy_bins = rebin
 	#monovan info
-	reducer.abs_map_file=monovan_mapfile+'.map'
+	fileName, fileExtension = os.path.splitext(monovan_mapfile)
+	if (not fileExtension):
+		monovan_mapfile=monovan_mapfile+'.map'
+	reducer.abs_map_file =monovan_mapfile 
+
 	if kwargs.has_key('abs_units_van_range'):
 		reducer.monovan_integr_range = kwargs.get('abs_units_van_range')
 		print 'Setting absolute units van range int range to ', kwargs.get('abs_units_van_range')
@@ -991,13 +1003,17 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		sample_run=sample_run[0]
 	
 	if kwargs.has_key('hardmaskOnly'):
-		totalmask = kwargs.get('hardmaskOnly')
-		print 'Using hardmask from ', totalmask
-		#next stable version can replace this with loadmask algoritum
-		specs=diag_load_mask(totalmask)
+		if (kwargs.get('hardmaskOnly')):		
+			totalmask = kwargs.get('hardmaskOnly')
+			print 'Using hardmask from ', totalmask
+			#next stable version can replace this with loadmask algoritum
+			specs=diag_load_mask(totalmask)
+		else:
+			specs=""
+		  
 		CloneWorkspace(InputWorkspace=sample_run,OutputWorkspace='mask_wksp')
 		MaskDetectors(Workspace='mask_wksp',SpectraList=specs)
-		masking=mtd['mask_wksp']
+		masking =mtd['mask_wksp']
 	else:
 		print '########### Run diagnose for sample run ##############'
 		masking = reducer.diagnose(wb_run, 
@@ -1021,6 +1037,13 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 			bleed_maxrate=rate,
 			bleed_pixels=pixels,
 			hard_mask=HardMaskFile)
+	
+	
+	if kwargs.has_key('use_sam_msk_on_monovan') and kwargs.get('use_sam_msk_on_monovan')==True:
+		print 'applying sample run mask to mono van'
+		reducer.spectra_masks=masking
+		fail_list=get_failed_spectra_list(masking)		
+	else:
 		print '########### Run diagnose for monochromatic vanadium run ##############'
 		masking2 = reducer.diagnose(wb_mono, 
 			sample=mono_van,
@@ -1043,17 +1066,10 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 			bleed_maxrate=rate,
 			bleed_pixels=pixels,
 			hard_mask=HardMaskFile)
-		
-		total_mask=masking+masking2
-	
-	
-	if kwargs.has_key('use_sam_msk_on_monovan') and kwargs.get('use_sam_msk_on_monovan')==True:
-		print 'applying sample run mask to mono van'
-		reducer.spectra_masks=masking
-	else:
-		reducer.spectra_masks=total_mask
-		
-	fail_list=get_failed_spectra_list('total_mask')
+				
+		total_mask=masking+masking2			
+		reducer.spectra_masks=total_mask		    
+		fail_list=get_failed_spectra_list('total_mask')
 	
 	
 	print 'Diag found ', len(fail_list),'bad spectra'
@@ -1063,7 +1079,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	#Run the conversion first on the sample
 	deltaE_wkspace_sample = reducer.convert_to_energy(sample_run, ei_guess, wb_run)
 	#now on the mono_vanadium run swap the mapping file
-	reducer.map_file = monovan_mapfile+'.map'
+	reducer.map_file = monovan_mapfile	
 	deltaE_wkspace_monovan = reducer.convert_to_energy(mono_van, ei_guess, wb_mono)
 
 	
