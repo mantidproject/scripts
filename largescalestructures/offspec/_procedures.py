@@ -379,8 +379,9 @@ def nrSESANSFn(runList,nameList,P0runList,P0nameList,minSpec,maxSpec,upPeriod,do
 	SEConstList=parseNameList(SEConstants)
 	k=0
 	for i in nlist:
+		if lnPOverLam == "2":
+			CloneWorkspace(InputWorkspace=i+"SESANS",OutputWorkspace=i+"SESANS_P")
 		a1=mantid.getMatrixWorkspace(i+"SESANS")
-		
 		x=a1.readX(0)
 		for j in range(len(x)-1):
 			lam=((a1.readX(0)[j]+a1.readX(0)[j+1])/2.0)/10.0
@@ -388,8 +389,8 @@ def nrSESANSFn(runList,nameList,P0runList,P0nameList,minSpec,maxSpec,upPeriod,do
 			e=a1.readE(0)[j]
 			if lnPOverLam == "2":
 				if p > 0.0:
-					a1.dataY(0)[j]=log(p)/((lam*1.0e-9)**2)
-					a1.dataE(0)[j]=(e/p)/((lam*1.0e-9)**2)
+					a1.dataY(0)[j]=log(p)/((lam)**2)
+					a1.dataE(0)[j]=(e/p)/((lam)**2)
 				else:
 					a1.dataY(0)[j]=0.0
 					a1.dataE(0)[j]=0.0
@@ -404,6 +405,8 @@ def nrSESANSFn(runList,nameList,P0runList,P0nameList,minSpec,maxSpec,upPeriod,do
 	if nspec > 4:
 		k=0
 		for i in nlist:
+			if lnPOverLam == "2":
+				CloneWorkspace(InputWorkspace=i+"2dSESANS",OutputWorkspace=i+"2dSESANS_P")
 			a1=mantid.getMatrixWorkspace(i+"2dSESANS")
 			nspec=a1.getNumberHistograms()
 			for l in range(nspec):
@@ -453,7 +456,7 @@ def nrCalcSEConst(RFFrequency,poleShoeAngle):
 #
 #===========================================================
 #
-def nrSESANSP0Fn(P0runList,P0nameList,minSpec,maxSpec,upPeriod,downPeriod,gparams):
+def nrSESANSP0Fn(P0runList,P0nameList,minSpec,maxSpec,upPeriod,downPeriod,gparams,diagnostics="0"):
 
 	P0nlist=parseNameList(P0nameList)
 	mtd.sendLogMessage("This is the P0nameslist:"+str(P0nlist))
@@ -482,17 +485,19 @@ def nrSESANSP0Fn(P0runList,P0nameList,minSpec,maxSpec,upPeriod,downPeriod,gparam
 		else:
 			CropWorkspace(i,i+"det",StartWorkspaceIndex=minSp,EndWorkspaceIndex=maxSp)
 		Divide(i+"det",i+"mon",i+"norm")
-		DeleteWorkspace(i+"mon")
-		DeleteWorkspace(i+"det")
-		DeleteWorkspace(i)
+		if (diagnostics=="0"):
+			DeleteWorkspace(i+"mon")
+			DeleteWorkspace(i+"det")
+			DeleteWorkspace(i)
 		Minus(i+"norm_"+upPeriod,i+"norm_"+downPeriod,"num")
 		Plus(i+"norm_2",i+"norm_1","den")
 		Divide("num","den",i+"pol")
 		ReplaceSpecialValues(i+"pol",i+"pol",0.0,0.0,0.0,0.0)
-		DeleteWorkspace(i+"norm_2")
-		DeleteWorkspace(i+"norm_1")
-		DeleteWorkspace("num")
-		DeleteWorkspace("den")
+		if (diagnostics=="0"):
+			DeleteWorkspace(i+"norm_2")
+			DeleteWorkspace(i+"norm_1")
+			DeleteWorkspace("num")
+			DeleteWorkspace("den")
 #
 #===========================================================
 #
