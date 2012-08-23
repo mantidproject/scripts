@@ -30,11 +30,13 @@ LoadEventNexus(Filename=nexus_file, OutputWorkspace=autows)
 
 # Get Ei from file
 Ei=mtd[autows].getRun()['EnergyRequest'].value[0]
-Tzero = 25.0 + 85.0/(1+(Ei/27.0)**4)
+#Tzero = 25.0 + 85.0/(1+(Ei/27.0)**4)
+Tzero = -1.0*(4.0 + 107.0/(1.0+(Ei/31.0)**3))
+#print "Tzero=",Tzero
 
 # Work out some energy bins
 emin = -(2.0*Ei)
-emax = Ei-1.0
+emax = Ei*0.9
 estep = (3.0*Ei)/250
 energy_bins = "%f,%f,%f" % (emin,estep,emax)
 
