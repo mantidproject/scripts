@@ -2,13 +2,17 @@ import os
 import sys
 import shutil
 
-mantid_root = "/opt/Mantid"
+#mantid_root = "/opt/Mantid"
+mantid_root = "/SNS/users/scu/build/mantid/adara-demo"
 mantid_bin = sys.path.append(os.path.join(mantid_root, "bin"))
 
 from mantid.simpleapi import *
 
-nexus_file=sys.argv[1]
-output_directory=sys.argv[2]
+#nexus_file=sys.argv[1]
+#output_directory=sys.argv[2]
+
+nexus_file="/SNS/HYSA/IPTS-8072/nexus/HYSA_67.nxs.h5"
+output_directory="/SNS/HYSA/shared/autoreduce/testoutput/"
 
 filename = os.path.split(nexus_file)[-1]
 run_number = filename.split('_')[1]
@@ -18,13 +22,16 @@ backgroundws = "__background_ws"
 tibws = "__tib_ws"
 
 # TODO: Get this value from the NeXus File.
-Ei = 70.0
 Tzero = -26.840661475400001
-energy_bins = "-100,0.5,60"
 
 processed_filename = os.path.join(output_directory, "HYSA_" + run_number + "_spe.nxs")
 
-LoadEventNexus(Filename=nexus_file,OutputWorkspace=autows)
+LoadEventNexus(Filename=nexus_file, OutputWorkspace=autows)
+
+Ei=mtd[autows].getRun()['EnergyRequest'].value
+energy_bins = "-20,0.5,20"
+
+
 ChangeBinOffset(InputWorkspace=autows,OutputWorkspace=autows,Offset=Tzero)
 Rebin(InputWorkspace=autows,OutputWorkspace=backgroundws,Params='6000,2000,8000')
 ConvertUnits(InputWorkspace=autows,OutputWorkspace=autows,Target='DeltaE',EMode='Direct',EFixed=Ei)
@@ -45,7 +52,7 @@ Rebin(InputWorkspace=autows,OutputWorkspace=autows,Params=energy_bins)
 GroupDetectors(InputWorkspace=autows,OutputWorkspace=autows,MapFile=r'/SNS/HYS/shared/hys_group/hys_group4.map',Behaviour='Average')
 ConvertToDistribution(Workspace=autows)
 # Save a file
-SaveNexus(Filename=processed_filename, InputWorkspace=autows) 
+SaveNexus(Filename=processed_filename, InputWorkspace=autows)
 
 
 
