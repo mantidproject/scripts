@@ -24,6 +24,7 @@ backgroundws = "__background_ws"
 tibws = "__tib_ws"
 
 processed_filename = os.path.join(output_directory, "HYSA_" + run_number + "_spe.nxs")
+nxspe_filename=os.path.join(output_directory, "HYSA_" + run_number + ".nxspe")
 
 # Load the data
 LoadEventNexus(Filename=nexus_file, OutputWorkspace=autows)
@@ -32,6 +33,7 @@ LoadEventNexus(Filename=nexus_file, OutputWorkspace=autows)
 Ei=mtd[autows].getRun()['EnergyRequest'].value[0]
 #Tzero = 25.0 + 85.0/(1+(Ei/27.0)**4)
 Tzero = -1.0*(4.0 + 107.0/(1.0+(Ei/31.0)**3))
+#print "Ei=",Ei
 #print "Tzero=",Tzero
 
 # Work out some energy bins
@@ -61,7 +63,7 @@ GroupDetectors(InputWorkspace=autows,OutputWorkspace=autows,MapFile=r'/SNS/HYS/s
 ConvertToDistribution(Workspace=autows)
 # Save a file
 SaveNexus(Filename=processed_filename, InputWorkspace=autows)
-
+SaveNXSPE(Filename=nxspe_filename, InputWorkspace=autows)
 
 
 
