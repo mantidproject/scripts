@@ -59,7 +59,7 @@ He3TubeEfficiency(InputWorkspace=autows,OutputWorkspace=autows)
 ConvertUnits(InputWorkspace=autows,OutputWorkspace=autows,Target='DeltaE',EMode='Direct',EFixed=Ei)
 CorrectKiKf(InputWorkspace=autows,OutputWorkspace=autows)
 Rebin(InputWorkspace=autows,OutputWorkspace=autows,Params=energy_bins)
-GroupDetectors(InputWorkspace=autows,OutputWorkspace=autows,MapFile=r'/SNS/HYS/shared/hys_group/hys_group4.map',Behaviour='Average')
+GroupDetectors(InputWorkspace=autows,OutputWorkspace=autows,MapFile=r'/SNS/HYSA/shared/autoreduce/hys_group4.map',Behaviour='Average')
 ConvertToDistribution(Workspace=autows)
 # Save a file
 SaveNexus(Filename=processed_filename, InputWorkspace=autows)
