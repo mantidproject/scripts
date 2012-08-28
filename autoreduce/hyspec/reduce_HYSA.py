@@ -36,6 +36,9 @@ Tzero = -1.0*(4.0 + 107.0/(1.0+(Ei/31.0)**3))
 #print "Ei=",Ei
 #print "Tzero=",Tzero
 
+# Get Angle
+s1=mtd[autows].getRun()['s1'].value[0]
+
 # Work out some energy bins
 emin = -(2.0*Ei)
 emax = Ei*0.9
@@ -63,7 +66,7 @@ GroupDetectors(InputWorkspace=autows,OutputWorkspace=autows,MapFile=r'/SNS/HYSA/
 ConvertToDistribution(Workspace=autows)
 # Save a file
 SaveNexus(Filename=processed_filename, InputWorkspace=autows)
-SaveNXSPE(Filename=nxspe_filename, InputWorkspace=autows)
+SaveNXSPE(Filename=nxspe_filename, InputWorkspace=autows, Psi=str(s1), KiOverKfScaling='1')
 
 
 
