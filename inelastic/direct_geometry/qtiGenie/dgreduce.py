@@ -1334,6 +1334,11 @@ def diag_load_mask(hard_mask):
     
 def getAbsNormalizationFactor(deltaE_wkspace,min,max):
     """
+    get absolute normalization factor for monochromatic vanadium
+    Inputs:
+    @param: deltaE_wkspace  -- the name (string) of monovan workspace, converted to energy
+    @param: min             -- the string representing the minimal energy to integrate the spectra
+    @param: max             -- the string representing the maximal energy to integrate the spectra    
     """
     global reducer,van_mass
     Integration(InputWorkspace=deltaE_wkspace,OutputWorkspace='van_int',RangeLower=min,RangeUpper=max,IncludePartialBins='1')
