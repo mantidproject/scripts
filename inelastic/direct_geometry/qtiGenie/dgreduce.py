@@ -29,7 +29,7 @@ def setup(instname):
 		bleed_switch=True
 		rate=0.01
 		pixels=80
-		van_mass=32.58
+		van_mass=32.62
 	elif instname=='MAP' or instname=='map':
 		print 'setup maps'
 		inst_name='MAP'
@@ -636,7 +636,7 @@ def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess
 
 	if kwargs.has_key('abs_units_van_range'):
 		reducer.monovan_integr_range = kwargs.get('abs_units_van_range')
-		print 'Setting absolute units vanadioum integratiin range to ', kwargs.get('abs_units_van_range')
+		print 'Setting absolute units vanadium integratiOn range to ', kwargs.get('abs_units_van_range')
 	else:
 		reducer.monovan_integr_range=[-40,40]
 	
