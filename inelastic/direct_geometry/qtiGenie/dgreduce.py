@@ -399,6 +399,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	RenameWorkspace(results_name,wksp_out)
 	
 	return mtd[wksp_out]
+    
 	
 def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,**kwargs):
 	"""	
@@ -806,6 +807,23 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	global reducer, rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
 	print 'DGreduce run for ',inst_name,'run number ',sample_run
 	print 'Output will be in absolute units of mb/str/mev/fu'
+
+	#reducer.van_rmm =50.94
+	reducer.van_mass=van_mass
+	#sample info
+	reducer.sample_mass=samp_mass
+	reducer.sample_rmm =samp_rmm
+	print 'Using vanadium mass: ',van_mass
+	print '        sample mass: ',samp_mass    
+	print '        sample_rmm : ',samp_rmm 
+    # check if mono-vanadium is provided as multiple files list or just put in brackets ocasionally
+	if isinstance(mono_van,list):
+             if len(mono_van)>1:
+                 raise IOError(' Can currently work only with single monovan file but list supplied')
+             else:
+                mono_van = mono_van[0];
+
+    
 	try:
 		n,r=lhs('both')
 		wksp_out=r[0]
@@ -937,6 +955,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	else:
 		print 'bleed set to default'
 	#####diad end########
+    
 	
 	if kwargs.has_key('det_cal_file'):
 		reducer.det_cal_file = kwargs.get('det_cal_file')
@@ -984,12 +1003,8 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		print 'Setting absolute units van range int range to ', kwargs.get('abs_units_van_range')
 	else:
 		reducer.monovan_integr_range=[-40,40]
+
 	
-	#reducer.van_rmm =50.94
-	reducer.van_mass=van_mass
-	#sample info
-	reducer.sample_mass=samp_mass
-	reducer.sample_rmm =samp_rmm
 	
 	print 'output will be normalised to', reducer.normalise_method
 	if (numpy.size(sample_run)) > 1 and kwargs.has_key('sum') and kwargs.get('sum')==True:
@@ -1037,8 +1052,9 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 			bleed_maxrate=rate,
 			bleed_pixels=pixels,
 			hard_mask=HardMaskFile)
+            
 	
-	
+    
 	if kwargs.has_key('use_sam_msk_on_monovan') and kwargs.get('use_sam_msk_on_monovan')==True:
 		print 'applying sample run mask to mono van'
 		reducer.spectra_masks=masking
@@ -1072,15 +1088,12 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		fail_list=get_failed_spectra_list('total_mask')
 	
 	
-	print 'Diag found ', len(fail_list),'bad spectra'
+	print 'Diag found ', len(fail_list),'bad spectra '
 	
 	
 	
 	#Run the conversion first on the sample
 	deltaE_wkspace_sample = reducer.convert_to_energy(sample_run, ei_guess, wb_run)
-	#now on the mono_vanadium run swap the mapping file
-	reducer.map_file = monovan_mapfile	
-	deltaE_wkspace_monovan = reducer.convert_to_energy(mono_van, ei_guess, wb_mono)
 
 	
 	if kwargs.has_key('mono_correction_factor'):
@@ -1088,72 +1101,14 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		print 'Using supplied correction factor for absolute units'
 	else:
 		print '##### Evaluate the integral from the monovan run and calculate the correction factor ######'
+		print '      Setting absolute units van range integration range to: ', reducer.monovan_integr_range                
+        #now on the mono_vanadium run swap the mapping file
+		reducer.map_file = monovan_mapfile	
+		deltaE_wkspace_monovan = reducer.convert_to_energy(mono_van, ei_guess, wb_mono)
+        
+		absnorm_factor = getAbsNormalizationFactor(deltaE_wkspace_monovan.getName(),str(reducer.monovan_integr_range[0]),str(reducer.monovan_integr_range[1]))
 		
-		Integration(InputWorkspace=deltaE_wkspace_monovan,OutputWorkspace='van_int',RangeLower=str(reducer.monovan_integr_range[0]),RangeUpper=str(reducer.monovan_integr_range[1]),IncludePartialBins='1')
-		ei_monovan = (deltaE_wkspace_monovan.getSampleDetails().getLogData("Ei").value)		
-		DeleteWorkspace(deltaE_wkspace_monovan)
-		data_ws=mtd['van_int']
-		#data_ws=ConvertToMatrixWorkspace(data_ws)
-		nhist = data_ws.getNumberHistograms()
-		#ConvertFromDistribution(data_ws)
-
-		#print nhist
-
-		average_value = 0.0
-		weight_sum = 0.0
-
-		for i in range(nhist):
-			try:
-		
-				det = data_ws.getDetector(i)
-	
-			except Exception:
-		
-				continue
-			if det.isMasked():
-				continue
-	
-			y_value = data_ws.readY(i)[0]
-	
-			#print 'ydat= ', y_value
-	
-			if y_value != y_value:
-		
-				continue
-	
-			weight = 1.0/data_ws.readE(i)[0]
-	
-			#print 'error value =' ,data_ws.readE(i)[0]
-	
-			average_value += y_value * weight
-	
-			#print 'average ',average_value
-	
-			weight_sum += weight
-	
-			#print 'weight ', weight
-		integral_monovan=average_value / weight_sum
-		#print 'output' ,integral_monovan
-		
-		absnorm_factor = integral_monovan * (float(reducer.van_rmm)/float(van_mass)) 
-
-		
-		if ei_monovan >= 200.0:
-	
-			xsection = 421.0
-
-		else:
-	
-			xsection = 400.0 + (ei_monovan/10.0)
-
-		
-		absnorm_factor /= xsection
-		#print absnorm_factor
-
-		
-		absnorm_factor= absnorm_factor *(float(reducer.sample_mass)/float(reducer.sample_rmm))
 	print 'Absolute correction factor =',absnorm_factor
-	DeleteWorkspace(data_ws)
 	CreateSingleValuedWorkspace(OutputWorkspace='AbsFactor',DataValue=absnorm_factor)
 	end_time=time.time()
 	results_name=str(sample_run)+'.spe'
@@ -1376,3 +1331,72 @@ def diag_load_mask(hard_mask):
         return ''
     # Return everything after the very first comma we added in the line above
     return spectra_list.rstrip(',')
+    
+def getAbsNormalizationFactor(deltaE_wkspace,min,max):
+    """
+    """
+    global reducer,van_mass
+    Integration(InputWorkspace=deltaE_wkspace,OutputWorkspace='van_int',RangeLower=min,RangeUpper=max,IncludePartialBins='1')
+    input_ws = mtd[deltaE_wkspace]
+    ei_monovan = input_ws.getSampleDetails().getLogData("Ei").value
+    data_ws=mtd['van_int']
+   #data_ws=ConvertToMatrixWorkspace(data_ws)
+    nhist = data_ws.getNumberHistograms()
+   #ConvertFromDistribution(data_ws)
+
+   #print nhist
+
+    average_value = 0.0
+    weight_sum = 0.0
+    ic=0;
+    for i in range(nhist):
+        try:
+            det = data_ws.getDetector(i)
+        except Exception:
+            continue
+        if det.isMasked():
+            continue
+
+        signal = data_ws.readY(i)[0]
+        error = data_ws.readE(i)[0]
+        
+        if signal != signal:	#ignore NaN
+            continue
+        if (error<=0):          # ignore Inf (0 in error are probably 0 in signal
+            continue
+            
+        weight = 1.0/error
+        average_value += signal * weight
+        weight_sum += weight
+        ic += 1
+        #print 'signal value =' ,y_value
+        #print 'error value =' ,error        
+        #print 'average ',average_value        
+   #---------------- Loop finished
+   
+    integral_monovan=average_value / weight_sum
+    van_multiplier = (float(reducer.van_rmm)/float(van_mass))
+    absnorm_factor = integral_monovan * van_multiplier
+    #print 'Monovan integral :' ,integral_monovan        
+    
+    if ei_monovan >= 200.0:
+        xsection = 421.0
+    else:
+        xsection = 400.0 + (ei_monovan/10.0)
+
+    absnorm_factor /= xsection
+    sample_multiplier = (float(reducer.sample_mass)/float(reducer.sample_rmm))
+    absnorm_factor= absnorm_factor *sample_multiplier
+    
+    if(absnorm_factor !=absnorm_factor):    # It is an error, print diagnostics:
+        print '-----------> Absolute normalization factor is NaN <------------------------------------------------'
+        print '-----------> Processing workspace: ',deltaE_wkspace
+        print '-----------> Monovan Integration range : min=',min,' max=',max
+        print '-----------> Calculated: ',ic,' spectra with average value: ',average_value, 'and total weight: ',weight_sum
+        print '-----------> Van multiplier: ',van_multiplier,'  sample multiplier: ',sample_multiplier, 'and xsection: ',xsection		
+        print '---------------------------------------------------------------------------------------------------'	
+    else:
+        DeleteWorkspace(deltaE_wkspace)
+    DeleteWorkspace(data_ws)
+    return absnorm_factor
+    
