@@ -636,7 +636,7 @@ def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess
 
 	if kwargs.has_key('abs_units_van_range'):
 		reducer.monovan_integr_range = kwargs.get('abs_units_van_range')
-		print 'Setting absolute units van range int range to ', kwargs.get('abs_units_van_range')
+		print 'Setting absolute units vanadioum integratiin range to ', kwargs.get('abs_units_van_range')
 	else:
 		reducer.monovan_integr_range=[-40,40]
 	
@@ -1000,7 +1000,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 
 	if kwargs.has_key('abs_units_van_range'):
 		reducer.monovan_integr_range = kwargs.get('abs_units_van_range')
-		print 'Setting absolute units van range int range to ', kwargs.get('abs_units_van_range')
+		print 'Setting absolute units vanadium integration range to: ', kwargs.get('abs_units_van_range')
 	else:
 		reducer.monovan_integr_range=[-40,40]
 
@@ -1101,7 +1101,7 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 		print 'Using supplied correction factor for absolute units'
 	else:
 		print '##### Evaluate the integral from the monovan run and calculate the correction factor ######'
-		print '      Setting absolute units van range integration range to: ', reducer.monovan_integr_range                
+		print '      Using absolute units vanadion integration range : ', reducer.monovan_integr_range                
         #now on the mono_vanadium run swap the mapping file
 		reducer.map_file = monovan_mapfile	
 		deltaE_wkspace_monovan = reducer.convert_to_energy(mono_van, ei_guess, wb_mono)
