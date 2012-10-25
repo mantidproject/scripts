@@ -1339,16 +1339,16 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
     @param: deltaE_wkspace  -- the name (string) of monovan workspace, converted to energy
     @param: min             -- the string representing the minimal energy to integrate the spectra
     @param: max             -- the string representing the maximal energy to integrate the spectra    
+    
+    @returns the value of monovan absolute normalization factor. 
+             deletes monovan workspace (deltaE_wkspace) if abs norm factor was calculated successfully
     """
     global reducer,van_mass
     Integration(InputWorkspace=deltaE_wkspace,OutputWorkspace='van_int',RangeLower=min,RangeUpper=max,IncludePartialBins='1')
     input_ws = mtd[deltaE_wkspace]
     ei_monovan = input_ws.getSampleDetails().getLogData("Ei").value
     data_ws=mtd['van_int']
-   #data_ws=ConvertToMatrixWorkspace(data_ws)
     nhist = data_ws.getNumberHistograms()
-   #ConvertFromDistribution(data_ws)
-
    #print nhist
 
     average_value = 0.0
@@ -1374,7 +1374,7 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
         average_value += signal * weight
         weight_sum += weight
         ic += 1
-        #print 'signal value =' ,y_value
+        #print 'signal value =' ,signal
         #print 'error value =' ,error        
         #print 'average ',average_value        
    #---------------- Loop finished
