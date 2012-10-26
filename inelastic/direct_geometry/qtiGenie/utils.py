@@ -293,3 +293,4 @@ def lhs(output='names'):
 		return (maxReturns,OutputVariableNames)
 	
 	return 0 # Should never get to here
+

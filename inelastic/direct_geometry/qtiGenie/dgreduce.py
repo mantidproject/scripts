@@ -1369,8 +1369,8 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
         if signal != signal:	#ignore NaN
             continue
         if (error<=0):          # ignore Inf (0 in error are probably 0 in sign
-	   izerc+=1
-           continue
+            izerc+=1
+            continue
             
         weight = 1.0/error
         average_value += signal * weight
@@ -1396,16 +1396,16 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
     absnorm_factor= absnorm_factor *sample_multiplier
     
     if (absnorm_factor !=absnorm_factor)|(izerc!=0):    # It is an error, print diagnostics:
-	if (absnorm_factor !=absnorm_factor):
-		print '-----------> Absolute normalization factor is NaN <------------------------------------------------'
-	else:
-		print '-----------> Warning, Monovanadium has zero spectra <------------------------------------------------'		
+        if (absnorm_factor !=absnorm_factor):
+            print '-----------> Absolute normalization factor is NaN <--------------------------------------------------'
+        else:
+            print '-----------> Warning, Monovanadium has zero spectra <------------------------------------------------'		
         print '-----------> Processing workspace: ',deltaE_wkspace
         print '-----------> Monovan Integration range : min=',min,' max=',max
         print '-----------> Calculated: ',ic,' spectra with average value: ',average_value, 'and total weight: ',weight_sum
         print '-----------> Dropped: ',izerc,' empty spectra'
         print '-----------> Van multiplier: ',van_multiplier,'  sample multiplier: ',sample_multiplier, 'and xsection: ',xsection		
-        print '---------------------------------------------------------------------------------------------------'	
+        print '-----------------------------------------------------------------------------------------------------'	
     else:
         DeleteWorkspace(deltaE_wkspace)
     DeleteWorkspace(data_ws)
