@@ -1354,6 +1354,7 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
     average_value = 0.0
     weight_sum = 0.0
     ic=0;
+    izerc=0;
     for i in range(nhist):
         try:
             det = data_ws.getDetector(i)
@@ -1367,8 +1368,9 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
         
         if signal != signal:	#ignore NaN
             continue
-        if (error<=0):          # ignore Inf (0 in error are probably 0 in signal
-            continue
+        if (error<=0):          # ignore Inf (0 in error are probably 0 in sign
+	   izerc+=1
+           continue
             
         weight = 1.0/error
         average_value += signal * weight
@@ -1393,11 +1395,15 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
     sample_multiplier = (float(reducer.sample_mass)/float(reducer.sample_rmm))
     absnorm_factor= absnorm_factor *sample_multiplier
     
-    if(absnorm_factor !=absnorm_factor):    # It is an error, print diagnostics:
-        print '-----------> Absolute normalization factor is NaN <------------------------------------------------'
+    if (absnorm_factor !=absnorm_factor)|(izerc!=0):    # It is an error, print diagnostics:
+		if (absnorm_factor !=absnorm_factor):
+			print '-----------> Absolute normalization factor is NaN <------------------------------------------------'
+		else:
+			print '-----------> Warning, Monovanadium has zero spectra <------------------------------------------------'		
         print '-----------> Processing workspace: ',deltaE_wkspace
         print '-----------> Monovan Integration range : min=',min,' max=',max
         print '-----------> Calculated: ',ic,' spectra with average value: ',average_value, 'and total weight: ',weight_sum
+        print '-----------> Dropped: ',izerc,' empty spectra'
         print '-----------> Van multiplier: ',van_multiplier,'  sample multiplier: ',sample_multiplier, 'and xsection: ',xsection		
         print '---------------------------------------------------------------------------------------------------'	
     else:
