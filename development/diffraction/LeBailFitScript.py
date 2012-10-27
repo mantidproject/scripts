@@ -6,9 +6,40 @@
 # 1. Load file
 # 2. Create LeBailFitInput
 # 3. Fit Peaks
+#
+# Step 1: Load data, model (HKL list) and starting instrument parameters values,
+#           and do an initial LeBailFit/calculation to see how much the starting
+#           values are off;
+# 
+# Step 2: Fit single peaks for TOF_h, Alpha, Beta, and Sigma;
+# 
+# Step 3: Plot parameters (TOF_H, Alpha, Beta and Sigma) against d-spacing;
+# 
+# Step 3.5:  Remove the peaks with bad fit;
+# 
+# Step 4: Refine instrument geometry parameters; 
+#  
+#         It is possible to loop back to Step 2 to include more peaks with single peaks
+#
+# Step 5: Do Le Bail Fit from previous result to see whether the peak parameters are 
+#         close enough for Le Bail Fit
+#
+# Step 6: Save the result files to HDD for Step 6, LeBailFit in random walk;
+#
+# Step 7: Not in this script;
+#
+# Step 8: Process Monte Carlo results from Step 6
+#
+#
 ######################################################################
 
+#--------------  BankID and Step To Execute (User Control) ----------
+usrbankid = 2
+usrstep = 3
+
 #--------------  Definition of Global Variables ---------------------
+bankid = 0
+
 datafilename = "" 
 hklfilename = ""
 irffilename = ""
@@ -24,18 +55,25 @@ outdataws1name = ""
 
 minpeakheight = 0.001
 
-startx = 5053.       
-endx =  49387.
+# Range for Le Bail Fit of all peaks 
+startx = -1
+endx =  -1
+# Range for fitting single peaks for step 1~3 
+tofmin_singlepeaks = -1
+tofmax_singlepeaks = -1
 
 backgroundtype = "Polynomial"
 backgroundorder = 6
 bkgdtablewsname = ""
 bkgdwsname = ""
 bkgdfilename = ""
+usrbkgdpoints = ''
+
+latticesize = 4.1568899999999998
 #--------------------------------------------------------------------
 
 
-def setupGlobals(bankid):
+def setupGlobals(usrbankid):
     """ Set up globals values
     """
     global datafilename, hklfilename, irffilename  
@@ -43,6 +81,11 @@ def setupGlobals(bankid):
     global outdataws1name , montecarlofilename
     global bkgdtablewsname, bkgdwsname, bkgdfilename
     global expirffilename
+    global tofmin_singlepeaks, tofmax_singlepeaks, startx, endx
+    global bankid, latticesize
+    global usrbkgdpoints
+
+    bankid = usrbankid
 
     if bankid == 1:
 	# Bank 1
@@ -61,13 +104,49 @@ def setupGlobals(bankid):
         startx = 5053.       
         endx =  49387.
 
+        tofmin_singlepeaks = 15000.
+        tofmax_singlepeaks = 50000.
+
         bkgdtablewsname = "PG3_10808_Background_Parameters"
         bkgdwsname = "PG3_10808_Background"
         bkgdfilename = '/home/wzz/Projects/MantidTests/LeBailFit/PeakPositionFitting/UnitTest_NewBank1/PG3_10808_Background_Parameters.bak'
 
+        latticesize = 4.1568899999999998
+
+        usrbkgdpoints = '5243,8910,11165,12153,13731,15060,16511,17767,19650,21874,23167,24519,36000,44282,49000'   
+    
     elif bankid == 2:
-	# Bank 2
-	raise NotImplementedError("To be implemented ASAP!")
+	# Bank2
+	datafilename = '/home/wzz/Projects/MantidTests/LeBailFit/PG3_2012August/FERNS-LaB6/PG3_10809-2.dat'
+	hklfilename = "/home/wzz/Projects/MantidTests/LeBailFit/PG3_2012August/Reflections/LB4853b2.hkl"
+	irffilename = r'/home/wzz/Projects/MantidTests/LeBailFit/PG3_2012August/PeakProfiles/2011B_HR60b2.irf'
+
+	expirffilename = "/home/wzz/Projects/MantidTests/LeBailFit/PG3_2012August_Bank2/Bank2.irf"
+
+	montecarlofilename = '/home/wzz/Projects/MantidTests/LeBailFit/PG3_2012August_Bank2/Bank2InstrumentMC.dat'
+
+	datawsname = "PG3_10809"
+    
+	outdataws1name = "PG3_10809_FittedSinglePeaks"
+
+        startx = 7000.0
+        endx =  70700.0
+
+        tofmin_singlepeaks = 17322.
+        tofmax_singlepeaks = 70700.
+
+
+        bkgdtablewsname = "PG3_10809_Background_Parameters"
+        bkgdwsname = "PG3_10808_Background"
+        bkgdfilename = '/home/wzz/Projects/MantidTests/LeBailFit/PG3_2012August_Bani2/PG3_10808_Background_Parameters.bak'
+
+        latticesize = 4.1568899999999998
+
+        usrbkgdpoints = '5243,8910,11165,12153,13731,15060,16511,17767,19650,21874,23167,24519,36000,44282,49000'   
+
+    else:
+	# Bank ?
+	raise NotImplementedError("To be implemented ASAP for Bank %d!" % (bankid))
 
 
     instrparamwsname = "Bank%sInstrumentParameterTable" % (bankid)
@@ -83,7 +162,7 @@ def importParameterBoundaryFile(paramfilename):
         infile = open(paramfilename, "r")
     except IOError:
 	 print "Unable to open file %s" % (paramfilename)
-	 raise IOError("Unable to open parameter boundary file")
+	 raise IOError("Unable to open parameter boundary file %s" % (paramfilename))
     lines = infile.readlines()
     infile.close()
 
@@ -251,23 +330,87 @@ def importBackground(bkgdfilename):
 
     return (tablews, bkgdtype, startx, endx)
 
+
+def TransformTableWorkspace(tablewsname, outputwsnames, xaxisname, yaxisnames):
+    """ Transform the content in a table worskpace with specified format
+    to several Workspace2D.
+    """
+    # 1. Validate input arguments
+    tablews = mtd[str(tablewsname)]
+    if tablews is None:
+        print "Error!  Unable to locate TableWorkspace %s" % (str(tablewsname))
+        return
+
+    if len(outputwsnames) != len(yaxisnames):
+        print "Error!  Input output workspace names and y-axis names are not in pair"
+        return
+
+    # 2. Information for table workspace
+    numrows =  tablews.rowCount()
+    colnames = tablews.getColumnNames()
+    colnamedict = {}
+    for i in xrange(len(colnames)):
+        colname = colnames[i]
+        colnamedict[colname] = i
+
+    # 3. Create workspace2Ds
+    # a) X-axis
+    if colnamedict.has_key(xaxisname) is False:
+        print "Error! Input X-axis name %s is not found in the table workspace columns" % (xaxisnamea)
+        return
+    else:
+        ixcol = colnamedict[xaxisname]
+    # ENDIF
+    xarray = []
+    for irow in xrange(numrows):
+        x = tablews.cell(irow, ixcol)
+        xarray.append(x)
+
+    for iy in xrange(len(yaxisnames)):
+        # b) Build arrays
+        yaxisname = yaxisnames[iy]
+        outputwsname = outputwsnames[iy]
+
+        if colnamedict.has_key(yaxisname) is False:
+            print "Error: Input Y-axis name %s is not found in the table workspace columns" % (yaxisnamea)
+            continue
+
+        iycol = colnamedict[yaxisname]
+
+        yarray = []
+        earray = []
+        for irow in xrange(numrows):
+            y = tablews.cell(irow, iycol)
+            yarray.append(y)
+	    earray.append(1.0)
+        # ENDFOR Table Row
+
+        # c) Create output workspace
+        CreateWorkspace(OutputWorkspace=outputwsname, DataX=xarray, DataY=yarray, DataE=earray, 
+                NSpec=1, UnitX="dSpacing")
+    # ENDFOR Y-axis name
+
+    return
+
+    
 """ Input Information Required """
-DataFileName = ""
-OutputWorkspace = ""
-ReflectionFile = ""
-FullprofParameterFile = ""
-
-LatticeConstant = 1.0
-
-MinTOF = 15000
-MaxTOF = 50000
+# ReflectionFile = ""
+# FullprofParameterFile = ""
+# 
+# LatticeConstant = 1.0
+# 
+# MinTOF = 15000
+# MaxTOF = 50000
 
 def Step1():
-    """ Step 1 for Le Bail Fitting
+    """ Step 1: Load data, parameters and do an initial/test Le Bail Fit/calculation
     """
     global datafilename, hklfilename, irffilename
     global datawsname, instrparamwsname, braggpeakparamwsname
     global outdataws1name
+    global tofmin_singlepeaks, tofmax_singlepeaks
+    global bankid
+    global latticesize
 
     # 1. Load File 
     LoadAscii(Filename=datafilename, 
@@ -277,9 +420,10 @@ def Step1():
     # 2. Create Input Tables
     CreateLeBailFitInput(ReflectionsFile=hklfilename, 
         FullprofParameterFile=irffilename, 
-        LatticeConstant='4.1568899999999998', 
+        LatticeConstant=latticesize, 
         InstrumentParameterWorkspace=instrparamwsname+"1", 
-        BraggPeakParameterWorkspace=braggpeakparamwsname+"1")
+        BraggPeakParameterWorkspace=braggpeakparamwsname+"1",
+        Bank=bankid)
 	
     # 3. Use Le Bail Fit 's calculation feature to generate the starting peak parameters (for fitting) values (can be off)
     LeBailFit(InputWorkspace=datawsname,
@@ -296,37 +440,64 @@ def Step1():
             PeakRadius='8',
             Minimizer='Levenberg-Marquardt')
 
-    # 3. Use LeBailFit/Calculation to create the initial peak parameters
+    return
+
+def Step2():
+    """ Step 2: Fit single peaks
+    """
+    global datafilename, hklfilename, irffilename
+    global datawsname, instrparamwsname, braggpeakparamwsname
+    global outdataws1name
+    global tofmin_singlepeaks, tofmax_singlepeaks
+    global bankid
+
+    # 1. Use LeBailFit/Calculation to create the initial peak parameters
+    # print "Fit Range: %f to %f" % (tofmin_singlepeaks, tofmax_singlepeaks)
+    # print "InputWorkspace = %s" % (datawsname)
+    # print "BraggPeakParameterWorkspace = %s" % (braggpeakparamwsname+"2")
+    # print "InstrumentParameterWorkspace = %s" % (instrparamwsname+"1")
+    # print "OutputWorkspace = %s" % (outdataws1name)
     FitPowderDiffPeaks(InputWorkspace=datawsname,
         OutputWorkspace=outdataws1name,
         BraggPeakParameterWorkspace=braggpeakparamwsname+"2",
         InstrumentParameterWorkspace=instrparamwsname+"1",
         OutputBraggPeakParameterWorkspace=braggpeakparamwsname+"3",
-        MinTOF='15000',
-	MaxTOF='50000')
+        MinTOF=tofmin_singlepeaks,
+	MaxTOF=tofmax_singlepeaks)
 
     print "\n............................... and you need to delete some peak by simple observation.\n"
 
     return
    
-def Step1_5():
-    """ Step 1.5: Best via observation! 
-    """ 
-    SelectPowderDiffPeaks(BraggPeakParameterWorkspace=braggpeakparamwsname+"3", 
-            ZscoreWorkspace='ZscoreTable',
-            OutputBraggPeakParameterWorkspace=braggpeakparamwsname+"4",
-            MinimumPeakHeight=minpeakheight, 
-            ZscoreFilter='Alpha, 3.0, Beta, 3.0') 
+#def Step1_5():
+#    """ Step 1.5: Best via observation! 
+#    """ 
+#    SelectPowderDiffPeaks(BraggPeakParameterWorkspace=braggpeakparamwsname+"3", 
+#            ZscoreWorkspace='ZscoreTable',
+#            OutputBraggPeakParameterWorkspace=braggpeakparamwsname+"4",
+#            MinimumPeakHeight=minpeakheight, 
+#            ZscoreFilter='Alpha, 3.0, Beta, 3.0') 
 
 
-def Step2():
-    """ Step 2 for Le Bail Fitting
-    Refine the instrumental peak profile
+def Step3():
+    """ Convert the resultant table workspace of peak parameters and convert several workspace2D
+    """
+    global braggpeakparamwsname
+
+    tablewsname = braggpeakparamwsname+"3"
+    TransformTableWorkspace(tablewsname, ["PeakCentres", "PeakAlphas", "PeakBetas", "PeakSigmas"], 
+            "d_h", ["TOF_h", "Alpha", "Beta", "Sigma"])
+
+    return
+
+def Step4():
+    """ Step 4: Refine the instrumental peak profile
     """ 
     # 1. Remove peaks with parameters away from model
     global minpeakheight,  montecarlofilename
+    global bankid
 
-    instrumenttablews = mtd["Bank1InstrumentParameterTable1"]
+    instrumenttablews = mtd["Bank%sInstrumentParameterTable1"%(bankid)]
 
     # 2. Import the parameter boundary file
     paramdict = importParameterBoundaryFile( montecarlofilename)
@@ -336,9 +507,9 @@ def Step2():
 
     # 4. Refine parameters
     RefinePowderInstrumentParameters(BraggPeakParameterWorkspace=braggpeakparamwsname+"4",
-	InstrumentParameterWorkspace='Bank1InstrumentParameterTable1',
-        OutputWorkspace='Bank1PeakPositions',
-        OutputInstrumentParameterWorkspace='Bank1InstrumentParameterTable2',
+	InstrumentParameterWorkspace='Bank%dInstrumentParameterTable1'%(bankid),
+        OutputWorkspace='Bank%dPeakPositions'%(bankid),
+        OutputInstrumentParameterWorkspace='Bank%dInstrumentParameterTable2'%(bankid),
         OutputBestResultsWorkspace='BestMCResult1', 
         RefinementAlgorithm = "MonteCarlo",
         RandomWalkSteps='1000',
@@ -346,28 +517,31 @@ def Step2():
         NumberBestFitRecorded='10',
         MonteCarloRandomSeed='0')
 
+    print "... ... Consider Loop Back to Step 2 To Increase Range of Single Peaks"
+
     return
 
-def Step3():
-    """ Step 3 for Le Bail fit/calculation
-    to check whether the refinement result is good for low-d region
+
+def Step5():
+    """ Step 5: to check whether the refinement result is good for low-d region
     FunctionName : name=Chebyshev,EndX=1,StartX=-1,n=6,A0=0.657699,A1=3.68433e-05,
                    A2=-6.48189e-09,A3=2.91945e-13,A4=-5.89298e-18,A5=5.53119e-23,A6=-1.95804e-28'
     """
     global startx, endx
     global datawsname, instrparamwsname, braggpeakparamwsname
     global bkgdtablewsname, bkgdwsname, backgroundtype, backgroundorder
+    global bankid
+    global usrbkgdpoints
 
     # 1. Process background 
     bkgdwsname = datawsname+"_Background"
-    # FIXME BackgroundPoints should be in global
     ProcessBackground(InputWorkspace=datawsname, 
             OutputWorkspace=bkgdwsname, 
             Options='SelectBackgroundPoints',
             LowerBound=startx, 
             UpperBound=endx, 
             BackgroundType=backgroundtype,
-            BackgroundPoints='5243,8910,11165,12153,13731,15060,16511,17767,19650,21874,23167,24519,36000,44282,49000',
+            BackgroundPoints=usrbkgdpoints,
             NoiseTolerance='0.10000000000000001')
 
     functionstr = "name=%s,n=%d" % (backgroundtype, backgroundorder)
@@ -381,8 +555,8 @@ def Step3():
             Minimizer='Levenberg-MarquardtMD',
             CreateOutput='1',
             Output=bkgdwsname,
-            StartX='1131.3199999999999',
-            EndX='49646.400000000001')
+            StartX=startx,
+            EndX=endx)
 
     # 2. Do calculation
     paramdict = parseRefineGeometryMCResultWorkspace(mtd["BestMCResult1"]) 
@@ -390,12 +564,12 @@ def Step3():
     index = 0
     for chi2 in sorted(paramdict.keys()):
         # 1. Update parameter values
-        updateInstrumentParameterValue(mtd["Bank1InstrumentParameterTable1"], paramdict[chi2])
+        updateInstrumentParameterValue(mtd["Bank%sInstrumentParameterTable1"%(bankid)], paramdict[chi2])
 
         LeBailFit(InputWorkspace=datawsname,
             OutputWorkspace='CalculatedPattern%d'%(index),
-            InputParameterWorkspace='Bank1InstrumentParameterTable1',
-            OutputParameterWorkspace='Bank1InstrumentParameterTable1_%d'%(index),
+            InputParameterWorkspace='Bank%dInstrumentParameterTable1'%(bankid),
+            OutputParameterWorkspace='Bank%dInstrumentParameterTable1_%d'%(bankid, index),
             InputHKLWorkspace='BraggPeakParameterTable1',
             OutputPeaksWorkspace='BraggPeakParameterTable2_%d'%(index),
             Function='Calculation',
@@ -412,7 +586,6 @@ def Step3():
     # ENDFOR
 
     return
-
 
 
 def Step4():
@@ -509,10 +682,10 @@ def main(argv):
 
 if __name__=="__main__":
     global minpeakheight 
+    global usrbankid, usrstep
    
     """ Information Required For Step 2 """
     minpeakheight = 0.31  
+   
     
-    
-    main(["LeBailFitScript", 1, 4])
-
+    main(["LeBailFitScript", usrbankid, usrstep])
