@@ -1,6 +1,9 @@
 from math import *
 from mantidsimple import *
-from mantidplot import *
+try:
+  from mantidplot import *
+except ImportError:
+  pass
 #import qti as qti
 import numpy as n
 
@@ -872,7 +875,7 @@ def arr2list(iarray):
 #
 #===========================================================
 #
-def NRCombineDatafn(RunsNameList,CombNameList,applySFs,SFList,SFError,scaleOption,bparams,globalSF,applyGlobalSF):
+def NRCombineDatafn(RunsNameList,CombNameList,applySFs,SFList,SFError,scaleOption,bparams,globalSF,applyGlobalSF,diagnostics=0):
 	qmin=bparams[0]
 	bin=bparams[1]
 	qmax=bparams[2]
@@ -948,8 +951,9 @@ def NRCombineDatafn(RunsNameList,CombNameList,applySFs,SFList,SFError,scaleOptio
 		RenameWorkspace('currentSum',CombNameList)
 	for i in range(len(rlist)-1):
 		mantid.deleteWorkspace("sf"+str(i))
-	#for i in range(len(rlist)):
-	#	mantid.deleteWorkspace(rlist[i]+"reb")
+	if (diagnostics==0):
+		for i in range(len(rlist)):
+			mantid.deleteWorkspace(rlist[i]+"reb")
 	return [arr2list(sfs),arr2list(sferrs)] 
 	
 #
@@ -1132,14 +1136,37 @@ def nrPNRFn(runList,nameList,incidentAngles,DBList,specChan,minSpec,maxSpec,gpar
 		glist1=""
 		glist2=""
 		glist3=""
+		a1=mantid.getMatrixWorkspace(i+"_1")
+		nspec=a1.getNumberHistograms()
+		if (subbgd==1 and nspec!=4):
+			# If a background subtraction is required sum the bgd outside the 
+			# area of the detector that is visible through the analyser over all periods and average
+			CloneWorkspace(i,"bgdtemp")
+			ConvertUnits(InputWorkspace="bgdtemp",OutputWorkspace="bgdtemp",Target="Wavelength",AlignBins="1")
+			Rebin(InputWorkspace="bgdtemp",OutputWorkspace="bgdtemp",Params=reb)
+			CropWorkspace(InputWorkspace="bgdtemp",OutputWorkspace="bgdtemp",StartWorkspaceIndex=4,EndWorkspaceIndex=243)
+			Plus("bgdtemp"+"_"+pnums[0],"bgdtemp"+"_"+pnums[1],OutputWorkspace="wbgdsum")
+			if (nper>2):
+				for j in range(2,nper):
+					Plus("wbgdsum","bgdtemp"+"_"+pnums[j],OutputWorkspace="wbgdsum")
+			GroupDetectors("wbgdsum","bgd2",WorkspaceIndexList=range(0,50),KeepUngroupedSpectra="0")
+			GroupDetectors("wbgdsum","bgd1",WorkspaceIndexList=range(160,240),KeepUngroupedSpectra="0")
+			Plus("bgd1","bgd2",OutputWorkspace="bgd")
+			wbgdtemp=mtd["bgd"]/(130.0*nper)
+			Mantid.deleteWorkspace("bgdtemp")
+			Mantid.deleteWorkspace("wbgdsum")
+			Mantid.deleteWorkspace("bgd1")
+			Mantid.deleteWorkspace("bgd2")
+			Mantid.deleteWorkspace("bgd")
+			
 		for j in range(nper):
 			wksp=i+"_"+pnums[j]
 			ConvertUnits(InputWorkspace=wksp,OutputWorkspace=wksp,Target="Wavelength",AlignBins="1")
 			Rebin(InputWorkspace=wksp,OutputWorkspace=wksp,Params=reb)
 			#removeoutlayer(i+"_"+pnums[j])
 			CropWorkspace(InputWorkspace=wksp,OutputWorkspace=wksp+"mon",StartWorkspaceIndex=mon_spec,EndWorkspaceIndex=mon_spec)
-			a1=mantid.getMatrixWorkspace(wksp)
-			nspec=a1.getNumberHistograms()
+			#a1=mantid.getMatrixWorkspace(wksp)
+			#nspec=a1.getNumberHistograms()
 			if nspec == 4:
 				CropWorkspace(InputWorkspace=wksp,OutputWorkspace=wksp+"det",StartWorkspaceIndex=3,EndWorkspaceIndex=3)
 				RotateInstrumentComponent(wksp+"det","DetectorBench",X="-1.0",Angle=str(2.0*float(incAngles[k])))
@@ -1158,19 +1185,10 @@ def nrPNRFn(runList,nameList,incidentAngles,DBList,specChan,minSpec,maxSpec,gpar
 				RotateInstrumentComponent(wksp+"det","DetectorBench",X="-1.0",Angle=str(a1))
 				floodnorm(wksp+"det",floodfile)
 				if (subbgd==1):
-					# Calculate a background correction
-					GroupDetectors(wksp+"det",wksp+"bgd2",WorkspaceIndexList=range(0,50),KeepUngroupedSpectra="0")
-					GroupDetectors(wksp+"det",wksp+"bgd1",WorkspaceIndexList=range(160,240),KeepUngroupedSpectra="0")
-					Plus(wksp+"bgd1",wksp+"bgd2",OutputWorkspace=wksp+"bgd")
-					wbgdtemp=mtd[wksp+"bgd"]/130.0
-					Mantid.deleteWorkspace(wksp+"bgd1")
-					Mantid.deleteWorkspace(wksp+"bgd2")
-					Mantid.deleteWorkspace(wksp+"bgd")
 					# Subract a per spectrum background
 					Minus(wksp+"det",wbgdtemp,OutputWorkspace=wksp+"det")
+					ResetNegatives(InputWorkspace=wksp+"det",OutputWorkspace=wksp+"det",AddMinimum='0',ResetValue="0.0")
 					GroupDetectors(wksp+"det",wksp+"sum",WorkspaceIndexList=range(int(minSpec)-5,int(maxSpec)-5+1),KeepUngroupedSpectra="0")
-					Minus(wksp+"sum",wbgdtemp,OutputWorkspace=wksp+"sum")
-					Mantid.deleteWorkspace("wbgdtemp")
 				else:
 					GroupDetectors(wksp+"det",wksp+"sum",WorkspaceIndexList=range(int(minSpec)-5,int(maxSpec)-5+1),KeepUngroupedSpectra="0")
 				RebinToWorkspace(WorkspaceToRebin=wksp+"sum",WorkspaceToMatch=wksp+"mon",OutputWorkspace=wksp+"sum")
@@ -1249,6 +1267,8 @@ def nrPNRFn(runList,nameList,incidentAngles,DBList,specChan,minSpec,maxSpec,gpar
 			GroupWorkspaces(InputWorkspaces=glist2,OutputWorkspace=i+"detnorm")
 		k=k+1
 		DeleteWorkspace(i)
+		if (subbgd==1):
+			DeleteWorkspace("wbgdtemp")
 #
 #===========================================================
 #
