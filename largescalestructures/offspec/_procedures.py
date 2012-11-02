@@ -1,6 +1,9 @@
 from math import *
 from mantidsimple import *
-from mantidplot import *
+try:
+  from mantidplot import *
+except ImportError:
+  pass
 #import qti as qti
 import numpy as n
 
