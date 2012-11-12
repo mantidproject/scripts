@@ -1,8 +1,11 @@
+import sys
+sys.path.append("C:\\LabVIEW Modules\\dae\\genie_python")
+
+from genie_api import *
+from genie_init import *
+import time
 from qtiGenie import *
 from PySlice2 import *
-import time
-from genie_init import *
-
 
 
 
@@ -25,8 +28,43 @@ class mariControl:
 		self.fix=False
 		iliad_setup(self.inst)
 	
-	def count(self,uamps=0,updateTime=2):
-	
+	def reduction_ei(self,*args):
+			inp=args[0]
+			self.ei=float(inp[0])            
+	def list(self):
+	#returns a list of displayable command names must be a nicer way todo this!
+		return ['set_ei ei freq',
+		'count uamps',
+		'waitfor uamps',
+		'begin',
+		'end',
+		'settemp temp',
+		'changetitle runtitle',
+		'setWhiteBeam WBrunNumber',
+		'reduction_ei eiForReduction',
+		'defineRoi Qmin Qmax Emin Emax',
+		'countStats statlevel uamps',
+		]
+		
+	def set_ei(self,*args):
+		#ei,freq
+		inp=args[0]
+		ei=int(inp[0])
+		freq=int(inp[1])
+		print 'setenergy'
+		print 'ei',ei
+		print 'freq',freq
+		self.ei=0.0
+		self.ei=ei
+		self.seteifree()
+		#set ei here
+		set_ei(ei,freq)
+		
+	def count(self,*args):
+	# uamps=0,updateTime=2
+		inp=args[0]
+		uamps=float(inp[0])
+		updateTime=2
 		totalcurrent=uamps
 		currentUamps=0
 		starttime=time.time()
@@ -40,11 +78,18 @@ class mariControl:
 			print 'Integrated current = ',currentUamps,' Runtime= ',int(elaspedtime),' secs'
 	
 		end()
-	def changetitle(self,title):
-		change(Title=title)
-
-	def settemp(self,Temp=0.0,offset=2.0,runControlOffset=2.0):
 		
+	def changetitle(self,*args):
+		title=args[0]
+        
+		change(Title=title[0])
+
+	def settemp(self,*args):
+		#Temp=0.0,offset=2.0,runControlOffset=2.0
+		inp=args[0]
+		Temp=float(inp[0])
+		offset=2.0
+		runControlOffset=2.0
 		settemphead=Temp-offset
 		
 		lowlimittemphead=settemphead-runControlOffset
@@ -62,13 +107,18 @@ class mariControl:
 		cset(T_head=settemphead, wait=True,lowlimit=lowlimittemphead, highlimit=highlimittemphead)
 		
 		
-	def updatestore(self):
+	def updatestore(self,*args):
 		update()
 		snapshot_crpt(self.tmpfile)#update from dae and save file as mar00000.raw
 		print 'current run saved to ',self.tmpfile
 		
-	def countStats(self,statlevel=0,updateTime=2,uamps=0):
-	
+	def countStats(self,*args):
+		#statlevel=0,uamps=0,updateTime=2
+		inp=args[0]
+		statlevel=float(inp[0])
+		uamps=float(inp[1])
+		updateTime=30
+		
 		totalcurrent=uamps
 		currentUamps=0
 		currentstatistic=1e10
@@ -95,7 +145,7 @@ class mariControl:
 					data=iliad("wb_wksp","run_wksp",self.ei,ebin,self.mapfile,det_cal_file=cal_file,norm_method='current',fixei=True)
 				else:
 					data=iliad("wb_wksp","run_wksp",self.ei,ebin,self.mapfile,det_cal_file=cal_file,norm_method='current')
-	
+				
 				w2=data2D('data')
 				w2.rebinproj(qbin)
 				currentstatistic=w2.integrate(self.rebinInput[0],self.rebinInput[1],self.rebinInput[2],self.rebinInput[3])
@@ -117,8 +167,13 @@ class mariControl:
 		end()
 	
 
-	def defineRoi(self,Qmin,Qmax,Emin,Emax):
-
+	def defineRoi(self,*args):
+		#Qmin,Qmax,Emin,Emax
+		inp=args[0]
+		Qmin=float(inp[0])
+		Qmax=float(inp[1])
+		Emin=float(inp[2])
+		Emax=float(inp[3])
 		self.rebinInput=[]	
 		self.rebinInput.append(Qmin)
 		self.rebinInput.append(Qmax)
@@ -126,39 +181,50 @@ class mariControl:
 		self.rebinInput.append(Emax)
 		print 'region of interest for control set to ', self.rebinInput
 
-		
 
-	def setWhiteBeam(self,whiteBeamRunNumber):
+	def setWhiteBeam(self,*args):
+		#whiteBeamRunNumber
+		inp=args[0]
+		whiteBeamRunNumber=inp[0]
 		self.whitebeamfile=''
 		self.whitebeamfile=str(whiteBeamRunNumber)
 		print 'whitebeam file for control set to ',self.whitebeamfile
 
-	def seteifixed(self):
+	def seteifixed(self,*args):
 		self.fix=True
 		print 'Ei will be fixed to ', self.ei,'meV'
 		
-	def seteifree(self):
+	def seteifree(self,*args):
 		self.fix=False
 		print 'Ei will be calculated'
-		
-	def setEiForControl(self,ei):
+    
+	def begin(self,*args):
+		begin()
+            
+	def end(self,*args):
+		end()
+        
+	def setEiForControl(self,*args):
+		#ei
+		inp=args[0]
+		ei=float(inp[0])
 		self.ei=0.0
 		self.ei=ei
 		print 'incident energy for control set to ',self.ei,'meV'
 
 #init the class once and define some alias commands for the class
-run=mariControl()
+#run=mariControl()
 
-defineRoi=run.defineRoi
-setWhiteBeam=run.setWhiteBeam
-seteiforcontrol=run.setEiForControl
-count=run.count
-countstats=run.countStats
-settemp=run.settemp
-changetitle=run.changetitle
-updatestore=run.updatestore
-seteifixed=run.seteifixed
-seteifree=run.seteifree
+#defineRoi=run.defineRoi
+#setWhiteBeam=run.setWhiteBeam
+#seteiforcontrol=run.setEiForControl
+#count=run.count
+#countstats=run.countStats
+#settemp=run.settemp
+#changetitle=run.changetitle
+#updatestore=run.updatestore
+#seteifixed=run.seteifixed
+#seteifree=run.seteifree
 #defineRoi(5.0,5.5,50.0,60.0)
 #run.runfile='16654' # this would be the hard coded way of setting the runfile for reduction
 #seteiforcontrol(100)
