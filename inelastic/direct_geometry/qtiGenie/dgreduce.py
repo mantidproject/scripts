@@ -105,10 +105,25 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	"""
 	arb_units(wb_run,sample_run,ei_guess,rebin,mapfile,**kwargs)
 	
+	arb_units(wb_run	Whitebeam run number or file name or workspace
+		  sample_run	sample run number or file name or workspace
+		  ei_guess 	Ei guess
+		  rebin		Rebin parameters
+		  mapfile	Mapfile
+		  kwargs	Additional keyword arguments
+	
+	with run numbers as input
 	dgreduce.arb_units(1000,10001,80,'-10,.1,70','mari_res', additional keywords as required)
 	
 	dgreduce.arb_units(1000,10001,80,'-10,.1,70','mari_res',fixei=True)
 	
+	A detector calibration file must be specified if running the reduction with workspace inputs
+	
+	with workspaces as input
+	
+	w2=iliad("wb_wksp","run_wksp",ei,rebin_params,mapfile,det_cal_file=cal_file
+	,diag_remove_zero=False,norm_method='current')
+
 	Available keywords
 	norm_method =[monitor-1],[monitor-2][Current]
 	background  =False , True
@@ -144,8 +159,6 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
 	
 	diag_remove_zero =True, False (default):Diag zero counts in background range
 	bleed=True , turn bleed correction on and off on by default for Merlin and LET
-	
-	sum	=True,False(default) , sum multiple files
 	
 	det_cal_file= a valid detector block file and path or a raw file. Setting this
 				  will use the detector calibraion from the specified file NOT the
@@ -744,8 +757,30 @@ def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess
 
 def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,**kwargs):
 	"""	
-	dgreduce.abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,rebin,map_file,monovan_mapfile,keyword arguments)
+	dgreduce.abs_units(wb_run		Whitebeam run number or file name or workspace
+			    sample_run		Sample run run number or file name or workspace       
+			    mono_van		Monochromatic run run number or file name or workspace
+			    wb_mono		White beam for Monochromatic run run number or file name or workspace
+			    samp_rmm		Mass of forumula unit of sample
+			    samp_mass		Actual sample mass
+			    ei_guess		Ei guess of run
+			    rebin		Rebin parameters for output data
+			    map_file		Mapfile for sample run
+			    monovan_mapfile	Mapfile for mono van run
+			    keyword arguments	Any specified additional keyword arguments
+
+	Example with run numbers
+	abs_units(11001,11002,11003,10098,250.1,5.2,80,'-10,.1,75','mari_res','mari_res')
 	
+	A detector calibration file must be specified if running the reduction with workspace inputs
+	
+	Example with workspace inputs
+
+	abs_units('wb_run','sam_run','mono_run','wb_for_mono',250.1,5.2,80,'-10,.1,75','mari_res','mari_res',
+				det_cal_file=10001,diag_remove_zero=False,norm_method='current')
+
+
+	A detector calibration file must be specified if running the reduction with workspace inputs
 	Available keywords
 	norm_method =[monitor-1],[monitor-2][Current]
 	background  =False , True
@@ -783,8 +818,6 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
 	
 	bleed=True , turn bleed correction on and off on by default for Merlin and LET
 	
-	sum	=True,False(default) , sum multiple files
-
 	det_cal_file= a valid detector block file and path or a raw file. Setting this
 				  will use the detector calibraion from the specified file NOT the
 				  input raw file
