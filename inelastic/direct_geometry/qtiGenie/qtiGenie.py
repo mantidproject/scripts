@@ -196,8 +196,8 @@ def showgpath():
     getgpath();
     
 def getgpath(silent=False):
-    """
-    shows global data searh path 
+    """shows global data searh path 
+    
     """    
     current_path = config.getDataSearchDirs();
     if not(silent):
@@ -207,24 +207,26 @@ def getgpath(silent=False):
             
     return current_path;
 def addgpath(path):
-    """
-    adds the specified path to data search path
+    """adds the specified path to data search path
     """
     config.appendDataSearchDir(path)
     
 def getspepath(silent=False):
-    """
-    shows the path where qtiGenie and mantid writes its results and temporary working files (mainly)
+    """Shows the path where qtiGenie and mantid writes its results and temporary working files.
+    
+    The folder is used for output operations if other path is not specified explicitly by an output operation.    
+    if silent opiton is used, the function just returns the path without printing it to std output. 
     """    
     spepath=config.getetString('defaultsave.directory')
     if not(silent):
-       print ' Output data path:',spepath
+       print ' Default output data path:',spepath
     
     return spepath;
      
-def head(runnumber):
-	"""
-	classic head command
+def head(runnumber=0000000):
+	"""Classic head command.
+    
+    Prints head information defined for the run number specified
 	"""
 	runnumber=getnumor(runnumber)
 	
@@ -780,6 +782,7 @@ def avrg_spectra(ws_name,index_min=0,index_max=sys.float_info.max,calc_sigma_avr
     >>(avrg,stats)=avrg_spectra(ws,index_min,index_max,calc_sigma_avrg=False,include_monitors=True)    
     Where:
     Input Arguments:
+        ws_name          -- the name or the handler of the input workspace to calculae the average spectra. 
         index_min        -- minimal workspace index to sum from default 0 
         index_max        -- maximal workspace index -- maximal number of spectra in the workspace to sum to
                             Detault is max wsorkspace index.
