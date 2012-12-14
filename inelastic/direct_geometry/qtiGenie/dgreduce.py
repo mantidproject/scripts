@@ -173,7 +173,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
     bkgd_range     =[15000,19000]     :integration range for background tests
     
     second_white     - If provided an additional set of tests is performed on this. (default = None)
-    hard_mask            - A file specifying those spectra that should be masked without testing (default=None)
+    hardmaskPlus     - A file specifying those spectra that should be masked without testing (default=None)
     tiny             - Minimum threshold for acceptance (default = 1e-10)
     large             - Maximum threshold for acceptance (default = 1e10)
     bkgd_range           - A list of two numbers indicating the background range (default=instrument defaults)
@@ -469,7 +469,7 @@ def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess
     bkgd_range     =[15000,19000]     :integration range for background tests
     
     second_white     - If provided an additional set of tests is performed on this. (default = None)
-    hard_mask            - A file specifying those spectra that should be masked without testing (default=None)
+    hardmaskPlus     - A file specifying those spectra that should be masked without testing (default=None)
     tiny             - Minimum threshold for acceptance (default = 1e-10)
     large             - Maximum threshold for acceptance (default = 1e10)
     bkgd_range           - A list of two numbers indicating the background range (default=instrument defaults)
@@ -835,9 +835,9 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
     bkgd_range     =[15000,19000]     :integration range for background tests
     
     second_white     - If provided an additional set of tests is performed on this. (default = None)
-    hard_mask            - A file specifying those spectra that should be masked without testing (default=None)
+    hardmaskPlus     - A file specifying those spectra that should be masked without testing (default=None)
     tiny             - Minimum threshold for acceptance (default = 1e-10)
-    large             - Maximum threshold for acceptance (default = 1e10)
+    large            - Maximum threshold for acceptance (default = 1e10)
     bkgd_range           - A list of two numbers indicating the background range (default=instrument defaults)
     diag_van_median_rate_limit_lo       - Lower bound defining outliers as fraction of median value (default = 0.01)
     diag_van_median_rate_limit_hi      - Upper bound defining outliers as fraction of median value (default = 100.)
@@ -1409,8 +1409,8 @@ def diag_load_mask(hard_mask):
    return spectra_list.rstrip(',')
    
 def getAbsNormalizationFactor(deltaE_wkspace,min,max):
-    """
-    get absolute normalization factor for monochromatic vanadium
+    """get absolute normalization factor for monochromatic vanadium
+    
     Inputs:
     @param: deltaE_wkspace  -- the name (string) of monovan workspace, converted to energy
     @param: min             -- the string representing the minimal energy to integrate the spectra

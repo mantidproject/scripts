@@ -42,7 +42,7 @@ save_dir = config.getString('defaultsave.directory')
 if len(save_dir) ==0 :
    #set save directory to the directory where qtigenie resides
    save_dir = str(os.path.dirname(inspect.getmodule(dgreduce).__file__))
-
+  
 print 'Working directory set to: ',save_dir;
 cd(save_dir)
 
@@ -115,7 +115,7 @@ def print_globals():
 		print a[i]
 
 ##instrument definitions
-def setinst(iname):
+def setinst(iname):
 	"""
 	setinst('mar')
 	setup instrument defaults by reading the instname.txt file
@@ -1140,10 +1140,85 @@ def dscan_maps_analysis(run_start,run_end,d_lo,d_hi,specno):
 	DeleteWorkspace("tmp")
 	
 	return outdat
+
+def export_masks(ws):
+    """Exports masks applied to Mantid workspace into the old fashioned ascii msk file with masked spectra numbers
     
+     the file is Libisis/Mantid old ISIS format compartible and can be read by libisis or Manid LoadMasks algorithm
+    """
+    if isinstance(ws,str):
+        pws = mtd[ws]
+    else:
+       pws = ws
+
+    ws_name=pws.getName()       
+    nhist = pws.getNumberHistograms()
+ 
+    masks = []
+    for i in range(nhist):
+        try:
+            det = pws.getDetector(i)
+        except Exception:
+            continue
+        if det.isMasked():
+            masks.append(i+1)
+
+    nMasks = len(masks);
+    if nMasks == 0:
+        print 'workspace ',ws_name,' have no masked spectra'
+        return
+        
+    print 'workspace ',ws_name,' have ',nMasks,' masked spectra'
+    
+    filename=ws_name+'.msk'
+    f = open(filename,'w')   
+    
+    # prepare and write mask data in conventional msk format
+    # where adjusted spectra are separated by - sign
+    OutString   = ''
+    LastSpectraN= ''
+    iBlock = 0;
+    iDash = 0;
+    im1=masks[0]
+    nSpectraInBlock = 8
+    for i in masks:
+        if len(OutString)== 0:
+            OutString=str(i)     
+            iBlock+=1
+            continue
+        # if the current spectra is different from the previous one by 1 only, we may want to skip it
+        if im1+1 == i:
+            LastSpectraN = str(i)
+            iDash += 1;
+        else :  # it is different and should be dealt separately
+            if iDash > 0 :
+              iBlock += 1;            
+              OutString = OutString+'-'+LastSpectraN
+              iDash = 0
+              LastSpectraN=''
+              # write the string if it is finished
+              if iBlock >= nSpectraInBlock:       
+                    f.write(OutString+'\n');
+                    OutString = ''
+                    iBlock = 0
 
 
-
+          
+            if len(OutString) == 0:
+                OutString = str(i)
+            else:
+                OutString = OutString + ' ' + str(i)
+            iBlock += 1;    
+     
+        # write the string if it is finished
+        if iBlock >= nSpectraInBlock:       
+            f.write(OutString+'\n');
+            OutString = ''
+            iBlock = 0
+            
+        im1 = i  
+    f.close();
+            
 def help(*args):
 	if len(args)==0:
 		print '!-------------------------------------------------------------------!'    
