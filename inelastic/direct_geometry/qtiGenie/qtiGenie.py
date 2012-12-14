@@ -1217,6 +1217,9 @@ def export_masks(ws):
             iBlock = 0
             
         im1 = i  
+    if len(OutString) > 0:
+       f.write(OutString+'\n');
+       
     f.close();
             
 def help(*args):
