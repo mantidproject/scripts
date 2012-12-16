@@ -1156,12 +1156,23 @@ def export_masks(ws):
  
     masks = []
     for i in range(nhist):
+        ms = i+1
         try:
             det = pws.getDetector(i)
         except Exception:
+            masks.append(ms)        
             continue
         if det.isMasked():
-            masks.append(i+1)
+            masks.append(ms)
+        if det.isMonitor():
+            masks.append(ms)
+      
+        try: 
+            sp = pws.getSpectrum(i)
+        except Exception: 
+            print " failed on masked spectra",i
+            masks.append(ms) 
+            continue        
 
     nMasks = len(masks);
     if nMasks == 0:
@@ -1180,7 +1191,7 @@ def export_masks(ws):
     iBlock = 0;
     iDash = 0;
     im1=masks[0]
-    nSpectraInBlock = 8
+    nSpectraInBlock = 2
     for i in masks:
         if len(OutString)== 0:
             OutString=str(i)     
