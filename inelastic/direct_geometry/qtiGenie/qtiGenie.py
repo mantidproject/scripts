@@ -1164,8 +1164,8 @@ def export_masks(ws):
             continue
         if det.isMasked():
             masks.append(ms)
-        if det.isMonitor():
-            masks.append(ms)
+        #if det.isMonitor():
+        #    masks.append(ms)
       
         try: 
             sp = pws.getSpectrum(i)
