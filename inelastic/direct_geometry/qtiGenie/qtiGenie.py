@@ -1141,16 +1141,23 @@ def dscan_maps_analysis(run_start,run_end,d_lo,d_hi,specno):
 	
 	return outdat
 
-def export_masks(ws):
+def export_masks(ws,fileName='',returnMasks=False):
     """Exports masks applied to Mantid workspace into the old fashioned ascii msk file with masked spectra numbers
     
-     the file is Libisis/Mantid old ISIS format compartible and can be read by libisis or Manid LoadMasks algorithm
+      The file is Libisis/Mantid old ISIS format compartible and can be read by libisis or Manid LoadMasks algorithm
+	 
+	  If optional parameter fileName is present, the masks are saved in the file with this name
+	  Otherwise, the file with the name equal to the workspace name and the extension .msk is used.
+	  
+	  If returnMasks is set to True, the function does not write to file but returns masks array instead
     """
-    if isinstance(ws,str):
+   # get pointer to the workspace    
+    if (type(ws) == str):
         pws = mtd[ws]
     else:
-       pws = ws
-
+        pws = ws
+ 	
+ 
     ws_name=pws.getName()       
     nhist = pws.getNumberHistograms()
  
@@ -1180,11 +1187,33 @@ def export_masks(ws):
     nMasks = len(masks);
     if nMasks == 0:
         print 'workspace ',ws_name,' have no masked spectra'
-        return
-        
+        return ()
     print 'workspace ',ws_name,' have ',nMasks,' masked spectra'
-    
-    filename=ws_name+'.msk'
+	
+    if len(fileName)==0 :
+		filename=ws_name+'.msk'
+	else
+    	filename=fileName
+	
+	if returnMasks :
+	   return masks
+	else:
+		write_ISISmasks(filename,masks,8)
+	
+def  writeISISmasks(filename,masks,nSpectraInRow=8):
+	""" Function writes input array in the form of ISSI mask file array
+	
+		namely, if one have array 1,2,3,4, 20 30,31,32
+		file will have the following ascii stgings:
+		1-4 20 30-32
+			
+	  Usage: 
+	  >>writeISISmasks(fileName,masks)
+	  where:
+	  fileName  -- the name of the output file
+	  masks      -- the array with data
+	  
+	"""
     f = open(filename,'w')   
     
     # prepare and write mask data in conventional msk format
@@ -1194,8 +1223,6 @@ def export_masks(ws):
     iBlock = 0;
     iDash = 0;
     im1=masks[0]
-    # how many specras print in one row
-    nSpectraInBlock = 8
     for i in masks:
         if len(OutString)== 0:
             OutString=str(i)     
@@ -1212,7 +1239,7 @@ def export_masks(ws):
               iDash = 0
               LastSpectraN=''
               # write the string if it is finished
-              if iBlock >= nSpectraInBlock:       
+              if iBlock >= nSpectraInRow:       
                     f.write(OutString+'\n');
                     OutString = ''
                     iBlock = 0
@@ -1226,7 +1253,7 @@ def export_masks(ws):
             iBlock += 1;    
      
         # write the string if it is finished
-        if iBlock >= nSpectraInBlock:       
+        if iBlock >= nSpectraInRow:       
             f.write(OutString+'\n');
             OutString = ''
             iBlock = 0
