@@ -1156,7 +1156,17 @@ def export_masks(ws):
  
     masks = []
     for i in range(nhist):
+        # set provisional spectra ID
         ms = i+1
+        try: 
+            sp = pws.getSpectrum(i)
+            # got real spectra ID, which would correspond real spectra num to spectra ID map
+            ms = sp.getSpectrumNo();
+        except Exception: 
+            print " Can not get spectra No: ",i
+            masks.append(ms) 
+            continue        
+        
         try:
             det = pws.getDetector(i)
         except Exception:
@@ -1164,15 +1174,8 @@ def export_masks(ws):
             continue
         if det.isMasked():
             masks.append(ms)
-        #if det.isMonitor():
-        #    masks.append(ms)
+ 
       
-        try: 
-            sp = pws.getSpectrum(i)
-        except Exception: 
-            print " failed on masked spectra",i
-            masks.append(ms) 
-            continue        
 
     nMasks = len(masks);
     if nMasks == 0:
@@ -1191,7 +1194,8 @@ def export_masks(ws):
     iBlock = 0;
     iDash = 0;
     im1=masks[0]
-    nSpectraInBlock = 2
+    # how many specras print in one row
+    nSpectraInBlock = 8
     for i in masks:
         if len(OutString)== 0:
             OutString=str(i)     
