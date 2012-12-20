@@ -238,6 +238,9 @@ def head(runnumber=0000000,keepWSwithResults=False):
     """Classic head command.
     
     Prints head information defined for the run number specified
+    if keepWSwithResults is set to True, the function do not deletes 
+    the Mantid Matrix workspace with additional information about the run. 
+    By default this workspace is deleted.
     """
     global instname
     
