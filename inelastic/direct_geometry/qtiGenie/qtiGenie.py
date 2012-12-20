@@ -45,6 +45,13 @@ if len(save_dir) ==0 :
 print 'Working directory set to: ',save_dir;
 cd(save_dir)
 
+# set default instrument from Mantid configuration
+instname = config['default.instrument']
+setinst(instname);
+print 'Default instrument is set to : ',instname
+print 'You can change it by issuing setinst(InstrumentName) command'
+print 'where InstrumentName can be MER, MAR, MAP, LET, TSK or XSD'
+
 #set up some 'isis friendly' alias names to dgreduce
 iliad_setup=dgreduce.setup
 iliad=dgreduce.arb_units
@@ -115,55 +122,60 @@ def print_globals():
 
 ##instrument definitions
 def setinst(iname):
-	"""
-	setinst('mar')
-	setup instrument defaults by reading the instname.txt file
-	"""
-	if iname =='mer' or iname=='MER':
-		print "Reading params file for merlin from current working directory"
-		readsetuptxtfile('merlin.txt')
+    """
+    setinst('mar')
+    setup instrument defaults by reading the instname.txt file
+    """
+    config['default.instrument'] = iname
+    if iname.capitalize()[0:2] =='MER':
+        print "Reading params file for merlin from qtiGenie directory"        
+        readsetuptxtfile('merlin.txt')
 
-	if iname =='map' or iname=='MAP':
-		print "Reading params file for maps from current working directory"
-		readsetuptxtfile('maps.txt')
+    if iname.capitalize()[0:2]=='MAP':
+        print "Reading params file for maps from qtiGenie directory"
+        readsetuptxtfile('maps.txt')
 
-	if iname =='let' or iname=='LET':
-		print "Reading params file for LET from current working directory"
-		readsetuptxtfile('let.txt')
+    if iname.capitalize()[0:2]=='LET':
+        print "Reading params file for LET from qtiGenie directory"
+        readsetuptxtfile('let.txt')
 
-	if iname =='mar' or iname=='MAR':
-		print "Reading params file for MARI from current working directory"
-		readsetuptxtfile('mari.txt')
-	if iname =='tsc' or iname=='TSC':
-		print "Reading params file for TOSCA from current working directory"
-		readsetuptxtfile('tosca.txt')
-	if iname=='sxd' or iname=='SXD':
-		print "Reading params file for SXD from current working directory"
-		readsetuptxtfile('sxd.txt')
+    if iname.capitalize()[0:2]=='MAR':
+        print "Reading params file for MARI from qtiGenie directory"
+        readsetuptxtfile('mari.txt')
+    if iname.capitalize()[0:2]=='TSC':
+        print "Reading params file for TOSCA from qtiGenie directory"
+        readsetuptxtfile('tosca.txt')
+    if iname.capitalize()[0:2]=='SXD':
+        print "Reading params file for SXD from qtiGenie directory"
+        readsetuptxtfile('sxd.txt')
 
 def readsetuptxtfile(fname):
-		global wdir, instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
-		f = open(fname, 'r+')
-		
-		instring=f.readline()
-		instname=instring.split()[1]
-	
-		instring=f.readline()
-		ext=instring.split()[1]
-	
-		instring=f.readline()
-		instdae=instring.split()[1]
-	
-		instring=f.readline()
-		mon1_spec=int(instring.split()[1])
-	
-		instring=f.readline()
-		mon2_spec=int(instring.split()[1])
-	
-		instring=f.readline()
-		mon3_spec=int(instring.split()[1])
-		f.close()
-		return wdir,instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
+    global wdir, instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
+    
+    file_path = str(os.path.dirname(inspect.getmodule(dgreduce).__file__))
+    longName = os.path.join(file_path,fname);
+    f = open(longName, 'r+')
+        
+    instring=f.readline()
+    instname=instring.split()[1]
+    
+    instring=f.readline()
+    ext=instring.split()[1]
+    
+    instring=f.readline()
+    instdae=instring.split()[1]
+
+    instring=f.readline()
+    mon1_spec=int(instring.split()[1])
+
+    instring=f.readline()
+    mon2_spec=int(instring.split()[1])
+
+    instring=f.readline()
+    mon3_spec=int(instring.split()[1])
+    f.close()
+    return wdir,instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
+    
 def setmon_1_spec(spec):
 	"""
 	sets the default mon 1 spec to another spectrum
@@ -223,29 +235,50 @@ def getspepath(silent=False):
     return spepath;
      
 def head(runnumber=0000000):
-	"""Classic head command.
+    """Classic head command.
     
     Prints head information defined for the run number specified
-	"""
-	runnumber=getnumor(runnumber)
-	
-	runinfo=RawFileInfo(instname+str(runnumber),GetRunParameters=True)
+    """
+    global instname
+    
+    runnumber=getnumor(runnumber)
+    
+    runinfo=RawFileInfo(instname+str(runnumber),GetRunParameters=True)
 
-	title=runinfo.getPropertyValue('runtitle')
+    title =runinfo.getPropertyValue('RunTitle')
+    header=runinfo.getPropertyValue('RunHeader')
 
-	print ('Title              :'), title
+    paramWSName = 'Raw_RPB'
+    temp = mtd[paramWSName] 
+    #enddate=temp.getString('r_enddate') 
+    #endtime=temp.getString('r_endtime')
+  
+    print 'RunID\t\t: '+instname+header #+' to '+enddate+endtime
+    print 'Title\t\t: '+title     
+ 
+    print 'Protons\t\t:', temp.getDouble('r_gd_prtn_chrg', 0),' uAmps'
 
-	temp = mtd['Raw_RPB']
-
-	print ('uamps              :'), temp.getDouble('r_gd_prtn_chrg', 0)
-
-	print ('Run duration (hrs) :'), temp.getInt('r_dur', 0) /3600
-
-		#R_dur # r_durunits# r_dur_freq# r_dmp# r_dmp_units# r_dmp_freq#r_freq
-
-		#r_gd_prtn_chrg# r_tot_prtn_chrg# r_goodfrm#r_rawfrm# r_dur_wanted#r_dur_secs
-
-		#r_mon_sum1# r_mon_sum2#r_mon_sum3# r_enddate#r_endtime#r_prop
+    run_length = temp.getInt('r_dur', 0)
+    if run_length > 3600 :
+        hrs = run_length/3600
+        run_length = run_length-hrs*3600
+        mins= run_length/60
+        sec = run_length - mins*60
+        print 'Run duration\t\t:', hrs,' hrs ',mins,' mins ',sec,' sec'
+    elif run_length > 60:
+        mins= run_length/60
+        sec = run_length - mins*60
+        print 'Run duration\t\t:',mins,' mins ',sec,' sec' 
+    else:
+        print 'Run duration\t\t:',run_length,' sec'     
+    
+    print 'More details availible from Mantid RawFileInfo algorithm'
+    mantid.deleteWorkspace(paramWSName)
+    
+    
+#R_dur # r_durunits# r_dur_freq# r_dmp# r_dmp_units# r_dmp_freq#r_freq
+#r_gd_prtn_chrg# r_tot_prtn_chrg# r_goodfrm#r_rawfrm# r_dur_wanted#r_dur_secs
+#r_mon_sum1# r_mon_sum2#r_mon_sum3# r_enddate#r_endtime#r_prop
 
 
 def iv(wksp_in):
@@ -346,10 +379,10 @@ def load_monitors(*args):
 		print 'error'
 
 def getnumor(runnumber):
-	#creates a string runnumber from interger input and pads with zerso to cope with isis 
-	#file naminging convention need an additional switch for ts1 and ts2 instruments
-	#to cope with the different number of preceeding zeros.
-	
+	"""creates a string runnumber from interger input and pads with zerso to cope with isis 
+	   file naminging convention need an additional switch for ts1 and ts2 instruments
+	   to cope with the different number of preceeding zeros.
+	"""
 	if instname=='LET':
 		run=str(runnumber)	
 		if len(run) == 3:
