@@ -1,4 +1,3 @@
-#from mantid import *
 from utils import *
 #from mantidsimple import *
 import MantidFramework 
@@ -1187,81 +1186,94 @@ def export_masks(ws,fileName='',returnMasks=False):
     nMasks = len(masks);
     if nMasks == 0:
         print 'workspace ',ws_name,' have no masked spectra'
-        return ()
+        return masks
     print 'workspace ',ws_name,' have ',nMasks,' masked spectra'
-	
+    
+    filename=''
     if len(fileName)==0 :
-		filename=ws_name+'.msk'
-	else
-    	filename=fileName
-	
-	if returnMasks :
-	   return masks
-	else:
-		write_ISISmasks(filename,masks,8)
-	
+        filename=ws_name+'.msk'
+    else:
+        filename = fileName
+        
+    if returnMasks :
+        return masks
+    else:
+        writeISISmasks(filename,masks,8)
+        
+        
+def flushOutString(f,OutString,BlockSize,BlockLimit):
+    """Internal function for writeISISmasks procedure
+    
+    """
+    BlockSize+=1;
+    if BlockSize >= BlockLimit: 
+       if len(OutString)>0:
+           f.write(OutString+'\n');
+       OutString = ''
+       BlockSize = 0
+    return (f,BlockSize,OutString)
+
+    
 def  writeISISmasks(filename,masks,nSpectraInRow=8):
-	""" Function writes input array in the form of ISSI mask file array
-	
-		namely, if one have array 1,2,3,4, 20 30,31,32
-		file will have the following ascii stgings:
-		1-4 20 30-32
-			
-	  Usage: 
-	  >>writeISISmasks(fileName,masks)
-	  where:
-	  fileName  -- the name of the output file
-	  masks      -- the array with data
-	  
-	"""
+    """ Function writes input array in the form of ISSI mask file array
+    
+        namely, if one have array 1,2,3,4, 20 30,31,32
+        file will have the following ascii stgings:
+        1-4 20 30-32
+    
+    Usage: 
+    >>writeISISmasks(fileName,masks)
+    where:
+    fileName  -- the name of the output file
+    masks      -- the array with data
+    """
+    ext = os.path.splitext(filename)[1]
+    if len(ext) == 0 :
+        filename=filename+'.msk'
+
+    
     f = open(filename,'w')   
     
     # prepare and write mask data in conventional msk format
     # where adjusted spectra are separated by - sign
     OutString   = ''
     LastSpectraN= ''
-    iBlock = 0;
+    BlockSize = 0;
     iDash = 0;
     im1=masks[0]
-    for i in masks:
+    for i in masks:       
         if len(OutString)== 0:
-            OutString=str(i)     
-            iBlock+=1
+            OutString = str(i)        
+            (f,BlockSize,OutString) = flushOutString(f,OutString,BlockSize,nSpectraInRow)
+            im1 = i  
             continue
         # if the current spectra is different from the previous one by 1 only, we may want to skip it
-        if im1+1 == i:
+        if im1+1 == i :
             LastSpectraN = str(i)
             iDash += 1;
         else :  # it is different and should be dealt separately
             if iDash > 0 :
-              iBlock += 1;            
-              OutString = OutString+'-'+LastSpectraN
-              iDash = 0
-              LastSpectraN=''
-              # write the string if it is finished
-              if iBlock >= nSpectraInRow:       
-                    f.write(OutString+'\n');
-                    OutString = ''
-                    iBlock = 0
+                OutString = OutString+'-'+LastSpectraN
+                iDash = 0
+                LastSpectraN=''
+                # write the string if it is finished
+                (f,BlockSize,OutString) = flushOutString(f,OutString,BlockSize,nSpectraInRow)
 
-
-          
+      
             if len(OutString) == 0:
                 OutString = str(i)
             else:
                 OutString = OutString + ' ' + str(i)
-            iBlock += 1;    
-     
-        # write the string if it is finished
-        if iBlock >= nSpectraInRow:       
-            f.write(OutString+'\n');
-            OutString = ''
-            iBlock = 0
-            
+            # write the string if it is finished
+            (f,BlockSize,OutString) = flushOutString(f,OutString,BlockSize,nSpectraInRow)             
+        #endif
+      
+        # current spectra is the previous now
         im1 = i  
-    if len(OutString) > 0:
-       f.write(OutString+'\n');
-       
+    # end masks loop
+    if iDash > 0 :
+        OutString = OutString+'-'+LastSpectraN   
+    (f,OutString,BlockSize)=flushOutString(f,OutString,BlockSize,0)                   
     f.close();
             
 def help(*args):
