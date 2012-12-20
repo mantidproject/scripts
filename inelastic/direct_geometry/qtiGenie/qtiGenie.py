@@ -234,7 +234,7 @@ def getspepath(silent=False):
     
     return spepath;
      
-def head(runnumber=0000000):
+def head(runnumber=0000000,keepWSwithResults=False):
     """Classic head command.
     
     Prints head information defined for the run number specified
@@ -273,7 +273,8 @@ def head(runnumber=0000000):
         print 'Run duration\t\t:',run_length,' sec'     
     
     print 'More details availible from Mantid RawFileInfo algorithm'
-    mantid.deleteWorkspace(paramWSName)
+    if not(keepWSwithResults) :
+        mantid.deleteWorkspace(paramWSName)
     
     
 #R_dur # r_durunits# r_dur_freq# r_dmp# r_dmp_units# r_dmp_freq#r_freq
