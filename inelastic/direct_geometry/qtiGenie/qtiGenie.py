@@ -41,16 +41,8 @@ save_dir = config.getString('defaultsave.directory')
 if len(save_dir) ==0 :
    #set save directory to the directory where qtigenie resides
    save_dir = str(os.path.dirname(inspect.getmodule(dgreduce).__file__))
-  
-print 'Working directory set to: ',save_dir;
-cd(save_dir)
-
-# set default instrument from Mantid configuration
-instname = config['default.instrument']
-setinst(instname);
-print 'Default instrument is set to : ',instname
-print 'You can change it by issuing setinst(InstrumentName) command'
-print 'where InstrumentName can be MER, MAR, MAP, LET, TSK or XSD'
+   
+instname = config['default.instrument']  
 
 #set up some 'isis friendly' alias names to dgreduce
 iliad_setup=dgreduce.setup
@@ -58,6 +50,19 @@ iliad=dgreduce.arb_units
 iliad_abs=dgreduce.abs_units
 iliad_help=dgreduce.help
 iliad_set_calfile = dgreduce.set_cal_file
+cd(save_dir)
+print 'Working directory set to: ',save_dir;
+
+def __init__(self):
+    """
+    """
+    # set default instrument from Mantid configuration
+
+    setinst(instname);
+    print 'Default instrument is set to : ',instname
+    print 'You can change it by issuing setinst(InstrumentName) command'
+    print 'where InstrumentName can be MER, MAR, MAP, LET, TSK or XSD'
+
 
 #######################
 #######################
@@ -275,7 +280,7 @@ def head(runnumber=0000000,keepWSwithResults=False):
     else:
         print 'Run duration\t\t:',run_length,' sec'     
     
-    print 'More details availible from Mantid RawFileInfo algorithm'
+    print 'More details available from Mantid RawFileInfo algorithm\n'
     if not(keepWSwithResults) :
         mantid.deleteWorkspace(paramWSName)
     
