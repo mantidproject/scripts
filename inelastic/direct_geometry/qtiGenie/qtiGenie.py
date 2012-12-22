@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 #from mantid import *
+=======
+>>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 from utils import *
 #from mantidsimple import *
 import MantidFramework 
@@ -37,15 +40,33 @@ plotmkr=""
 
 plotcolor="red"
 
+<<<<<<< HEAD
 #change path to the directory where qtigenie resides
 print 'Working directory set to ',str(os.path.dirname(inspect.getmodule(dgreduce).__file__))
 cd(str(os.path.dirname(inspect.getmodule(dgreduce).__file__)))
+=======
+
+save_dir = config.getString('defaultsave.directory')
+if len(save_dir) ==0 :
+   #set save directory to the directory where qtigenie resides
+   save_dir = str(os.path.dirname(inspect.getmodule(dgreduce).__file__))
+   
+instname = config['default.instrument']  
+>>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 
 #set up some 'isis friendly' alias names to dgreduce
 iliad_setup=dgreduce.setup
 iliad=dgreduce.arb_units
 iliad_abs=dgreduce.abs_units
 iliad_help=dgreduce.help
+<<<<<<< HEAD
+=======
+iliad_set_calfile = dgreduce.set_cal_file
+cd(save_dir)
+print 'Working directory set to: ',save_dir;
+
+
+>>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 
 #######################
 #######################
@@ -110,6 +131,7 @@ def print_globals():
 
 ##instrument definitions
 def setinst(iname):
+<<<<<<< HEAD
 	"""
 	setinst('mar')
 	setup instrument defaults by reading the instname.txt file
@@ -159,6 +181,62 @@ def readsetuptxtfile(fname):
 		mon3_spec=int(instring.split()[1])
 		f.close()
 		return wdir,instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
+=======
+    """
+    setinst('mar')
+    setup instrument defaults by reading the instname.txt file
+    """
+    config['default.instrument'] = iname
+    if iname.capitalize()[0:2] =='MER':
+        print "Reading params file for merlin from qtiGenie directory"        
+        readsetuptxtfile('merlin.txt')
+
+    if iname.capitalize()[0:2]=='MAP':
+        print "Reading params file for maps from qtiGenie directory"
+        readsetuptxtfile('maps.txt')
+
+    if iname.capitalize()[0:2]=='LET':
+        print "Reading params file for LET from qtiGenie directory"
+        readsetuptxtfile('let.txt')
+
+    if iname.capitalize()[0:2]=='MAR':
+        print "Reading params file for MARI from qtiGenie directory"
+        readsetuptxtfile('mari.txt')
+    if iname.capitalize()[0:2]=='TSC':
+        print "Reading params file for TOSCA from qtiGenie directory"
+        readsetuptxtfile('tosca.txt')
+    if iname.capitalize()[0:2]=='SXD':
+        print "Reading params file for SXD from qtiGenie directory"
+        readsetuptxtfile('sxd.txt')
+
+def readsetuptxtfile(fname):
+    global wdir, instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
+    
+    file_path = str(os.path.dirname(inspect.getmodule(dgreduce).__file__))
+    longName = os.path.join(file_path,fname);
+    f = open(longName, 'r+')
+        
+    instring=f.readline()
+    instname=instring.split()[1]
+    
+    instring=f.readline()
+    ext=instring.split()[1]
+    
+    instring=f.readline()
+    instdae=instring.split()[1]
+
+    instring=f.readline()
+    mon1_spec=int(instring.split()[1])
+
+    instring=f.readline()
+    mon2_spec=int(instring.split()[1])
+
+    instring=f.readline()
+    mon3_spec=int(instring.split()[1])
+    f.close()
+    return wdir,instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
+    
+>>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 def setmon_1_spec(spec):
 	"""
 	sets the default mon 1 spec to another spectrum
@@ -187,6 +265,7 @@ def showgpath():
     except NameError:
         print 'No monitors are defined for this function'
     
+<<<<<<< HEAD
     current_path = config.getDataSearchDirs();
     print 'inst_data:::'
     for i in range(0,len(current_path)):
@@ -215,6 +294,90 @@ def head(runnumber):
 		#r_gd_prtn_chrg# r_tot_prtn_chrg# r_goodfrm#r_rawfrm# r_dur_wanted#r_dur_secs
 
 		#r_mon_sum1# r_mon_sum2#r_mon_sum3# r_enddate#r_endtime#r_prop
+=======
+    getgpath();
+    
+def getgpath(silent=False):
+    """shows global data searh path 
+    
+    """    
+    current_path = config.getDataSearchDirs();
+    if not(silent):
+        print 'inst_data:::'
+        for i in range(0,len(current_path)):
+            print '         :::',current_path[i];
+            
+    return current_path;
+def addgpath(path):
+    """adds the specified path to data search path
+    """
+    config.appendDataSearchDir(path)
+    
+def getspepath(silent=False):
+    """Shows the path where qtiGenie and mantid writes its results and temporary working files.
+    
+    The folder is used for output operations if other path is not specified explicitly by an output operation.    
+    if silent opiton is used, the function just returns the path without printing it to std output. 
+    """    
+    spepath=config.getetString('defaultsave.directory')
+    if not(silent):
+       print ' Default output data path:',spepath
+    
+    return spepath;
+     
+def head(runnumber=0000000,keepWSwithResults=False):
+    """Classic head command.
+    
+    Prints head information defined for the run number specified
+    
+    If keepWSwithResults is set to True, the function do not deletes 
+    the Mantid Matrix workspace with additional information about the run. 
+    By default this workspace is deleted.
+    """
+    global instname
+    
+    instShort = instname[0:3]
+    
+    runnumber=getnumor(runnumber)
+    
+    runinfo=RawFileInfo(instShort+str(runnumber),GetRunParameters=True)
+
+    title =runinfo.getPropertyValue('RunTitle')
+    header=runinfo.getPropertyValue('RunHeader')
+
+    paramWSName = 'Raw_RPB'
+    temp = mtd[paramWSName] 
+    #enddate=temp.getString('r_enddate') 
+    #endtime=temp.getString('r_endtime')
+  
+    print 'RunID\t\t: '+instShort+header #+' to '+enddate+endtime
+    print 'Title\t\t: '+title     
+ 
+    print 'Protons\t\t:', temp.getDouble('r_gd_prtn_chrg', 0),' uAmps'
+
+    run_length = temp.getInt('r_dur', 0)
+    if run_length > 3600 :
+        hrs = run_length/3600
+        run_length = run_length-hrs*3600
+        mins= run_length/60
+        sec = run_length - mins*60
+        print 'Run duration\t\t:', hrs,' hrs ',mins,' mins ',sec,' sec'
+    elif run_length > 60:
+        mins= run_length/60
+        sec = run_length - mins*60
+        print 'Run duration\t\t:',mins,' mins ',sec,' sec' 
+    else:
+        print 'Run duration\t\t:',run_length,' sec'     
+    
+    print 'More details available from Mantid RawFileInfo algorithm\n'
+    if not(keepWSwithResults) :
+        mantid.deleteWorkspace(paramWSName)
+    
+    
+#R_dur # r_durunits# r_dur_freq# r_dmp# r_dmp_units# r_dmp_freq#r_freq
+#r_gd_prtn_chrg# r_tot_prtn_chrg# r_goodfrm#r_rawfrm# r_dur_wanted#r_dur_secs
+#r_mon_sum1# r_mon_sum2#r_mon_sum3# r_enddate#r_endtime#r_prop
+>>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 
 
 def iv(wksp_in):
@@ -315,10 +478,17 @@ def load_monitors(*args):
 		print 'error'
 
 def getnumor(runnumber):
+<<<<<<< HEAD
 	#creates a string runnumber from interger input and pads with zerso to cope with isis 
 	#file naminging convention need an additional switch for ts1 and ts2 instruments
 	#to cope with the different number of preceeding zeros.
 	
+=======
+	"""creates a string runnumber from interger input and pads with zerso to cope with isis 
+	   file naminging convention need an additional switch for ts1 and ts2 instruments
+	   to cope with the different number of preceeding zeros.
+	"""
+>>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 	if instname=='LET':
 		run=str(runnumber)	
 		if len(run) == 3:
@@ -740,6 +910,79 @@ def etrans(*args):
 	
 	return mtd[wksp_out]
 
+<<<<<<< HEAD
+=======
+def avrg_spectra(ws_name,index_min=0,index_max=sys.float_info.max,calc_sigma_avrg=False,include_monitors=False):
+    """Get averaged workspace spectrum out of the workpsace spectra in the specified range without using map file.
+        
+    Usage:
+    >>(avrg,stats)=avrg_spectra(ws)
+    >>(avrg,stats)=avrg_spectra(ws,index_min,index_max,False,True)
+    >>(avrg,stats)=avrg_spectra(ws,index_min,index_max,True,True)    
+    >>(avrg,stats)=avrg_spectra(ws,index_min,index_max,calc_sigma_avrg=False,include_monitors=True)    
+    Where:
+    Input Arguments:
+        ws_name          -- the name or the handler of the input workspace to calculae the average spectra. 
+        index_min        -- minimal workspace index to sum from default 0 
+        index_max        -- maximal workspace index -- maximal number of spectra in the workspace to sum to
+                            Detault is max wsorkspace index.
+        calc_sigma_avrg  -- calculate the weighted averaged sum. By default this value is False
+        include_monitors -- if monitors are in the range of averaging, include them in the sum. 
+                            By default, the monitors are excluded.
+    Outputs:
+       avrg      -- the averaged spectra, the 
+       stats     -- 3-element array, which contains number of spectra, contributed into the average,
+                    numberOfMaskedSpectra in the input workspace (these spectra were dropped from the sum) and
+                    numberOfZeros -- number of zero elements in the input workspace
+    """
+    # get pointer to the workspace    
+    if (type(ws_name) == str):
+        ws = mtd[ws_name]
+    else:
+        ws = ws_name
+        
+    # check the ws indexes are within limits or defaults
+    max_ind_possible = ws.getNumberHistograms()-1
+    if (index_max>max_ind_possible):
+        index_max = max_ind_possible
+    if (index_min < 0):
+        index_min = 0
+    if (index_max<index_min):
+        raise ValueError('Min ws index > Max WS index')        
+    
+    SumSpectra(InputWorkspace=ws,OutputWorkspace='sumWS',StartWorkspaceIndex=str(index_min),EndWorkspaceIndex=(index_max),
+               WeightedSum=calc_sigma_avrg,IncludeMonitors=include_monitors)
+    
+    
+    pOutWS = mtd['sumWS'];
+    
+    nSpectra       = pOutWS.getRun().getLogData("NumAllSpectra").value
+    nMaskedSpectra = pOutWS.getRun().getLogData("NumMaskSpectra").value
+    nUsedSpectra   = nSpectra
+    nZeroSpectra   = pOutWS.getRun().getLogData("NumZeroSpectra").value
+    if (calc_sigma_avrg):
+        if nZeroSpectra>0:
+           print "->avrg_spectra:: ",nZeroSpectra," spectra out of: ",nUsedSpectra," have have been droped out due to no counts in it"          
+
+        nUsedSpectra-= nZeroSpectra
+        if(nUsedSpectra <=0) :
+            mtd.deleteWorkspace('sumWS')        
+            raise Exception(" no valid spectra found in the workspace")
+
+    spectra = pOutWS.readY(0);  
+            
+    if len(spectra)==1:
+        rez= spectra[0]/nUsedSpectra
+    else:
+        rez = [None]*len(spectra)           
+        for i in range(0,len(spectra)):
+            rez[i]=spectra[i]/nUsedSpectra
+             
+    mtd.deleteWorkspace('sumWS')
+    stats =[nUsedSpectra,nMaskedSpectra,nZeroSpectra]
+    return (rez,stats);
+    
+>>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 def sumspec(*args):
 	"""
 	#sums spectra onto a single 1d matrix	
@@ -1039,6 +1282,7 @@ def dscan_maps_analysis(run_start,run_end,d_lo,d_hi,specno):
 	
 	return outdat
 
+<<<<<<< HEAD
 
 
 
@@ -1050,6 +1294,155 @@ def help(*args):
 		print '--------------------------------------------------------------------'
 		print 'qtiGenie functions'
 		print '--------------------------------------------------------------------'
+=======
+def export_masks(ws,fileName='',returnMasks=False):
+    """Exports masks applied to Mantid workspace into the old fashioned ascii msk file with masked spectra numbers
+    
+      The file is Libisis/Mantid old ISIS format compartible and can be read by libisis or Manid LoadMasks algorithm
+	 
+	  If optional parameter fileName is present, the masks are saved in the file with this name
+	  Otherwise, the file with the name equal to the workspace name and the extension .msk is used.
+	  
+	  If returnMasks is set to True, the function does not write to file but returns masks array instead
+    """
+   # get pointer to the workspace    
+    if (type(ws) == str):
+        pws = mtd[ws]
+    else:
+        pws = ws
+ 	
+ 
+    ws_name=pws.getName()       
+    nhist = pws.getNumberHistograms()
+ 
+    masks = []
+    for i in range(nhist):
+        # set provisional spectra ID
+        ms = i+1
+        try: 
+            sp = pws.getSpectrum(i)
+            # got real spectra ID, which would correspond real spectra num to spectra ID map
+            ms = sp.getSpectrumNo();
+        except Exception: 
+            print " Can not get spectra No: ",i
+            masks.append(ms) 
+            continue        
+        
+        try:
+            det = pws.getDetector(i)
+        except Exception:
+            masks.append(ms)        
+            continue
+        if det.isMasked():
+            masks.append(ms)
+ 
+      
+
+    nMasks = len(masks);
+    if nMasks == 0:
+        print 'workspace ',ws_name,' have no masked spectra'
+        return masks
+    print 'workspace ',ws_name,' have ',nMasks,' masked spectra'
+    
+    filename=''
+    if len(fileName)==0 :
+        filename=ws_name+'.msk'
+    else:
+        filename = fileName
+        
+    if returnMasks :
+        return masks
+    else:
+        writeISISmasks(filename,masks,8)
+        
+        
+def flushOutString(f,OutString,BlockSize,BlockLimit):
+    """Internal function for writeISISmasks procedure
+    
+    """
+    BlockSize+=1;
+    if BlockSize >= BlockLimit: 
+       if len(OutString)>0:
+           f.write(OutString+'\n');
+       OutString = ''
+       BlockSize = 0
+    return (f,BlockSize,OutString)
+
+    
+def  writeISISmasks(filename,masks,nSpectraInRow=8):
+    """ Function writes input array in the form of ISSI mask file array
+    
+        namely, if one have array 1,2,3,4, 20 30,31,32
+        file will have the following ascii stgings:
+        1-4 20 30-32
+    
+    Usage: 
+    >>writeISISmasks(fileName,masks)
+    where:
+    fileName  -- the name of the output file
+    masks      -- the array with data
+    """
+    ext = os.path.splitext(filename)[1]
+    if len(ext) == 0 :
+        filename=filename+'.msk'
+
+    
+    f = open(filename,'w')   
+    
+    # prepare and write mask data in conventional msk format
+    # where adjusted spectra are separated by - sign
+    OutString   = ''
+    LastSpectraN= ''
+    BlockSize = 0;
+    iDash = 0;
+    im1=masks[0]
+    for i in masks:       
+        if len(OutString)== 0:
+            OutString = str(i)        
+            (f,BlockSize,OutString) = flushOutString(f,OutString,BlockSize,nSpectraInRow)
+            im1 = i  
+            continue
+        # if the current spectra is different from the previous one by 1 only, we may want to skip it
+        if im1+1 == i :
+            LastSpectraN = str(i)
+            iDash += 1;
+        else :  # it is different and should be dealt separately
+            if iDash > 0 :
+                OutString = OutString+'-'+LastSpectraN
+                iDash = 0
+                LastSpectraN=''
+                # write the string if it is finished
+                (f,BlockSize,OutString) = flushOutString(f,OutString,BlockSize,nSpectraInRow)
+
+      
+            if len(OutString) == 0:
+                OutString = str(i)
+            else:
+                OutString = OutString + ' ' + str(i)
+            # write the string if it is finished
+            (f,BlockSize,OutString) = flushOutString(f,OutString,BlockSize,nSpectraInRow)             
+        #endif
+      
+        # current spectra is the previous now
+        im1 = i  
+    # end masks loop
+    if iDash > 0 :
+        OutString = OutString+'-'+LastSpectraN   
+    (f,OutString,BlockSize)=flushOutString(f,OutString,BlockSize,0)                   
+    f.close();
+            
+def help(*args):
+	if len(args)==0:
+		print '!-------------------------------------------------------------------!'    
+		print '!                  Mantid Built in Fucntions                        !'
+		print '!-------------------------------------------------------------------!'            
+		mantidHelp()
+        #from inspect import *        
+		print '!-------------------------------------------------------------------!'    
+		print '!-------------------------------------------------------------------!'    
+		print '!                  qtiGenie functions                               !'
+		print '!-------------------------------------------------------------------!'    
+>>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 		print '\t''trim(dat,t1,t2) '
 		print '\t''listfiles() '
 		print '\t''setinst() '
@@ -1111,3 +1504,14 @@ def help(*args):
 	else:
 		execstr='print '+str(args[0])+'.__doc__'
 		exec(execstr)
+<<<<<<< HEAD
+=======
+
+        
+# set default instrument from Mantid configuration
+setinst(instname);
+print 'Default instrument is set to : ',instname
+print 'You can change it by issuing setinst(InstrumentName) command'
+print 'where InstrumentName can be MER, MAR, MAP, LET, TSK or XSD'
+        
+>>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
