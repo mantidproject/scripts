@@ -234,15 +234,18 @@ def head(runnumber=0000000,keepWSwithResults=False):
     """Classic head command.
     
     Prints head information defined for the run number specified
-    if keepWSwithResults is set to True, the function do not deletes 
+    
+    If keepWSwithResults is set to True, the function do not deletes 
     the Mantid Matrix workspace with additional information about the run. 
     By default this workspace is deleted.
     """
     global instname
     
+    instShort = instname[0:3]
+    
     runnumber=getnumor(runnumber)
     
-    runinfo=RawFileInfo(instname+str(runnumber),GetRunParameters=True)
+    runinfo=RawFileInfo(instShort+str(runnumber),GetRunParameters=True)
 
     title =runinfo.getPropertyValue('RunTitle')
     header=runinfo.getPropertyValue('RunHeader')
@@ -252,7 +255,7 @@ def head(runnumber=0000000,keepWSwithResults=False):
     #enddate=temp.getString('r_enddate') 
     #endtime=temp.getString('r_endtime')
   
-    print 'RunID\t\t: '+instname+header #+' to '+enddate+endtime
+    print 'RunID\t\t: '+instShort+header #+' to '+enddate+endtime
     print 'Title\t\t: '+title     
  
     print 'Protons\t\t:', temp.getDouble('r_gd_prtn_chrg', 0),' uAmps'
