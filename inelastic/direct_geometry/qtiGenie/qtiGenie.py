@@ -53,15 +53,6 @@ iliad_set_calfile = dgreduce.set_cal_file
 cd(save_dir)
 print 'Working directory set to: ',save_dir;
 
-def __init__(self):
-    """
-    """
-    # set default instrument from Mantid configuration
-
-    setinst(instname);
-    print 'Default instrument is set to : ',instname
-    print 'You can change it by issuing setinst(InstrumentName) command'
-    print 'where InstrumentName can be MER, MAR, MAP, LET, TSK or XSD'
 
 
 #######################
@@ -1390,3 +1381,11 @@ def help(*args):
 	else:
 		execstr='print '+str(args[0])+'.__doc__'
 		exec(execstr)
+
+        
+# set default instrument from Mantid configuration
+setinst(instname);
+print 'Default instrument is set to : ',instname
+print 'You can change it by issuing setinst(InstrumentName) command'
+print 'where InstrumentName can be MER, MAR, MAP, LET, TSK or XSD'
+        
