@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-#from mantid import *
-=======
->>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 from utils import *
 #from mantidsimple import *
 import MantidFramework 
@@ -40,11 +36,6 @@ plotmkr=""
 
 plotcolor="red"
 
-<<<<<<< HEAD
-#change path to the directory where qtigenie resides
-print 'Working directory set to ',str(os.path.dirname(inspect.getmodule(dgreduce).__file__))
-cd(str(os.path.dirname(inspect.getmodule(dgreduce).__file__)))
-=======
 
 save_dir = config.getString('defaultsave.directory')
 if len(save_dir) ==0 :
@@ -52,21 +43,15 @@ if len(save_dir) ==0 :
    save_dir = str(os.path.dirname(inspect.getmodule(dgreduce).__file__))
    
 instname = config['default.instrument']  
->>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 
 #set up some 'isis friendly' alias names to dgreduce
 iliad_setup=dgreduce.setup
 iliad=dgreduce.arb_units
 iliad_abs=dgreduce.abs_units
 iliad_help=dgreduce.help
-<<<<<<< HEAD
-=======
 iliad_set_calfile = dgreduce.set_cal_file
 cd(save_dir)
 print 'Working directory set to: ',save_dir;
-
-
->>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 
 #######################
 #######################
@@ -131,57 +116,6 @@ def print_globals():
 
 ##instrument definitions
 def setinst(iname):
-<<<<<<< HEAD
-	"""
-	setinst('mar')
-	setup instrument defaults by reading the instname.txt file
-	"""
-	if iname =='mer' or iname=='MER':
-		print "Reading params file for merlin from current working directory"
-		readsetuptxtfile('merlin.txt')
-
-	if iname =='map' or iname=='MAP':
-		print "Reading params file for maps from current working directory"
-		readsetuptxtfile('maps.txt')
-
-	if iname =='let' or iname=='LET':
-		print "Reading params file for LET from current working directory"
-		readsetuptxtfile('let.txt')
-
-	if iname =='mar' or iname=='MAR':
-		print "Reading params file for MARI from current working directory"
-		readsetuptxtfile('mari.txt')
-	if iname =='tsc' or iname=='TSC':
-		print "Reading params file for TOSCA from current working directory"
-		readsetuptxtfile('tosca.txt')
-	if iname=='sxd' or iname=='SXD':
-		print "Reading params file for SXD from current working directory"
-		readsetuptxtfile('sxd.txt')
-
-def readsetuptxtfile(fname):
-		global wdir, instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
-		f = open(fname, 'r+')
-		
-		instring=f.readline()
-		instname=instring.split()[1]
-	
-		instring=f.readline()
-		ext=instring.split()[1]
-	
-		instring=f.readline()
-		instdae=instring.split()[1]
-	
-		instring=f.readline()
-		mon1_spec=int(instring.split()[1])
-	
-		instring=f.readline()
-		mon2_spec=int(instring.split()[1])
-	
-		instring=f.readline()
-		mon3_spec=int(instring.split()[1])
-		f.close()
-		return wdir,instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
-=======
     """
     setinst('mar')
     setup instrument defaults by reading the instname.txt file
@@ -236,7 +170,6 @@ def readsetuptxtfile(fname):
     f.close()
     return wdir,instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
     
->>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 def setmon_1_spec(spec):
 	"""
 	sets the default mon 1 spec to another spectrum
@@ -265,36 +198,6 @@ def showgpath():
     except NameError:
         print 'No monitors are defined for this function'
     
-<<<<<<< HEAD
-    current_path = config.getDataSearchDirs();
-    print 'inst_data:::'
-    for i in range(0,len(current_path)):
-        print '         :::',current_path[i];
-    
-def head(runnumber):
-	"""
-	classic head command
-	"""
-	runnumber=getnumor(runnumber)
-	
-	runinfo=RawFileInfo(instname+str(runnumber),GetRunParameters=True)
-
-	title=runinfo.getPropertyValue('runtitle')
-
-	print ('Title              :'), title
-
-	temp = mtd['Raw_RPB']
-
-	print ('uamps              :'), temp.getDouble('r_gd_prtn_chrg', 0)
-
-	print ('Run duration (hrs) :'), temp.getInt('r_dur', 0) /3600
-
-		#R_dur # r_durunits# r_dur_freq# r_dmp# r_dmp_units# r_dmp_freq#r_freq
-
-		#r_gd_prtn_chrg# r_tot_prtn_chrg# r_goodfrm#r_rawfrm# r_dur_wanted#r_dur_secs
-
-		#r_mon_sum1# r_mon_sum2#r_mon_sum3# r_enddate#r_endtime#r_prop
-=======
     getgpath();
     
 def getgpath(silent=False):
@@ -377,7 +280,6 @@ def head(runnumber=0000000,keepWSwithResults=False):
 #R_dur # r_durunits# r_dur_freq# r_dmp# r_dmp_units# r_dmp_freq#r_freq
 #r_gd_prtn_chrg# r_tot_prtn_chrg# r_goodfrm#r_rawfrm# r_dur_wanted#r_dur_secs
 #r_mon_sum1# r_mon_sum2#r_mon_sum3# r_enddate#r_endtime#r_prop
->>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 
 
 def iv(wksp_in):
@@ -478,17 +380,10 @@ def load_monitors(*args):
 		print 'error'
 
 def getnumor(runnumber):
-<<<<<<< HEAD
-	#creates a string runnumber from interger input and pads with zerso to cope with isis 
-	#file naminging convention need an additional switch for ts1 and ts2 instruments
-	#to cope with the different number of preceeding zeros.
-	
-=======
 	"""creates a string runnumber from interger input and pads with zerso to cope with isis 
 	   file naminging convention need an additional switch for ts1 and ts2 instruments
 	   to cope with the different number of preceeding zeros.
 	"""
->>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 	if instname=='LET':
 		run=str(runnumber)	
 		if len(run) == 3:
@@ -910,8 +805,6 @@ def etrans(*args):
 	
 	return mtd[wksp_out]
 
-<<<<<<< HEAD
-=======
 def avrg_spectra(ws_name,index_min=0,index_max=sys.float_info.max,calc_sigma_avrg=False,include_monitors=False):
     """Get averaged workspace spectrum out of the workpsace spectra in the specified range without using map file.
         
@@ -982,7 +875,6 @@ def avrg_spectra(ws_name,index_min=0,index_max=sys.float_info.max,calc_sigma_avr
     stats =[nUsedSpectra,nMaskedSpectra,nZeroSpectra]
     return (rez,stats);
     
->>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 def sumspec(*args):
 	"""
 	#sums spectra onto a single 1d matrix	
@@ -1282,19 +1174,8 @@ def dscan_maps_analysis(run_start,run_end,d_lo,d_hi,specno):
 	
 	return outdat
 
-<<<<<<< HEAD
 
 
-
-def help(*args):
-	if len(args)==0:
-		print 'Mantid Built in Fucntions'
-		mantidHelp()
-		print '--------------------------------------------------------------------'
-		print '--------------------------------------------------------------------'
-		print 'qtiGenie functions'
-		print '--------------------------------------------------------------------'
-=======
 def export_masks(ws,fileName='',returnMasks=False):
     """Exports masks applied to Mantid workspace into the old fashioned ascii msk file with masked spectra numbers
     
@@ -1430,7 +1311,7 @@ def  writeISISmasks(filename,masks,nSpectraInRow=8):
         OutString = OutString+'-'+LastSpectraN   
     (f,OutString,BlockSize)=flushOutString(f,OutString,BlockSize,0)                   
     f.close();
-            
+
 def help(*args):
 	if len(args)==0:
 		print '!-------------------------------------------------------------------!'    
@@ -1442,7 +1323,6 @@ def help(*args):
 		print '!-------------------------------------------------------------------!'    
 		print '!                  qtiGenie functions                               !'
 		print '!-------------------------------------------------------------------!'    
->>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
 		print '\t''trim(dat,t1,t2) '
 		print '\t''listfiles() '
 		print '\t''setinst() '
@@ -1504,9 +1384,6 @@ def help(*args):
 	else:
 		execstr='print '+str(args[0])+'.__doc__'
 		exec(execstr)
-<<<<<<< HEAD
-=======
-
         
 # set default instrument from Mantid configuration
 setinst(instname);
@@ -1514,4 +1391,3 @@ print 'Default instrument is set to : ',instname
 print 'You can change it by issuing setinst(InstrumentName) command'
 print 'where InstrumentName can be MER, MAR, MAP, LET, TSK or XSD'
         
->>>>>>> c3a43a5afca5653a821691774e60ab5035b04e21
