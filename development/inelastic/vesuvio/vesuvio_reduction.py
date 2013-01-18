@@ -8,7 +8,6 @@ from mantid.simpleapi import *
 from vesuvio_routines import mask_data
 import numpy
 import math
-from screen import constrain
 
 ################################################################################
 ## Load data (need to correct for positions in IP
@@ -23,6 +22,11 @@ ip_file = "/home/dmn58364/Scripts/inelastic/vesuvio/selena/IP0004_10_no_header.p
 print "Loading spectra %s from runs %s" % (spectra,runs)
 raw_ws = LoadVesuvio(RunNumbers=runs, SpectrumList=spectra,
                      DifferenceType=diff_type,InstrumentParFile=ip_file)
+
+raw_ws /= 1e6
+#raw_ws = CropWorkspace(raw_ws,XMin=50)
+tof = raw_ws.readX(0)
+raw_ws = Rebin(raw_ws,Params=[50.0,1,tof[-1]])
 
 #################################################################################
 ## Smoothing
@@ -68,12 +72,12 @@ k_free = False
 sears_flag = 1
 
 # If FSE not free, then sears flags should be off
-if k_free is False:
+if k_free:
     sears_flag = 0
-    n_kfree = 0
-else:
     n_kfree = 1
-
+else:
+    n_kfree = 0
+    
 print "Number of terms in Hermite expansion=%d." % n_c,
 terms = ""
 for index, value in enumerate(c_free):
@@ -85,18 +89,18 @@ print "Sears flag=%d" % (sears_flag)
 #################################################################################
 ## Mass distribution inputs
 #################################################################################
-masses = [1.00794, 16.0, 270.0, 133.0]
+masses = [1.00794, 16.0, 27.0, 133.0]
 gauss_width = [5, 10, 13, 30] # The only free width is the first mass
 gauss_lower = [2, 10, 13, 30]
 gauss_upper = [7, 10, 13, 30]
-npeaks = len(masses)
+nmasses = len(masses)
 
 #################################################################################
 ## Intensity constraints
 ##   Aeq*X = 0
 ## where Aeq is a matrix of size (nconstraints,nhermite(active) + nkfree + nmasses)
 #################################################################################
-aeq = [ [0,-1,0,4] ] # list of lists. First=mass1,second=mass2 etc
+aeq = [ [0,-1,0,4] ] # list of lists. First list=mass1,second list=mass2 etc
 
 #################################################################################
 ## Run the fit
@@ -111,46 +115,79 @@ def to_space_sep_str(collection):
 mass_str = to_space_sep_str(masses)
 hermite_str = to_space_sep_str(c_free)
 
-function_str = "name=NCSCountRate,WorkspaceIndex=%d,Masses=%s,HermiteCoeffs=%s" \
-     % (ws_index, mass_str, hermite_str)
+function_str = ""
 ties = ""
 constraints = ""
 
-## Width contraints
-for index, (wg_low, wg_width, wg_hi) in enumerate(zip(gauss_lower,gauss_width,gauss_upper)):
-    par_name = "Sigma_%d" % index
+for index, mass in enumerate(masses):
+    # Main function
+    function_str += "name=%s,%s;"
+    if index == 0:
+        func_name = "GramCharlierComptonProfile"
+        params = "WorkspaceIndex=%d,Mass=%f,HermiteCoeffs=%s" % (ws_index,mass,hermite_str)
+    else:
+        func_name = "GaussianComptonProfile"
+        params = "WorkspaceIndex=%d,Mass=%f" % (ws_index,mass)
+    function_str = function_str % (func_name, params)
+    
+    # Constraints/Ties
+    func_index = index
+    par_name = "f%d.Width" % func_index
+    wg_low,wg_width,wg_hi = gauss_lower[index],gauss_width[index],gauss_upper[index]
     if wg_low == wg_hi:
         ties += "%s=%f," % (par_name,wg_low)
     else:
         constraints += "%f < %s < %f," % (wg_low, par_name, wg_hi)
+        
+### Stoichiometry/Intensity constraints
+for aeq_i in aeq:
+    # The first value in the aeq list relates to the first mass. We need to expand the
+    # matrix to incorporate the hermite polynomial coeffs that are used instead of the Gaussian
+    intensity_pars = ["f%d.Intensity" % index for index in range(1,nmasses)]
+    firstmass_aeq = aeq_i[0]
+    aeq_i = aeq_i[1:]
+    for back_index, coeff in enumerate(reversed(c_free)):
+        if coeff == 1:
+            aeq_i.insert(0, firstmass_aeq) #prepend
+            intensity_pars.insert(0,"f0.C_%d" % (2*(n_c - 1 - back_index)) ) #Even coefficents
 
-## Intensity constraints
-for index, value in enumerate(c_free): # These all relate to the first mass
-    lhs_par = "C_%d" % index
-    if value == 1:
-        ties += "%s*%s=0," % (lhs_par,"Intens_0")
+    # Make list of tuples (coeff,par_name) that contribute
+    lhs_terms = []
+    for coeff, par_name in zip(aeq_i, intensity_pars):
+        if abs(coeff) > 0.0:
+            lhs_terms.append((coeff,par_name))
     
+    # Pick first par name to go on lhs of tie expression.
+    # and rearrange so everything else is on the the RHS of aeq_i*x_i = 0
+    lhs = lhs_terms[0]
+    rhs = lhs_terms[1:]
+    denominator = -1.0*lhs[0]
+    rhs = map(lambda term: (term[0]/denominator,term[1]), rhs)
+    # Now form p=a*b+c*d...
+    tie_i = lhs[1] + "="
+    rhs_str = ""
+    for coeff, param in rhs:
+        rhs_str += "%+f*%s" % (coeff,param) # +f prints +/- with number
+    ties += lhs[1] + "=" + rhs_str.lstrip("+") + ","
+
 ## FSE constraint
 if not k_free:
-    ties += "%s=%s,"
-    par_name = "FSECoeff"
+    ties += "%s=%s"
+    par_name = "f0.FSECoeff"
     if sears_flag == 1:
-        value = "Sigma_0*sqrt(2)/12"
+        value = "f0.Width*sqrt(2)/12"
     else:
         value = "0"
     ties = ties % (par_name, value)
-    
-## Stoichiometry
-for aeq_i in aeq:
-    for index, value in enumerate(aeq_i):
-        if abs(value) != 0.0:
-            rhs_par = "Intens_%d" % (index)
-            ties += "%f*%s=0," % (value, rhs_par)
-        
+
+function_str = function_str.rstrip(";")
 ties = ties.rstrip(",")
 constraints = constraints.rstrip(",")
 
+print function_str
 print "-"*15,"Ties","-"*15
 print ties
 print "-"*15,"Constraints","-"*15
 print constraints
+
+Fit(function_str,"raw_ws",Ties=ties,Constraints=constraints,Output="fit",CreateOutput=True,OutputCompositeMembers=True,MaxIterations=500)
