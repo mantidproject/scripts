@@ -15,12 +15,12 @@ def preprocess(data_ws, options):
         pts = options.smooth_points
         print "Smoothing data using %d neighbours" % pts
         from mantid.simpleapi import SmoothData
-        data_ws = SmoothData(InputWorkspace=data_ws, NPoints=[pts])
+        data = SmoothData(InputWorkspace=data_ws, OutputWorkspace=data_ws, NPoints=[pts])
 
     if options.has_been_set("bad_data_error"):
-        mask_data(data_ws, options.bad_data_error)
+        mask_data(data, options.bad_data_error)
         
-    return data_ws
+    return data
 
 def mask_data(workspace, error_threshold, verbose=False):
     """
@@ -48,8 +48,8 @@ def mask_data(workspace, error_threshold, verbose=False):
         xmin, xmax = x_data[bin_index],x_data[bin_index+1]
         if verbose:
             print "Masking index %d between [%f,%f]" % (ws_index,xmin,xmax)
-        workspace = MaskBins(InputWorkspace=workspace, SpectraList=[int(ws_index)],
-                             XMin=xmin,XMax=xmax)
+            MaskBins(InputWorkspace=workspace, SpectraList=[int(ws_index)],
+                     XMin=xmin,XMax=xmax)
 
 #----------------------------------------------------------------------------------------
 
