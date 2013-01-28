@@ -1,5 +1,5 @@
 ##
-## Functions to aid VESUVIO reduction
+##
 ##
 import numpy as np
 
@@ -15,12 +15,12 @@ def preprocess(data_ws, options):
         pts = options.smooth_points
         print "Smoothing data using %d neighbours" % pts
         from mantid.simpleapi import SmoothData
-        data = SmoothData(InputWorkspace=data_ws, OutputWorkspace=data_ws, NPoints=[pts])
+        data_ws = SmoothData(InputWorkspace=data_ws, OutputWorkspace=data_ws, NPoints=[pts])
 
     if options.has_been_set("bad_data_error"):
-        mask_data(data, options.bad_data_error)
+        mask_data(data_ws, options.bad_data_error)
         
-    return data
+    return data_ws
 
 def mask_data(workspace, error_threshold, verbose=False):
     """

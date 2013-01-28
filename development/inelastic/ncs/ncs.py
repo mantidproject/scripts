@@ -1,11 +1,11 @@
 ##
-## Basic Reduction script for the VESUVIO
-## instrument.
-##
 ## In active development to iron out the reduction
 ##
 from mantid.simpleapi import *
-from vesuvio_routines import ReductionOptions, mask_data, preprocess, run_fitting
+import sys
+if "ncs_helpers" in sys.modules:
+    reload(sys.modules["ncs_helpers"])
+from ncs_helpers import ReductionOptions, mask_data, preprocess, run_fitting
 import numpy
 import math
 
@@ -17,7 +17,7 @@ import math
 runs = "15039-15045"
 spectra = "135"
 diff_type="Single" # Allowed values=Single,Double,Thick
-ip_file = "/home/dmn58364/Scripts/inelastic/vesuvio/selena/IP0004_10_no_header.par"
+ip_file = "IP0004_10_no_header.par"
 
 print "Loading spectra %s from runs %s" % (spectra,runs)
 raw_ws = LoadVesuvio(RunNumbers=runs, SpectrumList=spectra,
@@ -36,7 +36,7 @@ reducer_options = ReductionOptions()
 reducer_options.smooth_points = 3
 
 ## Cropping
-reducer_options.bad_data_error = 1e6
+reducer_options.bad_data_error = None
 
 #################################################################################
 ## Fitting options
