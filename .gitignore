@@ -1,0 +1,13 @@
+# Ignore text editor (e.g. emacs) autosave files
+*~
+
+# Compiled python files
+*.py[co]
+
+# PyCharm IDE
+.idea/
+
+# thumbnail and index files
+.DS_Store
+Thumbs.db
+Desktop.ini
