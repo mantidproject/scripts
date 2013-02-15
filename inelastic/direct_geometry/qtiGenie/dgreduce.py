@@ -1182,10 +1182,10 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
          reducer.map_file = monovan_mapfile     
          deltaE_wkspace_monovan = reducer.convert_to_energy(mono_van, ei_guess, wb_mono)
        
-         (absnorm_factorL,absnorm_factor,absnorm_factorP) = getAbsNormalizationFactor(deltaE_wkspace_monovan.getName(),str(reducer.monovan_integr_range[0]),str(reducer.monovan_integr_range[1]))        
+         (absnorm_factorL,absnorm_factorSS,absnorm_factorP,absnorm_factTGP) = getAbsNormalizationFactor(deltaE_wkspace_monovan.getName(),str(reducer.monovan_integr_range[0]),str(reducer.monovan_integr_range[1]))        
          
-    print 'Absolute correction factor =',absnorm_factor,' Libisis: ',absnorm_factorL,' Puasonian: ',absnorm_factorP    
-    CreateSingleValuedWorkspace(OutputWorkspace='AbsFactor',DataValue=absnorm_factor)
+    print 'Absolute correction factor S^2 =',absnorm_factorSS,' Libisis: ',absnorm_factorL,' Puasonian: ',absnorm_factorP, ' TGP : ',absnorm_factTGP
+    CreateSingleValuedWorkspace(OutputWorkspace='AbsFactor',DataValue=absnorm_factTGP)
     end_time=time.time()
     results_name=str(sample_run)+'.spe'
     ei= (deltaE_wkspace_sample.getSampleDetails().getLogData("Ei").value)
@@ -1441,6 +1441,9 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
     weight2_sum = 0.0   
     signal3_sum = 0.0
     weight3_sum = 0.0   
+    signal4_sum = 0.0
+    weight4_sum = 0.0   
+
     
     ic=0;
     izerc=0;
@@ -1460,15 +1463,15 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
         if ((error<=0) or (signal<=0)):          # ignore Inf (0 in error are probably 0 in sign
             izerc+=1
             continue
-        # statistics which minimizes the value sum(n_i-n)^2/Sigma_i -- this what Libisis had
+        # Guess which minimizes the value sum(n_i-n)^2/Sigma_i -- this what Libisis had
         weight = 1.0/error
         signal1_sum += signal * weight
         weight1_sum += weight   
-        # statistics which minimizes the value sum(n_i-n)^2/Sigma_i^2
-        weight = 1.0/(error*error)
-        signal2_sum += signal * weight
-        weight2_sum += weight            
-        # statistics which assumes puassonian distribution with Err=Sqrt(signal) and calculates 
+        # Guess which minimizes the value sum(n_i-n)^2/Sigma_i^2
+        weight2 = 1.0/(error*error)
+        signal2_sum += signal * weight2
+        weight2_sum += weight2            
+        # Guess which assumes puassonian distribution with Err=Sqrt(signal) and calculates 
         # the function: N_avrg = 1/(DetEfficiency_avrg^-1)*sum(n_i*DetEfficiency_i^-1)
         # where the DetEfficiency = WB_signal_i/WB_average WB_signal_i is the White Beam Vanadium 
         # signal on i-th detector and the WB_average -- average WB vanadium signal. 
@@ -1477,6 +1480,9 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
         weight      = err_sq/signal
         signal3_sum += err_sq
         weight3_sum += weight
+        # Guess which estimatnes value sum(n_i^2/Sigma_i^2)/sum(n_i/Sigma_i^2) TGP suggestion from 12-2012
+        signal4_sum += signal*signal/err_sq
+        weight4_sum += signal/err_sq
         
         ic += 1       
         #print 'signal value =' ,signal
@@ -1487,11 +1493,13 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
     integral_monovanLibISIS=signal1_sum / weight1_sum
     integral_monovanSigSq  =signal2_sum / weight2_sum    
     integral_monovanPuason =signal3_sum / weight3_sum        
+    integral_monovanTGP    =signal4_sum / weight4_sum
     #integral_monovan=signal_sum /(wbVan_sum)
     van_multiplier = (float(reducer.van_rmm)/float(van_mass))
     absnorm_factorLibISIS = integral_monovanLibISIS * van_multiplier
     absnorm_factorSigSq   = integral_monovanSigSq   * van_multiplier    
     absnorm_factorPuason  = integral_monovanPuason  * van_multiplier    
+    absnorm_factorTGP     = integral_monovanTGP     * van_multiplier 
     #print 'Monovan integral :' ,integral_monovan        
     
     if ei_monovan >= 210.0:  
@@ -1500,13 +1508,15 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
         xsection = 400 + (ei_monovan/10)  
 
     absnorm_factorLibISIS /= xsection
-    absnorm_factorSigSq  /= xsection    
-    absnorm_factorPuason /= xsection        
+    absnorm_factorSigSq  /= xsection 
+    absnorm_factorPuason /= xsection   
+    absnorm_factorTGP    /= xsection 
     
     sample_multiplier = (float(reducer.sample_mass)/float(reducer.sample_rmm))
     absnorm_factorLibISIS= absnorm_factorLibISIS *sample_multiplier
     absnorm_factorSigSq  = absnorm_factorSigSq *sample_multiplier
     absnorm_factorPuason = absnorm_factorPuason *sample_multiplier
+    absnorm_factorTGP    = absnorm_factorTGP *sample_multiplier
     
     if (absnorm_factorLibISIS !=absnorm_factorLibISIS)|(izerc!=0):    # It is an error, print diagnostics:
         if (absnorm_factorLibISIS !=absnorm_factorLibISIS):
@@ -1518,10 +1528,11 @@ def getAbsNormalizationFactor(deltaE_wkspace,min,max):
         print '--------> Summarized: ',ic,' spectra with total value: ',signal2_sum, 'and total weight: ',weight2_sum
         print '--------> Dropped: ',izerc,' empty spectra'
         print '--------> Van multiplier: ',van_multiplier,'  sample multiplier: ',sample_multiplier, 'and xsection: ',xsection          
-        print '--------> Abs norm factors: LibISIS: ',absnorm_factorLibISIS,' Sigma^2: ',absnorm_factorSigSq,' Puasonian: ',absnorm_factorPuason
+        print '--------> Abs norm factors: LibISIS: ',absnorm_factorLibISIS,' Sigma^2: ',absnorm_factorSigSq
+        print '--------> Abs norm factors: Puasonian: ',absnorm_factorPuason, ' TGP: ',absnorm_factorTGP
         print '----------------------------------------------------------------------------------------------'        
     else:
         DeleteWorkspace(deltaE_wkspace)
     DeleteWorkspace(data_ws)
-    return (absnorm_factorLibISIS,absnorm_factorSigSq,absnorm_factorPuason)
+    return (absnorm_factorLibISIS,absnorm_factorSigSq,absnorm_factorPuason,absnorm_factorTGP)
     
