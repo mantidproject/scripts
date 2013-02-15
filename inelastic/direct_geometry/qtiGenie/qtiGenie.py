@@ -6,8 +6,9 @@ MantidFramework.mtd.initialise()
 from DirectEnergyConversion import *
 import time as time
 import dgreduce
-import inspect
 import numpy
+import nxs
+import inspect as insp        
 import PySlice2
 import PyChop
 # avoid _qti if running outside Mantid.
@@ -18,13 +19,13 @@ except ImportError:
 import os
 #########################
 #########################
-global mpl, wdir, instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
+global mpl, instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
 mpl = 0
 if mpl==1:
 	print 'Using matplotlib graphics'
 if mpl==0:
 	print 'Using qtiplot graphics'
-wdir=""
+
 
 instname=""
 
@@ -97,11 +98,10 @@ def test(wb_run,sample_run,ei_guess,rebin,mapfile,**kwargs):
 
 
 def listfiles():
-
 	"""
 	list function for the working data directory
 	"""
-	aa= os.listdir(wdir)
+	aa= os.listdir(os.getcwd())
 	for i in range(0,len(aa)):
 		print aa[i]
 def print_locals():
@@ -144,7 +144,7 @@ def setinst(iname):
         readsetuptxtfile('sxd.txt')
 
 def readsetuptxtfile(fname):
-    global wdir, instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
+    global instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
     
     file_path = str(os.path.dirname(inspect.getmodule(dgreduce).__file__))
     longName = os.path.join(file_path,fname);
@@ -168,7 +168,7 @@ def readsetuptxtfile(fname):
     instring=f.readline()
     mon3_spec=int(instring.split()[1])
     f.close()
-    return wdir,instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
+    return os.getcwd(),instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
     
 def setmon_1_spec(spec):
 	"""
@@ -186,7 +186,7 @@ def showgpath():
     print '----------------------------------------------------------'
     print 'Global::: ', instname, ': specific variables are:'
     
-    print 'Data directory::: ', wdir, ':'
+    print 'Data directory::: ', os.getcwd(), ':'
     
     print 'file extension::: ', ext , ':'
     print 'dae path::: ', instdae, ':'
@@ -231,11 +231,17 @@ def getspepath(silent=False):
 def head(runnumber=0000000,keepWSwithResults=False):
     """Classic head command.
     
-    Prints head information defined for the run number specified
+    Prints head information defined in the raw file for the run number specified.
+    
+    The command invokes Mantid RawFileInfo algorithm, which produces Mantid Matrix Workspace
+    with the information about the raw file.
     
     If keepWSwithResults is set to True, the function do not deletes 
-    the Mantid Matrix workspace with additional information about the run. 
-    By default this workspace is deleted.
+    the this workspace. By default this workspace is deleted.
+    
+    More information about the head of the file is availible from this 
+    matrix workspace. If one wants all this information, he may use 
+    RawFileInfo algorithm independently.
     """
     global instname
     
@@ -272,7 +278,7 @@ def head(runnumber=0000000,keepWSwithResults=False):
     else:
         print 'Run duration\t\t:',run_length,' sec'     
     
-    print 'More details available from Mantid RawFileInfo algorithm\n'
+    #print 'More details available from Mantid RawFileInfo algorithm\n'
     if not(keepWSwithResults) :
         mantid.deleteWorkspace(paramWSName)
     
@@ -457,7 +463,7 @@ def whos():
 	list all current loaded workspaces
 	"""
 	names=mtd.getWorkspaceNames()
-	print 'Instrument name: ', instname, '\t', 'Data Directory: ',wdir
+	print 'Instrument name: ', instname, '\t', 'Data Directory: ',os.getcwd()
 	print '---------------------------------------------------------------------------'
 	print 'WkSp Name', '\t', '\t', '\t', 'Allocated Mem', '\t', 'Title', '\t'
 	print '---------------------------------------------------------------------------'
@@ -540,7 +546,7 @@ def SaveData(out,run_num):
 	SaveData(w1,'fname')
 	"""
 	runnumber=getnumor(run_num)
-	fullname=wdir+instname+str(runnumber)+'.spe'
+	fullname=os.getcwd()+instname+str(runnumber)+'.spe'
 	SaveSPE(out,fullname)
 
 
@@ -968,13 +974,14 @@ def is_list(inp):
 	except:
 		return False		
 def spec2matrixsub(inp):
-	#convert spectrum number to matric subscipt i.e. -1
-	if is_list(inp):
-		tmp=inp
-		for i in range(len(tmp)):
-			tmp[i]=tmp[i]-1
-		return tmp
-	
+    """Convert spectrum number to matric subscipt i.e. -1
+    """
+    if is_list(inp):
+        tmp=inp
+        for i in range(len(tmp)):
+            tmp[i]=tmp[i]-1
+        return tmp
+
                 
 
 def getspec(wksp_in,spec):
@@ -1177,21 +1184,22 @@ def dscan_maps_analysis(run_start,run_end,d_lo,d_hi,specno):
 
 
 def export_masks(ws,fileName='',returnMasks=False):
-    """Exports masks applied to Mantid workspace into the old fashioned ascii msk file with masked spectra numbers
+    """Exports masks applied to Mantid workspace write masks applied to the workspace detectors (e.g. drawn using the instrument view)
+       into the old fashioned ascii msk file with masked spectra numbers.
     
       The file is Libisis/Mantid old ISIS format compartible and can be read by libisis or Manid LoadMasks algorithm
-	 
-	  If optional parameter fileName is present, the masks are saved in the file with this name
-	  Otherwise, the file with the name equal to the workspace name and the extension .msk is used.
-	  
-	  If returnMasks is set to True, the function does not write to file but returns masks array instead
+ 
+      If optional parameter fileName is present, the masks are saved in the file with this name
+      Otherwise, the file with the name equal to the workspace name and the extension .msk is used.
+    
+     If returnMasks is set to True, the function does not write to file but returns masks array instead
     """
    # get pointer to the workspace    
     if (type(ws) == str):
         pws = mtd[ws]
     else:
         pws = ws
- 	
+ 
  
     ws_name=pws.getName()       
     nhist = pws.getNumberHistograms()
@@ -1238,8 +1246,7 @@ def export_masks(ws,fileName='',returnMasks=False):
         
         
 def flushOutString(f,OutString,BlockSize,BlockLimit):
-    """Internal function for writeISISmasks procedure
-    
+    """Internal function for writeISISmasks procedure   
     """
     BlockSize+=1;
     if BlockSize >= BlockLimit: 
@@ -1251,11 +1258,16 @@ def flushOutString(f,OutString,BlockSize,BlockLimit):
 
     
 def  writeISISmasks(filename,masks,nSpectraInRow=8):
-    """ Function writes input array in the form of ISSI mask file array
+    """Function writes input array in the form of ISSI mask file array
+       This is the helper function for export_mask procedure, but can be used separately
     
         namely, if one have array 1,2,3,4, 20 30,31,32
         file will have the following ascii stgings:
         1-4 20 30-32
+        
+        nSpectaInRow indicates the number of the separate spectra ID (numbers) which the program 
+        needs to fit into one row. For the example above the number has to be 5 or more 
+        to fit all spectra into a single row. Setting it to one will produce 8 rows with single number in each.
     
     Usage: 
     >>writeISISmasks(fileName,masks)
@@ -1267,7 +1279,6 @@ def  writeISISmasks(filename,masks,nSpectraInRow=8):
     if len(ext) == 0 :
         filename=filename+'.msk'
 
-    
     f = open(filename,'w')   
     
     # prepare and write mask data in conventional msk format
@@ -1312,78 +1323,229 @@ def  writeISISmasks(filename,masks,nSpectraInRow=8):
     (f,OutString,BlockSize)=flushOutString(f,OutString,BlockSize,0)                   
     f.close();
 
+def convertDetDataToNexus(detDotDatFileName):
+    """ Function converts ascii det.Dat file,which describes detector positions and delay times
+        into nexus file format. Both formats are recognizable by Mantid, LoadDetectorInfo algorithm but 
+        the second one should be much faster to access. 
+    """
+    
+    fullFile = FileFinder.getFullPath(detDotDatFileName)
+    if len(fullFile) == 0:
+        raise IOError("Can not find file: "+detDotDatFileName+" in the mantid search path (see getgpath())")
+    # read detectror.dat file:
+    hf = open(fullFile,'r')
+    # skip  text header
+    hf.readline();
+    #   read number of detectors
+    sb = hf.readline().split();   
+    nDetectors = int(sb[0]);
+    something  = int(sb[1]);
+    #print "nDet and something: ",nDetectors,something    
+    # skip column names
+    hf.readline();    
+    # Read the first column and identify the det.dat type (MARI has 14 columns and all others have 19)
+    sb = hf.readline().split(); 
+    format  = "UND";
+    if len(sb) == 14 :
+        format = 'MAR';
+    if len(sb) == 19 :
+        format = 'LET';
+    if format=="UND" :
+        raise IOError("file : "+detDotDatFileName+" contains unsuported number of columns")
+        
+
+    # predefine numpy arrays for the coming data:
+    detIDT = numpy.empty( (nDetectors,2),dtype=numpy.int32);
+    timeOffsets  = numpy.empty((nDetectors,2),dtype=numpy.float32);
+    detCoord     = numpy.empty((nDetectors,3),dtype=numpy.float32);
+    detTrueSize  = numpy.empty((nDetectors,3),dtype=numpy.float32);
+    detFalseSize = numpy.empty((nDetectors,3),dtype=numpy.float32);    
+    detOrient    = numpy.empty((nDetectors,3),dtype=numpy.float32);    
+    detStruct    = numpy.empty((nDetectors,2),dtype=numpy.float32);        
+    detTubeIndex = numpy.empty(nDetectors,dtype=numpy.float32);        
+    
+    # READ IN, C-array ordering, last index fastest
+    for i in range(1,nDetectors+1) :
+        detIDT[i-1,0]=int(sb[0]);  #  det no.
+        detIDT[i-1,1] = int(sb[3]); # code
+        
+        timeOffsets[i-1,0] = float(sb[1]); # time offset
+        detCoord[i-1,0] = float(sb[2]) # L2
+        detCoord[i-1,1] = float(sb[4]) # theta  
+        detCoord[i-1,2] = float(sb[5]) # phi
+        detTrueSize[i-1,0] = float(sb[6]) # Fx
+        detTrueSize[i-1,1] = float(sb[7]) # Fy
+        detTrueSize[i-1,2] = float(sb[8]) # Fz
+        if format == 'MAR' :
+            detFalseSize[i-1,0] = detTrueSize[i-1,0] # W_x
+            detFalseSize[i-1,1] = detTrueSize[i-1,1] # W_y
+            detFalseSize[i-1,2] = detTrueSize[i-1,2] # W_z
+
+            detOrient[i-1,0] = float(sb[9])  # x
+            detOrient[i-1,1] = float(sb[10]) # y
+            detOrient[i-1,2] = float(sb[11]) # z
+
+            detStruct[i-1,0] = float(sb[12])  # tube pressure
+            detStruct[i-1,1] = float(sb[13])  # Wall thickness            
+            
+            timeOffsets[i-1,1] = 0
+            detTubeIndex[i-1]  = i  # det index     ? it seems the doc is not correct
+        else:
+            detFalseSize[i-1,0] = float(sb[9])  # W_x
+            detFalseSize[i-1,1] = float(sb[10]) # W_y
+            detFalseSize[i-1,2] = float(sb[11]) # W_z
+            
+            detOrient[i-1,0] = float(sb[12]) # a_x
+            detOrient[i-1,1] = float(sb[13]) # a_y
+            detOrient[i-1,2] = float(sb[14]) # a_z
+
+            timeOffsets[i-1,1] = float(sb[15]) # dead time or rubbish
+            
+            detStruct[i-1,0] = float(sb[16])  # tube pressure
+            detStruct[i-1,1] = float(sb[17])  # Wall thickness            
+            
+            detTubeIndex[i-1]  = float(sb[18])  # det index
+        # next line;
+        sb = hf.readline().split()
+    #end cycle
+    hf.close()       
+
+    outFileName = os.path.splitext(detDotDatFileName)[0]+'.nxs'
+    if os.path.exists(outFileName) :
+       os.unlink(outFileName);
+
+    file = nxs.napi.open(outFileName,"w5")
+    file.makegroup('detectors.dat','NXEntry')
+    file.opengroup('detectors.dat')
+    file.putattr("version","1.0");      
+    try:
+        #Write detector ID
+        file.makedata('detID','int32',(nDetectors,2))    
+        file.opendata('detID')    
+        file.putattr('description','DetectorID, DetectorType')
+        file.putdata(detIDT)
+        file.closedata()
+        #Write time shifs e.g electronics delay time and detectors dead time
+        file.makedata('timeOffsets','float32',(nDetectors,2))    
+        file.opendata('timeOffsets')
+        file.putattr('description','DelayTime, DeadTime')    
+        file.putdata(timeOffsets)
+        file.closedata()
+        # write detectors polar coordinates
+        file.makedata('detSphericalCoord','float32',(nDetectors,3))    
+        file.opendata('detSphericalCoord')
+        file.putattr('description','L2, Theta, Psi')    
+        file.putdata(detCoord)
+        file.closedata()
+        # write detectors true size
+        file.makedata('detTrueSize','float32',(nDetectors,3))    
+        file.opendata('detTrueSize')
+        file.putattr('description','W_x, W_y, W_z')    
+        file.putdata(detTrueSize)
+        file.closedata()
+        # write detectors false size
+        file.makedata('detFalseSize','float32',(nDetectors,3))    
+        file.opendata('detFalseSize')
+        file.putattr('description','F_x, F_y, F_z')    
+        file.putdata(detFalseSize)
+        file.closedata()
+        # write detectors orientation
+        file.makedata('detOrientation','float32',(nDetectors,3))    
+        file.opendata('detOrientation')
+        file.putattr('description','a_x, a_y, a_z')    
+        file.putdata(detOrient)
+        file.closedata()
+        # write detectors Pressure and wall thickness
+        file.makedata('detPressureAndWall','float32',(nDetectors,2))    
+        file.opendata('detPressureAndWall')
+        file.putattr('description','He3_pressure_Bar, WallThicknes_m')    
+        file.putdata(detStruct)
+        file.closedata()
+        # write detectors index (det_4)
+        file.makedata('detTubeIndex','float32',(nDetectors,1))    
+        file.opendata('detTubeIndex')
+        file.putattr('description','detTubeIndex')    
+        file.putdata(detTubeIndex)
+        file.closedata()   
+    except IOError as e:
+        print "IOError writing to file ",outFileName
+    # close detectors group
+    file.closegroup()    
+    file.close() 
+    
+
 def help(*args):
-	if len(args)==0:
-		print '!-------------------------------------------------------------------!'    
-		print '!                  Mantid Built in Fucntions                        !'
-		print '!-------------------------------------------------------------------!'            
-		mantidHelp()
-        #from inspect import *        
-		print '!-------------------------------------------------------------------!'    
-		print '!-------------------------------------------------------------------!'    
-		print '!                  qtiGenie functions                               !'
-		print '!-------------------------------------------------------------------!'    
-		print '\t''trim(dat,t1,t2) '
-		print '\t''listfiles() '
-		print '\t''setinst() '
-		print '\t''head(runnumber) '
-		print '\t''iv(wksp_in) '
-		print '\t''load(*args) '
-		print '\t''load_monitors(*args) '
-		print '\t''getnumor(runnumber) '
-		print '\t''loadascii(name) '
-		print '\t''ass(wksp) '	
-		print '\t''clear(wksp) '	
-		print '\t''whos() '
-		print '\t''default_plotting(inp) '
-		print '\t''dspacing(wksp_in) '
-		print '\t''get_ei(wksp_in,guess) '
-		print '\t''normalise(*args) '
-		print '\t''rebin(wksp_in,params) '
-		print '\t''integrate_over_runs(runstart,runstop,tmin,tmax,specmin,specmax) '	
-		print '\t''Log(wksp_in) '	
-		print '\t''Ln(wksp_in) '
-		print '\t''etrans(*args) '
-		print '\t''sumspec(*args) '
-		print '\t''integrate(*args) '
-		print '\t''transpose(wksp_in) '
-		print '\t''pwksp(wksp,spec) '
-		print '\t''changecolour(*args) '
-		print '\t''changemarker(*args) '
-		print '\t''p(spec) '
-		print '\t''pe(spec) '
-		print '\t''getspec(spec) '
-		print '\t''get2d() '
-		print '\t''p2d(*args) '
-		print '\t''psurf(*args) '
-		print '\t''plus(a,b) '
-		print '\t''minus(a,b) '
-		print '\t''mult(a,b) '
-		print '\t''div(a,b) '         
-		print '\t''help() '
-		print '--------------------------------------------------------------------'	
-		print 'qtiGenie classes'
-		print '--------------------------------------------------------------------'
-		print 'class Data_1D() '
-		print '--------------------------------------------------------------------'
-		print '\t''__init__(Data_1D) '  
-		print '\t''plot(wksp) '
-		print '\t''plotwe(wksp) '
-		print '\t''Add_1d(wksp,factor) '
-		print '\t''Minus_1D(wksp,factor) '
-		print '\t''Multiply_1d(wksp,factor) '
-		print '\t''Divide_1d(wksp,factor) '
-		print '\t''integrate(wksp,t1,t2) '
-		print '\t''xscale(dat,t1,t2) '
-		print '--------------------------------------------------------------------'	
-		print 'class Data_2D()'
-		print '--------------------------------------------------------------------'
-		print '\t''__init__(Data_2D) '
-		print '\t''sumspec(wksp,*args) '
-		print '\t''sum2d(wsk,s1,s2) '
-	else:
-		execstr='print '+str(args[0])+'.__doc__'
-		exec(execstr)
+    if len(args)==0:
+        print '!-------------------------------------------------------------------!'    
+        print '!                  Mantid Built in Fucntions                        !'
+        print '!-------------------------------------------------------------------!'            
+        mantidHelp()
+        print '!-------------------------------------------------------------------!'    
+        print '!-------------------------------------------------------------------!'    
+        print '!                  qtiGenie functions                               !'
+        print '!-------------------------------------------------------------------!'    
+        print '\t''trim(dat,t1,t2) '
+        print '\t''listfiles() '
+        print '\t''setinst() '
+        print '\t''head(runnumber) '
+        print '\t''iv(wksp_in) '
+        print '\t''load(*args) '
+        print '\t''load_monitors(*args) '
+        print '\t''getnumor(runnumber) '
+        print '\t''loadascii(name) '
+        print '\t''ass(wksp) '	
+        print '\t''clear(wksp) '	
+        print '\t''whos() '
+        print '\t''default_plotting(inp) '
+        print '\t''dspacing(wksp_in) '
+        print '\t''get_ei(wksp_in,guess) '
+        print '\t''normalise(*args) '
+        print '\t''rebin(wksp_in,params) '
+        print '\t''integrate_over_runs(runstart,runstop,tmin,tmax,specmin,specmax) '	
+        print '\t''Log(wksp_in) '	
+        print '\t''Ln(wksp_in) '
+        print '\t''etrans(*args) '
+        print '\t''sumspec(*args) '
+        print '\t''integrate(*args) '
+        print '\t''transpose(wksp_in) '
+        print '\t''pwksp(wksp,spec) '
+        print '\t''changecolour(*args) '
+        print '\t''changemarker(*args) '
+        print '\t''p(spec) '
+        print '\t''pe(spec) '
+        print '\t''getspec(spec) '
+        print '\t''get2d() '
+        print '\t''p2d(*args) '
+        print '\t''psurf(*args) '
+        print '\t''plus(a,b) '
+        print '\t''minus(a,b) '
+        print '\t''mult(a,b) '
+        print '\t''div(a,b) '         
+        print '\t''help() '
+        print '--------------------------------------------------------------------'	
+        print 'qtiGenie classes'
+        print '--------------------------------------------------------------------'
+        print 'class Data_1D() '
+        print '--------------------------------------------------------------------'
+        print '\t''__init__(Data_1D) '  
+        print '\t''plot(wksp) '
+        print '\t''plotwe(wksp) '
+        print '\t''Add_1d(wksp,factor) '
+        print '\t''Minus_1D(wksp,factor) '
+        print '\t''Multiply_1d(wksp,factor) '
+        print '\t''Divide_1d(wksp,factor) '
+        print '\t''integrate(wksp,t1,t2) '
+        print '\t''xscale(dat,t1,t2) '
+        print '--------------------------------------------------------------------'	
+        print 'class Data_2D()'
+        print '--------------------------------------------------------------------'
+        print '\t''__init__(Data_2D) '
+        print '\t''sumspec(wksp,*args) '
+        print '\t''sum2d(wsk,s1,s2) '
+    else:        
+        execstr='print '+str(args[0])+'.__doc__'
+        exec(execstr)
+
         
 # set default instrument from Mantid configuration
 setinst(instname);
