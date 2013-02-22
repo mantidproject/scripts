@@ -1372,8 +1372,12 @@ def diag_load_mask(hard_mask):
    50000
    60100-60105
    """
-  
-   mask_file = open(hard_mask)
+
+   fullFile = FileFinder.getFullPath(hard_mask)      
+   if len(fullFile)==0:
+        raise IOError("Can not find file: "+hard_mask+" in the mantid search path (see getgpath())")
+   
+   mask_file = open(fullFile)
    spectra_list = ""
    for line in mask_file:
        numbers = line.split()
