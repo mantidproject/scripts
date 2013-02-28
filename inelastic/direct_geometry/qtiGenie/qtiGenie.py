@@ -244,12 +244,15 @@ def head(runnumber=0000000,keepWSwithResults=False):
     RawFileInfo algorithm independently.
     """
     global instname
+    if isinstance(runnumber,str) :
+        runName = runnumber
+        instShort = runName[0:3]        
+    else:
+        instShort = instname[0:3]    
+        runnumber=getnumor(runnumber)
+        runName = instShort+str(runnumber)
     
-    instShort = instname[0:3]
-    
-    runnumber=getnumor(runnumber)
-    
-    runinfo=RawFileInfo(instShort+str(runnumber),GetRunParameters=True)
+    runinfo=RawFileInfo(runName,GetRunParameters=True)
 
     title =runinfo.getPropertyValue('RunTitle')
     header=runinfo.getPropertyValue('RunHeader')
