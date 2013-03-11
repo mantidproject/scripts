@@ -1,8 +1,8 @@
 import sys
-#sys.path.append("C:\\LabVIEW Modules\\dae\\genie_python")
+sys.path.append("C:\\LabVIEW Modules\\dae\\genie_python")
 
 #from genie_api import *
-#from genie_init import *
+from genie_init import *
 import time
 from qtiGenie import *
 
@@ -38,9 +38,12 @@ seteifree=run.seteifree
 
 list=run.list
 
+scanTemp=run.scanTemp
 begin=run.begin
+cset=run.cset
 
 end =run.end
+print get_uamps()
 #def list():
 #	#returns a list of displayable command names must be a nicer way todo this!
 #	return ['count uamps',

@@ -1,7 +1,6 @@
 import sys
 sys.path.append("C:\\LabVIEW Modules\\dae\\genie_python")
 
-from genie_api import *
 from genie_init import *
 import time
 from qtiGenie import *
@@ -27,7 +26,7 @@ class mariControl:
 		self.sampleblock='T_sample'
 		self.fix=False
 		iliad_setup(self.inst)
-	
+		print get_uamps()
 	def reduction_ei(self,*args):
 			inp=args[0]
 			self.ei=float(inp[0])            
@@ -40,6 +39,8 @@ class mariControl:
 		'end',
 		'settemp temp',
 		'changetitle runtitle',
+		'cset Command',
+		'scanTemp Tstart Tstep Tend uamps Title',
 		'setWhiteBeam WBrunNumber',
 		'reduction_ei eiForReduction',
 		'defineRoi Qmin Qmax Emin Emax',
@@ -81,9 +82,38 @@ class mariControl:
 		
 	def changetitle(self,*args):
 		title=args[0]
-        
-		change(Title=title[0])
+		print title
+		settitle=''
+		for i in range(len(title)):
+			settitle=settitle+' '+title[i]
+			
+		change(Title=settitle)
 
+	def cset(self,*args):
+		command=args[0]
+		
+		command=str(command[0])
+		print command
+		commandstr='cset('+command+')'
+		eval(commandstr)
+	def scanTemp(self,*args):
+		inp=args[0]
+		print len(inp)
+		Tstart=float(inp[0])
+		Tstep=float(inp[1])
+		Tend=float(inp[2])
+		uamps=float(inp[3])
+		Title=''
+		for i in range(4,len(inp)):
+			Title=Title+inp[i]
+		for T in range(int(Tstart),int(Tend+Tstep),int(Tstep)):
+			settitle=Title+' Temp='+str(T)+'K'
+			change(Title=settitle)
+			self.settemp([T,0])
+			self.count([uamps,0])
+
+			
+		
 	def settemp(self,*args):
 		#Temp=0.0,offset=2.0,runControlOffset=2.0
 		inp=args[0]
@@ -155,7 +185,7 @@ class mariControl:
 				stats.append(currentstatistic)
 				statsWksp=CreateWorkspace(eltime,stats,stats,1)
 				print 'ROI statistic = ',str(currentstatistic),' %: Runtime= ',int(elaspedtime),' secs Integrated current = ',currentUamps,' Uamp'
-				halfstat=int(elaspedtime*4)/3600
+				halfstat=(elaspedtime*4.0)/3600.0
 				print 'Runtime to halve current statistic on ROI =',halfstat,'hours'
 				if uamps>0 and currentUamps>uamps:
 					print 'Integrated current limit reached before statistic limit= ',currentUamps,' Runtime= ',int(elaspedtime),' secs' 

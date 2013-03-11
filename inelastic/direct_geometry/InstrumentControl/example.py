@@ -10,7 +10,7 @@ from mari_control import *
 #settemp(10)
 #set_ei(50,150)
 #cset(T_head=100)
-#changetitle('Change the run title to this)
+#changetitle('Change the run title to this')
 #updatestore()
 #count(.5)
 
@@ -31,7 +31,7 @@ countstats(1,60,500)
 set_ei(100,300)
 ei=100
 seteiforcontrol(ei)
-defineRoi(3.0,7.0,25,60)
+defineRoi(6,6.5,25,27)
 title='Test python control MonoVan'+str(ei)+'meV 6Gd'
 changetitle(title)
-countstats(1.5,60,500)
+countstats(3.0,60,500)

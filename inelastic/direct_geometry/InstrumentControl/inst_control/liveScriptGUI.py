@@ -1,20 +1,14 @@
-
 import sys
+sys.path.append("C:\\LabVIEW Modules\\dae\\genie_python")
 from liveScriptUI import Ui_MainWindow
 from PyQt4 import QtCore, uic,QtGui
-#import MantidFramework 
-#MantidFramework.mtd.initialise()
-#from DirectEnergyConversion import *
+
 import time as time
-#from mantidplotpy import *
-#import dgreduce
-#import inspect
 import numpy
-#from mantidplot import *
-#from mantid import *
-#from mantid.simpleapi import *
-#from PySlice2 import *
-#class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
+
+sys.path.append("C:\\LabVIEW Modules\\dae\\genie_python")
+
+from genie_init import *
 import commandset
 
 class MainWindow(QtGui.QMainWindow):
@@ -40,6 +34,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.integrateduamps=0
 		listOcommands=commandset.list()
 		iter=0
+		print get_uamps()
 		for command in listOcommands:
 			tmp=self.ui.commands.insertItem(iter,command)
  			line= self.ui.commands.item(iter)
@@ -51,6 +46,9 @@ class MainWindow(QtGui.QMainWindow):
 		self.update()
 		self.mainThread = GenericThread(self.startScript)
 		self.mainThread.start()
+		#self.mainThread = Thread(target=self.run_)
+		#self.mainThread.start()
+
 	def stop(self):
 		print 'stopping script, killing threads'
 		line= self.ui.script.item(self.currentline)
@@ -192,36 +190,31 @@ class MainWindow(QtGui.QMainWindow):
 		row= self.ui.script.currentRow()
  		line= self.ui.script.item(row)
  		line.setFlags(QtCore.Qt.ItemIsSelectable|QtCore.Qt.ItemIsEditable|QtCore.Qt.ItemIsDragEnabled|QtCore.Qt.ItemIsDropEnabled|QtCore.Qt.ItemIsUserCheckable|QtCore.Qt.ItemIsEnabled)
- 		
+
 class GenericThread(QtCore.QThread):
 	def __init__(self, function, *args, **kwargs):
 		QtCore.QThread.__init__(self)
 		self.function = function
 		self.args = args
 		self.kwargs = kwargs
-	
+
 	def __del__(self):
 		self.wait()
 	
 	def run(self):
+		try:
+			pythoncom.CoInitializeEx(pythoncom.COINIT_MULTITHREADED)
+		except pythoncom.com_error:
+			pass
 		self.function(*self.args,**self.kwargs)
 		return
 
-
-
-
-
-		
 def qapp():
 	if QtGui.QApplication.instance():
 		app = QtGui.QApplication.instance()
 	else:
 		app = QtGui.QApplication(sys.argv)
 	return app
-
-
-		
-    
 
 app = qapp()
 reducer = MainWindow()
