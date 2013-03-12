@@ -268,13 +268,17 @@ def parse_repository(repository_path, out_directory):
     
         #iterating through all the files in this directory    
         for name in files:
+            #print 'processing ', name
             key,value,dir_doc = make_entry(join(root,name), first_root)
             #check the entry is not .git specific
             if key and '.git' not in key:
                 fdb[key] = value
             #check if the current value has the description of the parent directory
             if dir_doc:
-                fdb[directory_key]['description'] = value['description']
+                try:
+                    fdb[directory_key]['description'] = value['description']
+                except: 
+                    pass
     
     #after looping through all the entries inside the repository, 
     # it is time to create the json file
