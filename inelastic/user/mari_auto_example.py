@@ -18,15 +18,15 @@ w1=iliad(WB,run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='curre
 run='18313'
 WB='18040'
 ei,rebin_params=autoEi(str(run))
-w1=iliad(WB,run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='current',save_format='')
+w2=iliad(WB,run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='current',save_format='')
 
 run='18322'
 WB='18040'
 ei,rebin_params=autoEi(str(run))
-w1=iliad(WB,run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='current',save_format='')
+w3=iliad(WB,run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='current',save_format='')
 
 
 run='18069'
 WB='18040'
 ei,rebin_params=autoEi(str(run))
-w1=iliad(WB,run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='current',save_format='')
+w4=iliad(WB,run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='current',save_format='')
