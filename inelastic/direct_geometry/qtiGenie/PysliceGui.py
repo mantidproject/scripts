@@ -1,6 +1,6 @@
 
 import sys
-from PysliceUI import Ui_MainWindow
+from PySliceUI2 import Ui_MainWindow
 from PyQt4 import QtCore, uic,QtGui
 import MantidFramework 
 MantidFramework.mtd.initialise()
@@ -14,6 +14,8 @@ from mantidplot import *
 from mantid import *
 from mantid.simpleapi import *
 from PySlice2 import *
+from qtiGenie import *
+from autoEi import *
 #class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 class MainWindow(QtGui.QMainWindow):
@@ -23,6 +25,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.ui = Ui_MainWindow()
 		self.ui.setupUi(self)
 		QtCore.QObject.connect(self.ui.plot, QtCore.SIGNAL("clicked()"), self.plot )
+		QtCore.QObject.connect(self.ui.Reduce, QtCore.SIGNAL("clicked()"), self.Reduce )
 		QtCore.QObject.connect(self.ui.plotOver, QtCore.SIGNAL("clicked()"), self.plotOver )
 		QtCore.QObject.connect(self.ui.calcProj, QtCore.SIGNAL("clicked()"), self.calcProj )
 		QtCore.QObject.connect(self.ui.display, QtCore.SIGNAL("clicked()"), self.display )
@@ -63,6 +66,18 @@ class MainWindow(QtGui.QMainWindow):
 			iter=iter+1
 		
 	 
+ 	def Reduce(self):
+ 		WB=self.ui.DetVanNum.text()
+ 		Run=self.ui.RunNum.text()
+ 		inst='mar'
+		iliad_setup(inst)
+		ext='.raw'
+		mapfile='mari_res2012'
+		cal_file='MAR'+WB+'.raw'
+		ei,rebin_params=autoEi(str(Run))
+		w1=iliad(WB,Run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='current')
+		RenameWorkspace(InputWorkspace='w1',OutputWorkspace='mar'+str(Run))
+		
  	def setwksp(self):
  		print 'high'
  	
@@ -262,16 +277,31 @@ class MainWindow(QtGui.QMainWindow):
 			 
 	def display(self):
 		smooth= self.ui.smooth.text()
+		IMin= self.ui.DispMin.text()
+		IMax= self.ui.DispMax.text()
+		
+		if len(IMax)>0 and len(IMin)==0:
+			IMin='0'
+		
 		try:
 			tmp=self.ui.wkspList.selectedItems()[0].text()
 			self.selectedWksp = tmp.split(':')[0]
 			#print self.selectedWksp
 			data=self.data_dict.get(str(self.selectedWksp))
-
-			if len(smooth)>0:
+			
+			
+			if len(smooth)>0 and len(IMin)>0 and len(IMax)>0:
+				data.smooth(int(smooth),int(IMin),int(IMax))
+				
+			if len(smooth)>0 and len(IMin)==0 and len(IMax)==0:
 				data.smooth(int(smooth))
-			else:	
+				
+			if len(smooth)==0 and len(IMin)>0 and len(IMax)>0:	
+				data.display(int(IMin),int(IMax))
+				
+			if len(smooth)==0 and len(IMin)==0 and len(IMax)==0:	
 				data.display()
+				
 		except:
 			print 'Select data to display'
 				

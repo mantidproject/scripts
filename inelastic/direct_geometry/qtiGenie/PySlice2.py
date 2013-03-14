@@ -9,13 +9,15 @@ import dgreduce
 import inspect
 import numpy
 try:
-  from mantidplot import *
+	from mantidplot import *
 except ImportError:
-  pass
+	pass
+#from mantidplot import *
 from mantid import *
 from mantid.simpleapi import *
 import pprint
 from numpy import *
+#import qti
 
 
 
@@ -73,7 +75,8 @@ class data2D:
 				self.display()
 			if len(args)==2:
 				self.display(args[1])
-				
+			if len(args)==3:
+				self.display(args[1],args[2])
 		except:
 			if n<=2:
 				n=3
@@ -83,6 +86,9 @@ class data2D:
 				self.display()
 			if len(args)==2:
 				self.display(args[1])
+			if len(args)==3:
+				self.display(args[1],args[2])
+				
 	
 	def boseFac(self,T):
 		from DgFuncs import bose
