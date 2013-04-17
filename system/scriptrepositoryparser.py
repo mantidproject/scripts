@@ -242,7 +242,8 @@ def make_entry(path, first_root):
         directory = os.path.isdir(path)
         if directory:
             return (path.replace(first_root,''),{'pub_date':pub_date, 'directory':directory, 'description':""}, False)
-        author = get_author(path)   
+        relative_path = path[len(first_root):]
+        author = get_author(relative_path)
         description,has_dir_desc = get_description(path)
         return (path.replace(first_root,''),{'pub_date':pub_date, 'directory':directory, 'description':description, 'author':author}, has_dir_desc)
     except:
