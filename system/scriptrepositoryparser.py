@@ -13,14 +13,15 @@ The repository.json is formed with the following structure:
     path of the directory/file
         pub_date: the date when the file was last modified
         directory: flag that indicates if the entry is a directory of a file
-        description: the description of the file or directory. 
+        description: the description of the file or directory.
+        author: the name of the author.
 
 This structure, can be created by the json module, using a python dictionary
 whose value is a dictionary. 
 
 .. code-block: python
 
-    {'path':{'description':'file description','pub_date':'today'}}
+    {'path':{'description':'file description','pub_date':'today', 'author':'myname'}}
 
         
 The :func:`parse_repository` function is responsible for iterating over all the 
@@ -46,8 +47,11 @@ from os.path import join
 import time
 import compiler
 import sys
+import commands
+import re
 
-
+re_default_author = re.compile('Author: (?P<author>.+) <(?P<email>.+)>')
+re_signed_author = re.compile('signed by: (?P<author>.+) <(?P<email>.+)>')
 
 def extract_readme_doc(path):
     """
@@ -171,6 +175,7 @@ def get_description(path):
     directory.    
     """    
     try:
+        
         if path.endswith('.py'):
             #extract python modules documentation
             return (extract_python_doc(path), path.endswith('__init__.py'))
@@ -181,6 +186,21 @@ def get_description(path):
         pass
     #default value: no description, do not use this for the directory
     return ("",False)
+
+
+
+def get_author(path):
+    try:
+        output = commands.getstatusoutput("git log -1 "+path)[1]
+        spec_m = re.search(re_signed_author,output)
+        if spec_m:
+            return spec_m.group('author')
+        def_m = re.search(re_default_author,output)
+        if def_m:
+            return def_m.group('author')
+    except:
+        print 'FAILED'
+
 
 
 
@@ -222,9 +242,9 @@ def make_entry(path, first_root):
         directory = os.path.isdir(path)
         if directory:
             return (path.replace(first_root,''),{'pub_date':pub_date, 'directory':directory, 'description':""}, False)
-                
-        description,has_dir_desc = get_description(path)    
-        return (path.replace(first_root,''),{'pub_date':pub_date, 'directory':directory, 'description':description}, has_dir_desc)
+        author = get_author(path)   
+        description,has_dir_desc = get_description(path)
+        return (path.replace(first_root,''),{'pub_date':pub_date, 'directory':directory, 'description':description, 'author':author}, has_dir_desc)
     except:
         return ("",{"description":"failed"},False)
 
@@ -248,6 +268,7 @@ def parse_repository(repository_path, out_directory):
     fdb = dict()
     #change the system path to unix like
     first_root = repository_path.replace('\\','/')
+    os.chdir(first_root)
     #directory requires the last slash
     if first_root.endswith('/'):
         first_root += '/'
