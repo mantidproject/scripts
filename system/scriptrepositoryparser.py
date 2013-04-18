@@ -299,6 +299,7 @@ def parse_repository(repository_path, out_directory):
             if dir_doc:
                 try:
                     fdb[directory_key]['description'] = value['description']
+                    fdb[directory_key]['author'] = value['author']
                 except: 
                     pass
     
