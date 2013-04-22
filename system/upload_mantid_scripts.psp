@@ -16,16 +16,21 @@ push it to the central repository:
   - git push
 
 You can try it through the upload_form.html inside this folder.
+
+It will return a dictionary with the following keys: 
+  - message: report on the status of the action
+  - detail: details on failures [optional]
+
 """
 from mod_python import psp, apache
 import re
 import commands
 import sys
+import json
 try:
-
+  info = dict()
   REPOSITORYPATH = req.subprocess_env['SCRIPTREPOSITORYPATH']
-
-  message = ''
+  
   #process author
   author = form['author']
   if not author: raise RuntimeError("Invalid author: "+ author)
@@ -81,29 +86,24 @@ try:
   shell_command = r"""cd %s && git add %s && git commit -m '%s' --author "%s" """%(REPOSITORYPATH, relative_path, comment, author + " <" + email+">")
   output = commands.getstatusoutput(shell_command)
   if output[0] != 0:
-    raise RuntimeError(str(output[1]))
+    info['detail'] = str(output[1])
+    raise RuntimeError("Failed to upload the file")
   output = commands.getstatusoutput("cd %s; git pull --rebase && git push" %(REPOSITORYPATH))
   if output[0] != 0:
-    raise RuntimeError(str(output[1]))  
-  message = 'success'
+    info['detail'] = str(output[1])
+    raise RuntimeError("Failed to publish this file to the central repository")  
+  info['message'] = 'success'
   req.status = apache.OK
 except RuntimeError, ex:
-  message = str(ex)
-  #raise RuntimeError('got it')
+  info['message'] = str(ex)
   req.status = apache.HTTP_BAD_REQUEST
 except KeyError, ex:
-  message = """Internal Error: the repository path is not configured. Variable %s not found!""" %(str(ex))
+  info['message'] = """Internal Error: the repository path is not configured. Variable %s not found!""" %(str(ex))
   req.status = apache.HTTP_INTERNAL_SERVER_ERROR
 except :
-  message = str(sys.exc_info()[2])
-  raise
-#  #req.status = apache.HTTP_INTERNAL_SERVER_ERROR
+  info['message'] = str(sys.exc_info()[2])
+  req.status = apache.HTTP_INTERNAL_SERVER_ERROR
+message = json.dumps(info, sort_keys=True, indent=2, separators=(',', ': '))
 %>
-<html>
-<head>
-<body>
 <%=message%>
-</body>
-</head>
-</html>
 
