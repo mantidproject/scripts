@@ -5,11 +5,32 @@ from peakdet import *
 from mantid.simpleapi import *
 
 
-def autoEi(WkspIn):
+def autoEi(WkspIn,BkgdGen=None,monspecin=None,BkgdLevel=None):
 	#monitor spectrum in spectrum number
-	monspec='2'
-	#load single spectrum for monitor
-	Load(Filename=WkspIn,OutputWorkspace='tmp_Monitors',Cache=r'Never',LoadLogFiles='0',SpectrumMin=monspec,SpectrumMax=monspec)
+	#pars for MARI
+	
+	monspec=monspecin
+	
+	
+	if mtd.doesExist(WkspIn)==True:
+		#data is passed as an existing workspace
+		tmp_Monitors=ExtractSingleSpectrum(WkspIn,monspec-1)
+	else:	
+		#load single spectrum for monitor
+		Load(Filename=WkspIn,OutputWorkspace='tmp_Monitors',Cache=r'Never',LoadLogFiles='0',SpectrumMin=monspec,SpectrumMax=monspec)
+		#get some distances for later
+		tmp_Monitors=mtd['tmp_Monitors']
+	
+	
+	instrumentObj=tmp_Monitors.getInstrument()
+	sampleObj=instrumentObj.getSample()
+
+	sourceObj=instrumentObj.getSource()
+
+	detObj=instrumentObj.getDetector(4101)
+	L1=sourceObj.getDistance(sampleObj)
+	L2=sampleObj.getDistance(detObj)
+	
 	ConvertToDistribution(Workspace='tmp_Monitors')
 	#convert to energy & rebin to make life simple later the rebin is required for mari as monitor 2 always has a sit load of gammas at low tofs
 	#these need to be ignored rebin can be removed for monitor 3 but the peak find is less reliable as there is always more noise in the m3
@@ -36,7 +57,23 @@ def autoEi(WkspIn):
 	rebin=str(-ei*.5)+','+str(ei*(2.5e-3))+','+str(ei*.95)
 	#print rebin
 	#print type(rebin)
-	return ei,rebin
 	
+	if BkgdGen == True:
+		if BkgdLevel > 0:
+			emin=BkgdLevel*ei   #minimum energy is with 70% energy loss
+		else:
+			emin=0.2*ei
+		
+		lam=(81.81/ei)**0.5
+		lam_max=(81.81/emin)**0.5
+		tsam=252.82*lam*L1   #time at sample
+		#tmon2=252.82*lam*23.5 #time to monitor 6 on LET
+		tmax=tsam+(252.82*lam_max*L2) #maximum time to measure inelastic signal to
+		BkgdRange=[tmax,19500]
+		return ei,rebin,BkgdRange
+	else:
+		return ei,rebin
+
+
 
 #ei,rebin=autoEi('18322')

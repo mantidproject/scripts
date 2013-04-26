@@ -132,7 +132,8 @@ def bose(wkspin,T):
 	axis=dat.getAxis(1)
 	en=axis.extractValues()
 	energy=(en[1:len(en)]+en[0:len(en)-1])/2
-	bose=1-exp(-energy*11.604/(T))
+	#bose=1-exp(-energy*11.604/(T))
+	bose=exp(-energy*11.604/(T))
 	
 	for i in range(0,shape(y)[1]):
 		
@@ -142,6 +143,30 @@ def bose(wkspin,T):
 	wkspOut=CreateWorkspace(x,y,Err,Nspec=len(en)-1,VerticalAxisUnit='DeltaE',VerticalAxisValues=energy,UnitX='|Q|',YUnitLabel='T corrected',WorkSpaceTitle='Bose factor corrected')
 	return wkspOut
 	
+def DetailBalance(wkspin,T):
+	dat=mtd[wkspin]
+	print 'correcting workspace for DB' , dat.name(),' with T=',T,'K' 
+	x=dat.extractX()
+		
+	y=dat.extractY()
+	Err=dat.extractE()
+	axis=dat.getAxis(0)
+	
+	bosegrid=ones_like(y)
+	#deal with the energy axis
+	axis=dat.getAxis(1)
+	en=axis.extractValues()
+	energy=(en[1:len(en)]+en[0:len(en)-1])/2
+	bose=exp(-energy*11.604/(T))
+	
+	for i in range(0,shape(y)[1]):
+		
+		bosegrid[:,i]=bose
+	y=y*bosegrid
+	Err=Err*bosegrid
+	wkspOut=CreateWorkspace(x,y,Err,Nspec=len(en)-1,VerticalAxisUnit='DeltaE',VerticalAxisValues=energy,UnitX='|Q|',YUnitLabel='T corrected',WorkSpaceTitle='Bose factor corrected')
+	return wkspOut
+
 def perCm(wkspin):
 	dat=mtd[wkspin]
 	print 'converting energy units to per cm' 

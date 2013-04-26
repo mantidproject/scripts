@@ -41,6 +41,22 @@ class MainWindow(QtGui.QMainWindow):
 		QtCore.QObject.connect(self.ui.removeWksp, QtCore.SIGNAL("clicked()"), self.removeWksp )
 		QtCore.QObject.connect(self.ui.removePlot, QtCore.SIGNAL("clicked()"), self.removePlot )
 		
+		#reduction UI commands
+		
+		QtCore.QObject.connect(self.ui.InstName, QtCore.SIGNAL("activated(int)"), self.setInst )
+		QtCore.QObject.connect(self.ui.NormMethod, QtCore.SIGNAL("activated(int)"), self.setNormMethod )
+		
+		QtCore.QObject.connect(self.ui.BkgSwitch,  QtCore.SIGNAL("stateChanged(int)"), self.BkgSwitchOn)
+		
+		QtCore.QObject.connect(self.ui.AutoEiChbox,  QtCore.SIGNAL("stateChanged(int)"), self.AutoEiOn)
+		QtCore.QObject.connect(self.ui.FixEi,  QtCore.SIGNAL("stateChanged(int)"), self.AutoEiOn)
+		QtCore.QObject.connect(self.ui.FixMonitorSpectrum,  QtCore.SIGNAL("stateChanged(int)"), self.MonitorSpec)
+		
+		QtCore.QObject.connect(self.ui.AbsNormSwitch,  QtCore.SIGNAL("stateChanged(int)"), self.AbsNormOn)
+		QtCore.QObject.connect(self.ui.sumRuns,  QtCore.SIGNAL("stateChanged(int)"), self.sumRunsOn)
+		
+		
+		
 		self.smooth=0
 		self.cutMin=0
 		self.cutMax=0
@@ -59,25 +75,268 @@ class MainWindow(QtGui.QMainWindow):
 		self.ui.axis.insertItem(1,'|Q|')
 		self.ui.axis.insertItem(2,'E')
 		
+		#stuff for the reduction UI
+		self.inst=''
+		self.BkgSwitch=False
+		self.AutoEi=False
+		self.FixEi=False
+		self.EiVal=[]
+		self.MonitorSpec=False
+		self.MonitorSpectrumNumber=[]
+		self.Normalisation='Current'
+		self.CurrentMapFile=''
+		
+		self.DetVanNum=''
+		self.runNum=''
+		self.WkspOutName=''
+		
+		self.AbsNormStatus=False
+		
+		self.MonoDetVanNum=''
+		self.MonorunNum=''
+		self.sampleMass=[]
+		self.RMM=[]
+		self.sumRunsCheck=False
+		self.BkgdRange=[]
+		self.ui.mapfile.setText('mari_res2012')
+		self.ui.MonSpecNumber.setText('2')
+		self.shortname=''
+		
+		
 		self.currentWkspNames=mtd.getObjectNames()
 		iter=0
 		for item in self.currentWkspNames: 
 			self.ui.WkspIn.insertItem(iter,item)
 			iter=iter+1
 		
-	 
- 	def Reduce(self):
- 		WB=self.ui.DetVanNum.text()
- 		Run=self.ui.RunNum.text()
- 		inst='mar'
-		iliad_setup(inst)
-		ext='.raw'
-		mapfile='mari_res2012'
-		cal_file='MAR'+WB+'.raw'
-		ei,rebin_params=autoEi(str(Run))
-		w1=iliad(WB,Run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='current')
-		RenameWorkspace(InputWorkspace='w1',OutputWorkspace='mar'+str(Run))
+	
+	def setInst(self):
+	
+		self.inst=str(self.ui.InstName.currentText())
+		print self.inst 
 		
+		if self.inst=='Mari':
+			self.shortname='MAR'
+			self.exten='.raw'
+			self.ui.mapfile.setText('mari_res2012')
+	
+	def setNormMethod(self):
+	
+		self.Normalisation=str(self.ui.NormMethod.currentText())
+		print self.Normalisation
+		
+		
+	def BkgSwitchOn(self):
+	
+		if self.BkgSwitch==False:
+			self.BkgSwitch =True
+			self.BkgdRange=[]
+			print 'Background subtraction on'
+		else:
+			self.BkgSwitch =False
+			self.BkgdRange=[]
+			print 'Background subtraction off'
+	
+	def sumRunsOn(self):
+	
+		if self.sumRunsCheck==False:
+			self.sumRunsCheck =True
+			print 'Reduction will sum runs'
+		else:
+			self.sumRunsCheck =False
+			print 'Reduction will not sum runs'
+			
+	def AutoEiOn(self):
+	
+		if self.AutoEi==False:
+			self.AutoEi =True
+			print 'AutoEi on'
+		else:
+			self.AutoEi =False
+			self.EiVal=double(self.ui.EiGuess.text())
+			print 'AutoEi off: Ei guess is', str(self.EiVal),' meV'
+			
+	
+	def FixEiOn(self):
+	
+		if self.FixEi==False:
+			self.FixEi =True
+			self.EiVal=double(self.ui.EiGuess.text())
+			print 'FixEi on set to :', str(self.EiVal),' meV'
+		else:
+			self.FixEi =False
+			print 'FixEi off'
+	
+	
+	def MonitorSpec(self):
+	
+		if self.MonitorSpec==False:
+			self.MonitorSpec =True
+			self.MonitorSpectrumNumber=int(self.ui.MonSpecNumber.text())
+			print 'Monitor spectrum set to :', str(self.MonitorSpectrumNumber)
+		else:
+			self.MonitorSpec =False
+			print 'Monitor spectrum set to default'
+	
+	def AbsNormOn(self):
+	
+		if self.AbsNormStatus==False:
+			self.AbsNormStatus =True
+			print 'Absolute Normalisation on'
+		else:
+			self.AbsNormStatus =False
+			print 'Absolute Normalisation off'
+	def getRuns(self):
+		WB=str(self.ui.DetVanNum.text())
+ 		Run=str(self.ui.RunNum.text())
+ 		
+ 		if len(Run.split(','))>1:
+ 			#case for a comma separated list
+ 			#generate a list of strings
+ 			Runs=Run.split(',')
+ 		
+ 		if len(Run.split(':'))>1:
+ 			#case for a colon separated list
+ 			#generate a list of strings from range
+ 			tmp=Run.split(':')
+ 			Runs=range(int(tmp[0]),int(tmp[1])+1)
+ 		
+ 		if len(Run.split(','))==1 & len(Run.split(':'))==1:
+ 			#for a single run return a 1 element list
+ 			tmp=int(Run)
+ 			Runs=[1]
+ 			Runs[0]=tmp
+ 			
+ 		print Runs, type(Run)
+ 		return WB,Runs
+ 	
+ 	def Reduce(self):
+ 	
+ 		if self.AbsNormStatus==True:
+ 			self.ReduceArbsolute()
+ 		else:
+ 			self.ReduceArbitary()
+ 		
+ 		
+ 	def ReduceArbsolute(self):
+ 		#absolute normalisation will be preformed
+ 		#try:
+		WB,Runs=self.getRuns()
+		print Runs, type(Runs)
+		
+		iliad_setup(self.shortname)
+		mapfile=str(self.ui.mapfile.text())
+		cal_file=self.shortname+WB+self.exten
+		
+		monoWB=str(self.ui.DetVanNum_2.text())
+ 		MonoRun=str(self.ui.MonoRunNum.text())
+		
+		sampleMass=double(self.ui.sampleMass.text())
+		RMMmass=double(self.ui.RMMmass.text())
+		
+		monovan_mapfile=mapfile
+		
+		if self.sumRunsCheck==True:
+		#sum runs
+			Load(Filename=Runs[0],OutputWorkspace='SummedWksp',Cache=r'Never',LoadLogFiles='0')
+			SummedWksp=mtd['SummedWksp']
+			for i in range(1,len(Runs)):
+				Load(Filename=Runs[i],OutputWorkspace='tmp',Cache=r'Never',LoadLogFiles='0')
+				tmp=mtd['tmp']
+				SummedWksp=SummedWksp+tmp
+			DeleteWorkspace('tmp')
+			#overwrite the runs list with 1 entry corresponding to the summed data
+			Runs=['SummedWksp']
+		
+		for Run in Runs:
+		
+			if self.AutoEi==True:
+				ei,rebin_params,self.BkgdRange=autoEi(str(Run),BkgdGen=True,monspecin=int(self.ui.MonSpecNumber.text()))
+				#set the absolute van integration range
+				tmp=rebin_params.split(',')
+				monovanreb=[tmp[0],tmp[2]]
+				
+			else:
+				ei=double(self.ui.EiGuess.text())
+				rebin_params=str(-ei*.5)+','+str(ei*(2.5e-3))+','+str(ei*.95)	
+				tmp=rebin_params.split(',')
+				monovanreb=[tmp[0],tmp[2]]
+				
+			if self.BkgSwitch==True:
+				w1=iliad_abs(str(WB),str(Run),str(MonoRun),str(monoWB),RMMmass,sampleMass,ei,rebin_params,mapfile,monovan_mapfile,det_cal_file=cal_file,norm_method=self.Normalisation,save_format='',abs_units_van_range=monovanreb,background=self.BkgSwitch,bkgd_range=self.BkgdRange)
+				RenameWorkspace(InputWorkspace='w1',OutputWorkspace=str(Run)+'reduced')
+			else:
+				w1=iliad_abs(WB,str(Run),MonoRun,monoWB,RMMmass,sampleMass,ei,rebin_params,mapfile,monovan_mapfile,det_cal_file=cal_file,norm_method=self.Normalisation,save_format='',abs_units_van_range=monovanreb)
+				RenameWorkspace(InputWorkspace='w1',OutputWorkspace=str(Run)+'reduced')
+		
+		
+		WkspOut=str(self.ui.outputWksp.text())
+		
+		if len(WkspOut)>0:
+			RenameWorkspace(InputWorkspace=str(Run)+'reduced',OutputWorkspace=str(self.ui.outputWksp.text()))
+		else:
+			RenameWorkspace(InputWorkspace=str(Run)+'reduced',OutputWorkspace='mar'+str(Run)+'reduced')
+			
+		String=':) Run '+str(Run)+' reduced with absolute normalisation successfully ei guess ='+str(ei)+'meV'+' data rebinned with Emin,deltaE,Emax of '+rebin_params
+		self.ui.ReduceOutput.addItem(String)
+		#except:
+		#	String=':( Something is wrong, terribly wrong ' 
+		#	self.ui.ReduceOutput.addItem(String)
+ 	
+ 		
+ 	def ReduceArbitary(self):
+ 	
+ 		#try:
+		WB,Runs=self.getRuns()
+		print Runs, type(Runs)
+		
+		iliad_setup(self.shortname)
+		mapfile=str(self.ui.mapfile.text())
+		cal_file=self.shortname+WB+self.exten
+		
+		
+		if self.sumRunsCheck==True:
+		#sum runs
+			Load(Filename=Runs[0],OutputWorkspace='SummedWksp',Cache=r'Never',LoadLogFiles='0')
+			SummedWksp=mtd['SummedWksp']
+			for i in range(1,len(Runs)):
+				Load(Filename=Runs[i],OutputWorkspace='tmp',Cache=r'Never',LoadLogFiles='0')
+				tmp=mtd['tmp']
+				SummedWksp=SummedWksp+tmp
+			DeleteWorkspace('tmp')
+			#overwrite the runs list with 1 entry corresponding to the summed data
+			Runs=['SummedWksp']
+		
+		for Run in Runs:
+		
+			if self.AutoEi==True:
+				ei,rebin_params,self.BkgdRange=autoEi(str(Run),BkgdGen=True,monspecin=int(self.ui.MonSpecNumber.text())) 
+			else:
+				ei=double(self.ui.EiGuess.text())
+				rebin_params=str(-ei*.5)+','+str(ei*(2.5e-3))+','+str(ei*.95)	
+		
+			#w1=iliad(WB,Run,ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method='current')
+			if self.BkgSwitch==True:
+				w1=iliad(WB,str(Run),ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method=self.Normalisation,save_format='',background=self.BkgSwitch,bkgd_range=self.BkgdRange)
+				RenameWorkspace(InputWorkspace='w1',OutputWorkspace=str(Run)+'reduced')
+			else:
+				w1=iliad(WB,str(Run),ei,rebin_params,mapfile,det_cal_file=cal_file,norm_method=self.Normalisation,save_format='')
+				RenameWorkspace(InputWorkspace='w1',OutputWorkspace=str(Run)+'reduced')
+		
+		
+		WkspOut=str(self.ui.outputWksp.text())
+		
+		if len(WkspOut)>0:
+			RenameWorkspace(InputWorkspace=str(Run)+'reduced',OutputWorkspace=str(self.ui.outputWksp.text()))
+		else:
+			RenameWorkspace(InputWorkspace=str(Run)+'reduced',OutputWorkspace='mar'+str(Run)+'reduced')
+			
+		String=':) Run '+str(Run)+' reduced successfully ei guess ='+str(ei)+'meV'+' data rebinned with Emin,deltaE,Emax of '+rebin_params
+		self.ui.ReduceOutput.addItem(String)
+		#except:
+		#	String=':( Something is wrong, terribly wrong ' 
+		#	self.ui.ReduceOutput.addItem(String)
+			
  	def setwksp(self):
  		print 'high'
  	

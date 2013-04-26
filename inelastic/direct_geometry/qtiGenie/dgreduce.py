@@ -1,10 +1,10 @@
 from utils import *
 from DirectEnergyConversion import *
-from mantid.api import Workspace
+#from mantid.api import Workspace
 import CommonFunctions as common
 import time as time
 import numpy
-
+from mantid.simpleapi import *
 
 def setup(instname):
     """
