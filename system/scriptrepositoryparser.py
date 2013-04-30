@@ -290,6 +290,7 @@ def parse_repository(repository_path, out_directory):
     
         #iterating through all the files in this directory    
         for name in files:
+            if 'repository.json' in name: continue
             #print 'processing ', name
             key,value,dir_doc = make_entry(join(root,name), first_root)
             #check the entry is not .git specific
