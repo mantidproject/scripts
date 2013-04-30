@@ -7,3 +7,6 @@ goal
 ===
 
 Our goal is that Mantid Users will share their scripts among them and amond us.
+
+
+More Information: www.mantidproject.org/ScriptRepository
