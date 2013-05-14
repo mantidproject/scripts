@@ -1322,20 +1322,17 @@ def get_failed_spectra_list(diag_workspace):
     """
     if type(diag_workspace) == str:
         diag_workspace = mtd[diag_workspace]
-
-    if hasattr(diag_workspace, "getAxis") == False:
-        raise ValueError("Invalid input to get_failed_spectra_list. "
-                         "A workspace handle or name is expected")
-        
-    spectra_axis = diag_workspace.getAxis(1)
+    
     failed_spectra = []
     for i in range(diag_workspace.getNumberHistograms()):
-        try:
-            det = diag_workspace.getDetector(i)
-        except RuntimeError:
-            continue
-        if det.isMasked():
-            failed_spectra.append(spectra_axis.spectraNumber(i))
+      try:
+        det = diag_workspace.getDetector(i)
+      except RuntimeError:
+        continue
+  
+    if det.isMasked():
+       spectrum = diag_workspace.getSpectrum(i)
+       failed_spectra.append(spectrum.getSpectrumNo())
 
     return failed_spectra
 
