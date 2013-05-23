@@ -4,8 +4,12 @@ within Mantid environent
 It can be useful for debugging because the errors do not alway 'get out' of
 the sub-process used for running the tests in the regular way
 '''
-from mantidsimple import *
+#import mantidsimple
+#print mantidsimple.__file__
+from mantid.simpleapi import *
 import sys
+import os
+import inspect
 
 
 this_dir = sys.path[0]
@@ -20,27 +24,68 @@ tests_dir = r'd:/Data/MantidSystemTests/SystemTests/AnalysisTests'
 sys.path.append(r'd:/Data/Mantid_GIT/Code/win64/bin/Release')
 #sys.path.append(r'C:\Backup\Backup_folder1\work\code\Mantid\builds\all\bin\Debug')
 sys.path.append(stressmodule_dir)
-#sys.path.append(r'C:\Backup\Backup_folder1\work\code\Mantid\git\mantid\Test\systemtests\Data\SANS2D')
-#sys.path.append(r'C:\Backup\Backup_folder1\work\code\Mantid\git\mantid\Test\systemtests\Data\LOQ')
+sys.path.append(r'd:\Data\MantidSystemTests\SystemTests\Data\SANS2D')
+sys.path.append(r'd:\Data\MantidSystemTests\SystemTests\Data\LOQ')
 # Find these first
 sys.path.insert(0,tests_dir)
-modlToRun = ['ISISDirectInelastic'];
-testToRun = ['MARIReductionFromWorkspace'];
+#Failed: 
+#Missing files:  'EQSANSFlatTestAPIv2','LoadLotsOfFiles','SNSConvertToMDEventsTest','SNSPowderRedux','UserAlgotithmsBuild','LoadVesuvioTest',,'VesuvioFittingTest'
+
+modlToRun = ['UserAlgotithmsBuild']
+# My: 'SXDAnalysis','WishDiffuseScattering','Diffraction_Workflow_Test',
 
 
-module = __import__(modlToRun[0])
-reload(module)
-#reload(sys.modules['isis_reduction_steps'])
+# not migrated 'EQSANSLive' EQSANSEff EQSANSIQOutput EQSANSTrans
 
-className = testToRun[0]
-if ( len(testToRun) > 1 ) : className = testToRun[1]
-try:
-    testClass = getattr(module, className)()
-    testClass.execute()
-except:
-    os.chdir(this_dir)
-    raise
+print "-------------------------------------------------------------------------------"
 
-outcome = testClass.doValidation()
-print 'Test result: ' + str(outcome)
+
+for i in xrange(0,len(modlToRun)):
+    print "-------------------------------------------------------------------------------"        
+    print "---> Testing modue "+modlToRun[i]
+    print "-------------------------------------------------------------------------------"        
+    
+    module = __import__(modlToRun[i])
+    reload(module)
+    
+    testsToRun = []
+    
+    for name, obj in inspect.getmembers(module):
+        if inspect.isclass(obj) and obj.__module__ == modlToRun[i] and not inspect.isabstract(obj) :
+		if name != 'get_reference_file' :
+			#print "Testing class: "+modlToRun[i]+" Name: "+name         
+			testsToRun.append(name)
+
+            
+    if len(testsToRun)==0:
+        testsToRun.append(modlToRun[i]);
+        #print "--->  Testing class:  ",testsToRun[0]
+
+
+    for j in xrange(0,len(testsToRun)):
+        print "--->  Testing class:  ",testsToRun[j]    
+        with open("CompletedTests.txt", "a") as myfile:
+                myfile.write("Started: "+modlToRun[i]+"\t\t Test: "+testsToRun[j]+"\t finished:\t ")
+        
+        
+        className = testsToRun[j]
+        try:
+            testClass = getattr(module, className)()
+            testClass.execute()
+        except:
+            with open("CompletedTests.txt", "a") as myfile:
+                myfile.write("Test: -----------------------------\n")
+            #continue
+            os.chdir(this_dir)
+            raise
+	    
+        outcome = testClass.doValidation()    
+        print 'Test result: ' + str(outcome)
+        
+        with open("CompletedTests.txt", "a") as myfile:
+                myfile.write("Test: "+testsToRun[j]+"\n")
+
+        
+    print "-------------------------------------------------------------------------------"        
+    
 os.chdir(this_dir)
