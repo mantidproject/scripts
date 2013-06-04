@@ -72,7 +72,7 @@ def setchoptype(inst_name,type):
 		else:
 			print 'Chopper type not recognised'
 
-	if instname=='maps' or instname=='map' or instname=='MAP'or instname=='MAPS':
+	if inst_name=='maps' or inst_name=='map' or inst_name=='MAP'or inst_name=='MAPS':
 		instname='map'
 		print 'setup for MAPS'
 		if type == 'c':
@@ -81,7 +81,7 @@ def setchoptype(inst_name,type):
 			titledata='MAPS C (100meV)'
 		elif type == 's':
 			chop_par=[2.8990,0.5340,49.00, 1300.00, 0.00, 0.00]
-			disp('MAPS S (sloppy) chopper chosen')
+			print 'MAPS S (sloppy) chopper chosen'
 			titledata='MAPS S (sloppy)'
 		elif type == 'b':
 			chop_par= [ 1.8120,0.5340,49.00,  920.00, 0.00, 0.0]
@@ -93,7 +93,7 @@ def setchoptype(inst_name,type):
 			titledata='MAPS A (500meV)'
 		else:
 			disp('Chopper type not recognised')
-	if instname=='MER' or instname=='mer' or instname=='MERLIN'or instname=='merlin':
+	if inst_name=='MER' or inst_name=='mer' or inst_name=='MERLIN'or inst_name=='merlin':
 		instname='mer'
 		print 'setup for MERLIN'
 		if type == 'c':
@@ -192,6 +192,7 @@ def calculate(ei,frequency,**kwargs):
 		 # chopper details
 		 # now some moderator details
 		 # for 300K H2O
+		 s=numpy.zeros(6)
 		 s[1] = 38.60
 		 s[2] = 0.52260
 		 s[3] = 0.00
@@ -213,7 +214,7 @@ def calculate(ei,frequency,**kwargs):
 		 dd_mm   = 250
 		 tbin_us = 0.00
 		 
-		 chop_par,titledata=setchoptype(instname,chop_type)
+		 #chop_par,titledata=setchoptype(instname,chop_type)
 		 # end of maps parameters 
 		 
 	if instname=='MER' or instname=='mer' or instname=='MERLIN'or instname=='merlin':
@@ -230,6 +231,7 @@ def calculate(ei,frequency,**kwargs):
 		# chopper details
 		# now some moderator details
 		# for 300K H2O
+		s=numpy.zeros(6)
 		s[1] = 38.60
 		s[2] = 0.52260
 		s[3] = 0.00
@@ -252,7 +254,7 @@ def calculate(ei,frequency,**kwargs):
 		idet    = 1
 		dd_mm   = 250
 		tbin_us = 0.00
-		chop_par,titledata=setchoptype(instname,chop_type)
+		#chop_par,titledata=setchoptype(instname,chop_type)
 		# end of HET parameters 
 
 	# Convert instrument parameters for the program (set as globals)

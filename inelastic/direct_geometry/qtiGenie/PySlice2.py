@@ -9,15 +9,13 @@ import dgreduce
 import inspect
 import numpy
 try:
-	from mantidplot import *
+  from mantidplot import *
 except ImportError:
-	pass
-#from mantidplot import *
+  pass
 from mantid import *
 from mantid.simpleapi import *
 import pprint
 from numpy import *
-#import qti
 
 
 
