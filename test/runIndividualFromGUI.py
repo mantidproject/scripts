@@ -26,12 +26,12 @@ sys.path.append(r'd:/Data/Mantid_GIT/Code/win64/bin/Release')
 sys.path.append(stressmodule_dir)
 sys.path.append(r'd:\Data\MantidSystemTests\SystemTests\Data\SANS2D')
 sys.path.append(r'd:\Data\MantidSystemTests\SystemTests\Data\LOQ')
+config.setDataSearchDirs('d:/Data/MantidSystemTests/SystemTests/Data')
 # Find these first
 sys.path.insert(0,tests_dir)
 #Failed: 
-#Missing files:  'EQSANSFlatTestAPIv2','LoadLotsOfFiles','SNSConvertToMDEventsTest','SNSPowderRedux','UserAlgotithmsBuild','LoadVesuvioTest',,'VesuvioFittingTest'
 
-modlToRun = ['UserAlgotithmsBuild']
+modlToRun = ['Diffraction_Workflow_Test']
 # My: 'SXDAnalysis','WishDiffuseScattering','Diffraction_Workflow_Test',
 
 
@@ -52,9 +52,8 @@ for i in xrange(0,len(modlToRun)):
     
     for name, obj in inspect.getmembers(module):
         if inspect.isclass(obj) and obj.__module__ == modlToRun[i] and not inspect.isabstract(obj) :
-		if name != 'get_reference_file' :
-			#print "Testing class: "+modlToRun[i]+" Name: "+name         
-			testsToRun.append(name)
+           #print "Testing class: "+modlToRun[i]+" Name: "+name         
+            testsToRun.append(name)
 
             
     if len(testsToRun)==0:

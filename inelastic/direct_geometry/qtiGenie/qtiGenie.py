@@ -120,28 +120,36 @@ def setinst(iname):
     setinst('mar')
     setup instrument defaults by reading the instname.txt file
     """
-    config['default.instrument'] = iname
-    if iname.capitalize()[0:2] =='MER':
+    global instname
+    instname=None;
+
+    shortName = iname.upper()[0:3]
+    if shortName == 'MER':
         print "Reading params file for merlin from qtiGenie directory"        
         readsetuptxtfile('merlin.txt')
 
-    if iname.capitalize()[0:2]=='MAP':
+    if shortName=='MAP':
         print "Reading params file for maps from qtiGenie directory"
         readsetuptxtfile('maps.txt')
 
-    if iname.capitalize()[0:2]=='LET':
+    if shortName=='LET':
         print "Reading params file for LET from qtiGenie directory"
         readsetuptxtfile('let.txt')
 
-    if iname.capitalize()[0:2]=='MAR':
+    if shortName =='MAR':
         print "Reading params file for MARI from qtiGenie directory"
         readsetuptxtfile('mari.txt')
-    if iname.capitalize()[0:2]=='TSC':
+    if shortName =='TSC':
         print "Reading params file for TOSCA from qtiGenie directory"
         readsetuptxtfile('tosca.txt')
-    if iname.capitalize()[0:2]=='SXD':
+    if shortName =='SXD':
         print "Reading params file for SXD from qtiGenie directory"
         readsetuptxtfile('sxd.txt')
+
+    if instname is None :
+        raise KeyError(" Instrument with name "+iname+" is not found");
+    else :
+        print "qtiGenie instrument set up to ",instname
 
 def readsetuptxtfile(fname):
     global instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
@@ -168,6 +176,8 @@ def readsetuptxtfile(fname):
     instring=f.readline()
     mon3_spec=int(instring.split()[1])
     f.close()
+
+    config['default.instrument'] = instname
     return os.getcwd(),instname,ext,instdae,mon1_spec,mon2_spec,mon3_spec
     
 def setmon_1_spec(spec):
@@ -245,29 +255,35 @@ def head(runnumber=0000000,keepWSwithResults=False):
     """
     global instname
     if isinstance(runnumber,str) :
-        runName = runnumber
-        instShort = runName[0:3]        
-    else:
+        try:
+           runNum = int(runnumber)
+           instShort = instname[0:3]    
+           runnumber=getnumor(runnumber)
+           runName = instShort+str(runnumber)
+        except ValueError :
+           runName = runnumber
+           instShort = runName[0:3]        
+    elif isinstance(runnumber,int):
         instShort = instname[0:3]    
         runnumber=getnumor(runnumber)
         runName = instShort+str(runnumber)
-    
-    runinfo=RawFileInfo(runName,GetRunParameters=True)
+    else:
+        raise KeyError(" The input parameter has to be either integer, describing run number or string defining the run (string number or shortInstrName+Number)")
+    #'RunTitle','RunHeader'
+    title,header,SpectraCount,TimeChannelCount,PeriodCount,parsWS=RawFileInfo(runName,GetRunParameters=True)
 
-    title =runinfo.getPropertyValue('RunTitle')
-    header=runinfo.getPropertyValue('RunHeader')
 
     paramWSName = 'Raw_RPB'
-    temp = mtd[paramWSName] 
+    parsWS = mtd[paramWSName] 
     #enddate=temp.getString('r_enddate') 
     #endtime=temp.getString('r_endtime')
   
     print 'RunID\t\t: '+instShort+header #+' to '+enddate+endtime
     print 'Title\t\t: '+title     
  
-    print 'Protons\t\t:', temp.getDouble('r_gd_prtn_chrg', 0),' uAmps'
+    print 'Protons\t\t:', parsWS.column('r_gd_prtn_chrg')[0],' uAmps'
 
-    run_length = temp.getInt('r_dur', 0)
+    run_length = parsWS.column('r_dur')[0]
     if run_length > 3600 :
         hrs = run_length/3600
         run_length = run_length-hrs*3600
@@ -283,7 +299,7 @@ def head(runnumber=0000000,keepWSwithResults=False):
     
     #print 'More details available from Mantid RawFileInfo algorithm\n'
     if not(keepWSwithResults) :
-        mantid.deleteWorkspace(paramWSName)
+        DeleteWorkspace(paramWSName)
     
     
 #R_dur # r_durunits# r_dur_freq# r_dmp# r_dmp_units# r_dmp_freq#r_freq
@@ -1556,3 +1572,10 @@ print 'Default instrument is set to : ',instname
 print 'You can change it by issuing setinst(InstrumentName) command'
 print 'where InstrumentName can be MER, MAR, MAP, LET, TSK or XSD'
         
+
+if __name__=="__main__":
+
+    setinst('MER');
+    getgpath()
+    head(12998)
+

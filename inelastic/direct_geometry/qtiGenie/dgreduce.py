@@ -11,7 +11,7 @@ def setup(instname):
     setup('mar')
     setup redcution parameters from instname_parameter.xml file
     """
-    global reducer, inst_name,van_mass,bleed_switch,rate,pixels
+    global reducer, inst_name,bleed_switch,rate,pixels
     if instname=='MAR' or instname=='mar':
          print 'setup mari'
          inst_name='MAR'
@@ -37,7 +37,7 @@ def setup(instname):
          print 'setup let'
          inst_name='LET'
          reducer = setup_reducer('LET')
-         bleed_switch=True
+         bleed_switch=False
          rate=0.01
          pixels=80
     elif instname=='ARCS' or instname=='arcs':
@@ -71,7 +71,6 @@ def setup(instname):
     else:
          print 'Instrument name not defined'
          return        
-    van_mass=reducer.get_default_parameter('vanadium-mass') 
     
        
 def set_cal_file(ws='',cal_file_name=''):
@@ -204,7 +203,7 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
     hardmaskOnly=Filename :load a hardmask and use as only mask
     
     """
-    global reducer, rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
+    global reducer, rm_zero,inst_name,bleed_switch,rate,pixels
     print 'DGreduce run for ',inst_name,'run number ',sample_run
     try:
         n,r=lhs('both')
@@ -510,7 +509,7 @@ def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess
     """ 
     #available keywords
     #abs_units_van_range
-    global reducer, rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
+    global reducer, rm_zero,inst_name,bleed_switch,rate,pixels
     print 'DGreduce run for ',inst_name,'run number ',sample_run
     print 'Output will be in absolute units of mb/str/mev/fu'
     try:
@@ -692,7 +691,7 @@ def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess
         reducer.monovan_integr_range=[-40,40]
     
     #reducer.van_rmm =50.94
-    reducer.van_mass=van_mass
+    reducer.van_mass=reducer.get_default_parameter('vanadium-mass')
     #sample info
     reducer.sample_mass=samp_mass
     reducer.sample_rmm =samp_rmm
@@ -877,16 +876,16 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
     """     
     #available keywords
     #abs_units_van_range
-    global reducer, rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
+    global reducer, rm_zero,inst_name,bleed_switch,rate,pixels
     print 'DGreduce run for ',inst_name,'run number ',sample_run
     print 'Output will be in absolute units of mb/str/mev/fu'
 
     #reducer.van_rmm =50.94
-    reducer.van_mass=van_mass
+    reducer.van_mass=reducer.get_default_parameter('vanadium-mass')
     #sample info
     reducer.sample_mass=samp_mass
     reducer.sample_rmm =samp_rmm
-    print 'Using vanadium mass: ',van_mass
+    print 'Using vanadium mass: ',reducer.van_mass
     print '        sample mass: ',samp_mass    
     print '        sample_rmm : ',samp_rmm 
    # check if mono-vanadium is provided as multiple files list or just put in brackets ocasionally
@@ -1223,7 +1222,7 @@ def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
                   will use the detector calibraion from the specified file NOT the
                   input raw file
     """
-    global reducer,rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
+    global reducer,rm_zero,inst_name,bleed_switch,rate,pixels
     print 'DGreduce run for ',inst_name,'run number ',sample_run
     try:
         n,r=lhs('both')
