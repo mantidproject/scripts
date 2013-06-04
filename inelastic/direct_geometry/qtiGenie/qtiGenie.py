@@ -273,10 +273,8 @@ def head(runnumber=0000000,keepWSwithResults=False):
     title,header,SpectraCount,TimeChannelCount,PeriodCount,parsWS=RawFileInfo(runName,GetRunParameters=True)
 
 
-    paramWSName = 'Raw_RPB'
-    parsWS = mtd[paramWSName] 
-    #enddate=temp.getString('r_enddate') 
-    #endtime=temp.getString('r_endtime')
+    #enddate=parsWS.column('r_enddate') 
+    #endtime=parsWS.column('r_endtime')
   
     print 'RunID\t\t: '+instShort+header #+' to '+enddate+endtime
     print 'Title\t\t: '+title     
