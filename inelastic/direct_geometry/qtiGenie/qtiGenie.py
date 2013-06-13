@@ -519,17 +519,17 @@ def dspacing(wksp_in):
 	return mtd[wksp_out]
 
 def get_ei(wksp_in,guess):
-	"""
-	runs getei on a workpsace ei result will be stored in that workspace
-	"""
-	global mon2_peak
-	out=GetEi(wksp_in,mon2_spec,mon3_spec,guess)
-	mon2_peak = float(out.getPropertyValue("FirstMonitorPeak"))
-	mon2_index = int(out.getPropertyValue("FirstMonitorIndex"))
-	ei = (wksp_in.getSampleDetails().getLogData("Ei").value)
-	print 'Incident Energy = ', ei, 'meV'
-	print 'Peak in monitor',mon2_index, 'at ', mon2_peak ,'usec'
-	return ei,mon2_peak
+    """
+    runs getei on a workpsace ei result will be stored in that workspace
+    """
+    global mon2_peak
+    ei,mon2_peak,mon2_index=GetEi(wksp_in,mon2_spec,mon3_spec,guess)
+    #ei = (wksp_in.getSampleDetails().getLogData("Ei").value)
+    print 'Incident Energy = ', ei, 'meV'
+    print 'Peak in monitor',mon2_index, 'at ', mon2_peak ,'usec'
+    return ei,mon2_peak
+
+    
 def diag(wb_wksp,run_wksp):
 	"""
 	runs diag on a white beam and a sample run to list bad spectra
