@@ -278,7 +278,7 @@ def head(runnumber=0000000,keepWSwithResults=False):
     
     #print 'More details available from Mantid RawFileInfo algorithm\n'
     if not(keepWSwithResults) :
-        DeleteWorkspace(paramWSName)
+        DeleteWorkspace(parsWS)
     
     
 #R_dur # r_durunits# r_dur_freq# r_dmp# r_dmp_units# r_dmp_freq#r_freq
