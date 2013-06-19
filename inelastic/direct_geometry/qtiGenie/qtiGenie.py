@@ -9,7 +9,10 @@ import sys
 import time as time
 import dgreduce
 import numpy
-import nxs
+try:
+    import nxs
+except ImportError:
+    pass
 import inspect as insp        
 import PySlice2
 import PyChop
