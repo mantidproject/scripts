@@ -151,8 +151,12 @@ def setinst(iname=None):
         raise KeyError(" for instrument : "+ilongname+" Can not find IDF file: "+par_file)
 
     qtg_par["instname"] = inst_info.shortName();
-    full_dae = inst_info.instdae()
-    qtg_par["instdae"]  = full_dae.split(':',1)[0]
+    try :
+        full_dae = inst_info.instdae()
+        qtg_par["instdae"]  = full_dae.split(':',1)[0]        
+    except :
+        qtg_par["instdae"]=""
+
 
     domObj=minidom.parse(par_file)
     params = domObj.getElementsByTagName("parameter")
