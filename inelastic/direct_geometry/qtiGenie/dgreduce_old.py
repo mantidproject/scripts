@@ -117,7 +117,7 @@ def set_cal_file(ws='',cal_file_name=''):
     LoadDetectorInfo(Workspace=targWSName,DataFilename= cal_file_name,RelocateDets=True)
     reducer.det_cal_file_ws = mtd[targWSName];
                 
-    
+        
 def help(*args):
     print 'available keywords for dgreduce with default values'
     print 'norm_method- normalistion monitor-1,monitor-2,uamph'
@@ -1207,7 +1207,8 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
     
     if mtd.doesExist(results_name)==False:
         RenameWorkspace(InputWorkspace=deltaE_wkspace_sample,OutputWorkspace=results_name)
-    RenameWorkspace(InputWorkspace=results_name,OutputWorkspace=wksp_out)
+    if results_name != wksp_out:
+        RenameWorkspace(InputWorkspace=results_name,OutputWorkspace=wksp_out)
     Divide(LHSWorkspace=wksp_out,RHSWorkspace='AbsFactor',OutputWorkspace=wksp_out)
     DeleteWorkspace(Workspace='AbsFactor')
     return mtd[wksp_out]
