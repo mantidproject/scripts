@@ -47,7 +47,7 @@ reducer_options.background_order = None
 ## Hermite polynomial 
 ## List of 1/0 indicating if this term in the polynomial should be included. Length
 ## should equal the number of terms to include
-reducer_options.hermite_coeffs = [1,0,1]
+reducer_options.hermite_coeffs = [1,0,0]
 
 # If true then FSE coefficient remains free during the fitting, otherwise
 # it is contrained to either 0 (sears_flag=0) or \sigma_H*sqrt(2)/12 (sears_flag=1) where \sigma_H is the
@@ -57,7 +57,7 @@ reducer_options.sears_flag = 1
 #-------------------------------------------------------------------
 
 ## Mass distributions
-reducer_options.masses = [1.0, 16.0, 27.0, 133.0]
+reducer_options.masses = [1.0079, 16.0, 27.0, 133.0]
 ## Widths - A list same length as masses list
 ##    Constrained Width: The entry should contain 3 numbers (low,value,high)
 ##    Fixed Width: The entry should be a single value, the width
@@ -118,6 +118,14 @@ for row in params_ws:
         k_best = value
         del_k_best = error
 
+# Fill in zeroes for non-active hermite coeffs
+n_active_c = len(c_best)
+if nc > n_active_c:
+    for i in range(n_active_c,nc):
+        c_best.append(0.0)
+        del_c_best.append(0.0)
+
+print c_best
 #######################################
 # Peak areas are normalized to the sum
 #######################################
@@ -216,10 +224,12 @@ for i in range(nmasses):
     
     if i == 0: # First mass
         for u in range(nc):
-          print 'Hermite polynomial expansion coefficient c%d = %f +/- %f' % (2*u,c_best[u],del_c_best[u])
+            if reducer_options.hermite_coeffs[u] > 0:
+                print 'Hermite polynomial expansion coefficient c%d = %f +/- %f' % (2*u,c_best[u],del_c_best[u])
   
         for u in range(nc):
-          print 'Hermite polynomial expansion coefficient a%d = c%d/(2^%d*%d!) = %f +/ %f' % (2*u,2*u,2*u,u,a_best[u],del_a_best[u])
+            if reducer_options.hermite_coeffs[u] > 0:
+                print 'Hermite polynomial expansion coefficient a%d = c%d/(2^%d*%d!) = %f +/ %f' % (2*u,2*u,2*u,u,a_best[u],del_a_best[u])
 
         print
         print 'FSE coefficient k by the k/q He_3(y) expansion member = %f +/- %f' % (k_best, del_k_best)
