@@ -175,26 +175,10 @@ class ReductionOptions(object):
             function_str = "composite=CompositeFunction,NumDeriv=1;"
         else:
             function_str = "composite=ComptonScatteringCountRate,NumDeriv=1%s;"
-            matrix_str = ""
-            if self.constraints is not None and len(self.constraints) > 0:
-                if hasattr(self.constraints[0], "__len__"):
-                    nrows = len(self.constraints)
-                    ncols = len(self.constraints[0])
-                else:
-                    nrows = 1
-                    # without trailing comma a single-element tuple is automatically 
-                    # converted to just be the element
-                    ncols = len(self.constraints)
-                    # put back in sequence
-                    
-
-                matrix_str = "\"Matrix(%d|%d)%s\""
-                values = ""
-                for row in self.constraints:
-                    for val in row:
-                        values += "%f|" % val
-                values = values.rstrip("|")
-                matrix_str = matrix_str % (nrows, ncols, values)
+            matrix_str = self.create_matrix_string(self.constraints)
+            if matrix_str == "":
+                function_str = function_str % ""
+            else:
                 function_str = function_str % (",IntensityConstraints=" + matrix_str)
 
         # Currently, it is assumed that the first mass is always  proton/deuterium
@@ -230,6 +214,32 @@ class ReductionOptions(object):
             function_str = function_str % (func_name, params)
         
         return function_str.rstrip(";")
+
+    def create_matrix_string(self, constraints_tuple):
+        """Returns a string for the value of the Matrix of intensity
+        constraint values
+        """
+        if self.constraints is None or len(self.constraints) == 0:
+            return ""
+        
+        if hasattr(self.constraints[0], "__len__"):
+            nrows = len(self.constraints)
+            ncols = len(self.constraints[0])
+        else:
+            nrows = 1
+            # without trailing comma a single-element tuple is automatically 
+            # converted to just be the element
+            ncols = len(self.constraints)
+            # put back in sequence
+
+        matrix_str = "\"Matrix(%d|%d)%s\""
+        values = ""
+        for row in self.constraints:
+            for val in row:
+                values += "%f|" % val
+        values = values.rstrip("|")
+        matrix_str = matrix_str % (nrows, ncols, values)
+        return matrix_str
 
     def create_constraints_str(self):
         """Returns the string of constraints for this Fit
@@ -281,7 +291,7 @@ class ReductionOptions(object):
             # or the tuple was created with a trailing comma and is 1 in size.
             # If the first element is not a sequence a single-element tuple was created without a 
             # trailing comma so the tuple was stripped
-            if name == "constraints" \
+            if name == "constraints" and (value is not None) \
                     and (len(value) > 0 and not hasattr(value[0], "__len")):
                     value = (value,) # note trailing comma
             self._options[name] = value
