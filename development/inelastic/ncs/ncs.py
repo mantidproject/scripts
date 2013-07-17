@@ -224,12 +224,10 @@ for i in range(nmasses):
     
     if i == 0: # First mass
         for u in range(nc):
-            if reducer_options.hermite_coeffs[u] > 0:
-                print 'Hermite polynomial expansion coefficient c%d = %f +/- %f' % (2*u,c_best[u],del_c_best[u])
+            print 'Hermite polynomial expansion coefficient c%d = %f +/- %f' % (2*u,c_best[u],del_c_best[u])
   
         for u in range(nc):
-            if reducer_options.hermite_coeffs[u] > 0:
-                print 'Hermite polynomial expansion coefficient a%d = c%d/(2^%d*%d!) = %f +/ %f' % (2*u,2*u,2*u,u,a_best[u],del_a_best[u])
+            print 'Hermite polynomial expansion coefficient a%d = c%d/(2^%d*%d!) = %f +/ %f' % (2*u,2*u,2*u,u,a_best[u],del_a_best[u])
 
         print
         print 'FSE coefficient k by the k/q He_3(y) expansion member = %f +/- %f' % (k_best, del_k_best)
