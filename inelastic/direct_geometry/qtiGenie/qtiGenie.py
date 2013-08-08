@@ -1,9 +1,7 @@
 from xml.dom import minidom 
 from mantid.kernel import funcreturns
-import MantidFramework 
 from mantid.simpleapi import *
 from mantid import config
-MantidFramework.mtd.initialise()
 from DirectEnergyConversion import *
 import sys
 import time as time
@@ -18,7 +16,7 @@ import PySlice2
 import PyChop
 # avoid _qti if running outside Mantid.
 try:
-    import _qti as qti
+    import mantidplot
 except ImportError:
   pass 
 import os
@@ -72,9 +70,9 @@ print 'Working directory set to: ',save_dir;
 def createqtiTable(*args):
 #create a qti table of length arg1 with name arg0
     if len(args)==0:
-        out=qti.app.newTable()
+        out=mantidplot.newTable()
     if len(args)==2:
-        out=qti.app.newTable(args[0],args[1],3)
+        out=mantidplot.newTable(args[0],args[1],3)
         out.setColumnRole(3, 5)
     return out 
                     
@@ -379,7 +377,7 @@ def load_monitors(*args):
         try: 
             ConvertToDistribution(wksp+'_Monitors')
         except:
-            CloneWorkspace(wksp,wksp+'_Monitors')		
+            CloneWorkspace(wksp,OutputWorkspace=wksp+'_Monitors')		
                 
             
         runinfo=RawFileInfo(fullname,GetRunParameters=True)
@@ -451,7 +449,7 @@ def ass(wksp):
     #define a workspace as current_working_data within the shell
     #simplifies plot etc
     global current_working_data
-    if mtd.workspaceExists(str(wksp)):
+    if mtd.doesExist(str(wksp)):
         current_working_data=wksp
     else:
         tmp=load(wksp)
@@ -464,7 +462,7 @@ def clear(wksp):
     clear(w1)
     """
     name=wksp.getName()
-    mtd.deleteWorkspace(name)
+    DeleteWorkspace(name)
 def whos():
     """
     list all current loaded workspaces
@@ -515,7 +513,7 @@ def get_ei(wksp_in,guess):
     mon2_spec = int(qtg_par["ei-mon1-spec"]);
     mon3_spec = int(qtg_par["ei-mon2-spec"]);
     ei,mon2_peak,mon2_index=GetEi(wksp_in,mon2_spec,mon3_spec,guess)
-    #ei = (wksp_in.getSampleDetails().getLogData("Ei").value)
+    #ei = (wksp_in.getRun().getLogData("Ei").value)
     print 'Incident Energy = ', ei, 'meV'
     print 'Peak in monitor',mon2_index, 'at ', mon2_peak ,'usec'
     return ei,mon2_peak
@@ -593,7 +591,7 @@ def normalise(*args):
 
         if method ==2:
             print 'Normalise to current'
-            NormaliseByCurrent(wksp_in,wksp_out)
+            NormaliseByCurrent(wksp_in, OutputWorkspace=wksp_out)
         
 
     if len(args)==4: #must have two imputs at least input wksp and method
@@ -683,7 +681,7 @@ def integrate_over_runs(runstart,runstop,tmin,tmax,specmin,specmax,*args,**kwarg
             outdat.setCell(3,jj,tmp.readE(0)[0])
             print 'Integral from run ', i, '=' ,tmp.readY(0)[0],'+/-',tmp.readE(0)[0]
         jj=jj+1
-    qti.app.plot(outdat,(1,2,3),2)
+    mantidplot.plot(outdat,(1,2,3),2)
     return outdat
 
 def integrate_maps_monitors_over_runs(runstart,runstop,tmin,tmax,mypath):
@@ -761,7 +759,7 @@ def integrate_maps_monitors_over_runs(runstart,runstop,tmin,tmax,mypath):
                 outdat.setCell(3,jj,0)
             else:	
                 if mflag:
-                    CloneWorkspace('tmp_Monitors','tmp')			
+                    CloneWorkspace('tmp_Monitors',OutputWorkspace='tmp')			
                     #out=normalise(tmp,norm)
                     out=tmp/uamps
                     tmp=integrate(out,tmin,tmax,1,1)
@@ -775,7 +773,7 @@ def integrate_maps_monitors_over_runs(runstart,runstop,tmin,tmax,mypath):
                 outdat.setCell(3,jj,tmp.readE(0)[0])
                 print 'Integral from run ', i, '=' ,tmp.readY(0)[0],'+/-',tmp.readE(0)[0]
         jj=jj+1
-    qti.app.plot(outdat,(1,2,3),2)
+    mantidplot.plot(outdat,(1,2,3),2)
     return outdat
 
 def Log(wksp_in):
@@ -806,7 +804,7 @@ def etrans(*args):
     
     if len(args)==1:
         wksp_in=args[0]
-        ei = float(wksp_in.getSampleDetails().getLogData("Ei").value())
+        ei = float(wksp_in.getRun().getLogData("Ei").value())
         print 'Converting to energy transfer ei = ', ei,'meV'
         
         ConvertUnits(InputWorkspace=wksp_in,OutputWorkspace=wksp_out,Target="DeltaE",EMode="Direct",EFixed=ei)
@@ -876,7 +874,7 @@ def avrg_spectra(ws_name,index_min=0,index_max=sys.float_info.max,calc_sigma_avr
 
         nUsedSpectra-= nZeroSpectra
         if(nUsedSpectra <=0) :
-            mtd.deleteWorkspace('sumWS')        
+            DeleteWorkspace('sumWS')        
             raise Exception(" no valid spectra found in the workspace")
 
     spectra = pOutWS.readY(0);  
@@ -888,7 +886,7 @@ def avrg_spectra(ws_name,index_min=0,index_max=sys.float_info.max,calc_sigma_avr
         for i in range(0,len(spectra)):
             rez[i]=spectra[i]/nUsedSpectra
              
-    mtd.deleteWorkspace('sumWS')
+    DeleteWorkspace('sumWS')
     stats =[nUsedSpectra,nMaskedSpectra,nZeroSpectra]
     return (rez,stats);
     
@@ -1007,7 +1005,7 @@ def getspec(wksp_in,spec):
     X=list(wksp_in.readX(spec))
     Y=list(wksp_in.readY(spec))
     E=list(wksp_in.readE(spec))
-    CreateWorkspace(wksp_out, X, Y, E)
+    CreateWorkspace(X, Y, E, OutputWorkspace=wksp_out)
     return mtd[wksp_out]
 
 def smooth(wksp_in,fac):
@@ -1015,7 +1013,7 @@ def smooth(wksp_in,fac):
     adjacent average smooth of 2d data
     """
     wksp_out=wksp_in
-    SmoothData(wksp_in,wksp_out,NPoints=str(fac))
+    SmoothData(wksp_in,OutputWorkspace=wksp_out,NPoints=str(fac))
 
 
 def pcolor(*args):
@@ -1079,15 +1077,15 @@ def dspace_maps(runnumber):
     w1b_=load_spectra(runnumber,440,574)
     ConjoinWorkspaces("w1a_","w1b_")
     w2_=dspacing(w1a_)#conjoined wksp is named after the first one
-    ConvertSpectrumAxis("w2_","w3_","theta")
-    Rebin("w3_","w3a_",[0,0.05,10])
+    ConvertSpectrumAxis("w2_","theta", OutputWorkspace="w3_")
+    Rebin("w3_",[0,0.05,10], OutputWorkspace="w3a_")
     #w3b_=transpose("w3a_")
-    #Rebin("w3b_","w3c_",[0,0.26,60])
+    #Rebin("w3b_",[0,0.26,60], OutputWorkspace="w3c_")
     #wout=transpose("w3c_")
     #pcolor("w3c_")
     #Make a copy of wout using CropWorkspace with no additional inputs.
-    #CropWorkspace("wout",wksp_out)
-    CropWorkspace("w3a_",wksp_out)
+    #CropWorkspace("wout",OutputWorkspace=wksp_out)
+    CropWorkspace("w3a_",OutputWorkspace=wksp_out)
     #Get rid of intermediate gubbins:
     DeleteWorkspace("w1a_")
     DeleteWorkspace("w2_")
@@ -1112,11 +1110,11 @@ def dintegrate(win,d_lo,d_hi):
 
     dd=d_hi-d_lo
     #w1=rebin(win,[d_lo,dd,d_hi])
-    Rebin(win,"w1",[d_lo,dd,d_hi])
-    Transpose("w1","w2")
-    Rebin("w2","wout",[0,0.26,60])
+    Rebin(win,[d_lo,dd,d_hi], OutputWorkspace="w1")
+    Transpose("w1",OutputWorkspace="w2")
+    Rebin("w2", [0,0.26,60], OutputWorkspace='wout')
     #Make a copy assigned to name of specified output
-    CropWorkspace("wout",wksp_out)
+    CropWorkspace("wout",OutputWorkspace=wksp_out)
     #plotSpectrum("wout",0)
     #Delete intermediate stuff:
     DeleteWorkspace("wout")
@@ -1178,14 +1176,14 @@ def dscan_maps_analysis(run_start,run_end,d_lo,d_hi,specno):
         wccr=wccr_ang_maps(i)
         wtmp1_=dspace_maps(i)	
         wtmp2_=sumspec(wtmp1_,specno-1,specno-1)
-        ConvertToHistogram("wtmp2_","wtmp3_")
+        ConvertToHistogram("wtmp2_",OutputWorkspace="wtmp3_")
         tmp=integrate("wtmp3_",d_lo,d_hi)
         outdat.setCell(1,jj,wccr)
         outdat.setCell(2,jj,tmp.readY(0)[0])
         outdat.setCell(3,jj,tmp.readE(0)[0])
         print 'Integral from run ', i, '=' ,tmp.readY(0)[0],'+/-',tmp.readE(0)[0]
         jj=jj+1
-    qti.app.plot(outdat,(1,2,3),2)
+    mantidplot.plot(outdat,(1,2,3),2)
     DeleteWorkspace("wtmp1_")
     DeleteWorkspace("wtmp2_")
     DeleteWorkspace("wtmp3_")
