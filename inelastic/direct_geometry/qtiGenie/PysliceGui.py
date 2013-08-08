@@ -2,8 +2,6 @@
 import sys
 from PySliceUI2 import Ui_MainWindow
 from PyQt4 import QtCore, uic,QtGui
-import MantidFramework 
-MantidFramework.mtd.initialise()
 import time as time
 from mantidplotpy import *
 import dgreduce
@@ -629,3 +627,4 @@ app = qapp()
 PySliceGui = MainWindow()
 PySliceGui.show()
 app.exec_()
+
