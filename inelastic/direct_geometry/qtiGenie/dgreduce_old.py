@@ -1376,13 +1376,13 @@ def sum_files(accumulator, files):
          for filename in files:
               print 'Summing run ',filename,' to workspace ',accumulator
               temp = common.load_run(filename, force=False)
-              if mtd.workspaceExists(accumulator)==False:
+              if not mtd.doesExist(accumulator):
                    #check for existance of output workpsace if false clone and zero
                    print 'create output file'
-                   CloneWorkspace(temp,accumulator)
+                   CloneWorkspace(temp,OutputWorkspace=accumulator)
                    CreateSingleValuedWorkspace(OutputWorkspace="tmp",DataValue="0",ErrorValue="0")
                    Multiply(LHSWorkspace=accumulator,RHSWorkspace="tmp",OutputWorkspace=accumulator)
-              Plus(accumulator, temp, accumulator)
+              Plus(accumulator, temp, OutputWorkspace=accumulator)
          return accumulator
 
 
