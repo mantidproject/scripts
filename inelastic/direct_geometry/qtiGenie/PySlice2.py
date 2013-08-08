@@ -1,7 +1,4 @@
 from utils import *
-#from mantidsimple import *
-import MantidFramework 
-MantidFramework.mtd.initialise()
 #from DirectEnergyConversion import *
 import time as time
 from mantidplotpy import *
@@ -318,7 +315,7 @@ class data2D:
 		
 		n,r=lhs('both')
 		wksp_out=r[0]
-		#ei= (wksp_in.getSampleDetails().getLogData("Ei").value)
+		#ei= (wksp_in.getRun().getLogData("Ei").value)
 		#wksp_in=mtd[wksp_in]
 		SofQW3(InputWorkspace=wksp_in,OutputWorkSpace=wksp_out,QAxisBinning=qbin,EMode="Direct")
 		##comment lines were code for correcting interceting area rebin as coded in sofqw2, sofqw3 seems to work correctly
@@ -344,8 +341,8 @@ class data2D:
 		try:
 			n,r=lhs('both')
 			wksp_out=r[0]
-			#ei= (wksp_in.getSampleDetails().getLogData("Ei").value)
-			SofQW(wksp_in,wksp_out,QAxisBinning=qbin,EMode="Direct",EFixed=str(ei))
+			#ei= (wksp_in.getRun().getLogData("Ei").value)
+			SofQW(wksp_in,OutputWorkspace=wksp_out,QAxisBinning=qbin,EMode="Direct",EFixed=str(ei))
 			return mtd[wksp_out]
 		except:
 			print 'no output workpsace defined'
@@ -495,8 +492,8 @@ class data2D:
 def createqtiTable(*args):
 #create a qti table of length arg1 with name arg0
 	if len(args)==0:
-		out=qti.app.newTable()
+		out=newTable()
 	if len(args)==2:
-		out=qti.app.newTable(args[0],args[1],3)
+		out=newTable(args[0],args[1],3)
 		out.setColumnRole(3, 5)
 	return out 
