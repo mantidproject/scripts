@@ -1,7 +1,5 @@
-from utils import *
 #from DirectEnergyConversion import *
 import time as time
-from mantidplotpy import *
 import dgreduce
 import inspect
 import numpy
@@ -11,6 +9,7 @@ except ImportError:
   pass
 from mantid import *
 from mantid.simpleapi import *
+from mantid.kernel import funcreturns
 import pprint
 from numpy import *
 
@@ -159,7 +158,7 @@ class data2D:
 		delcut=delE
 		cutmax=Emax
 		try:
-			n,r=lhs('both')
+			n,r=funcreturns.lhs_info('both')
 			name=r[0]
 			if kwargs.has_key('shoelace'):
 				if kwargs.has_key('over'):
@@ -207,7 +206,7 @@ class data2D:
 		delcut=delQ
 		cutmax=Qmax
 		try:
-			n,r=lhs('both')
+			n,r=funcreturns.lhs_info('both')
 			name=r[0]
 			if kwargs.has_key('shoelace'):
 				if kwargs.has_key('over'):
@@ -313,7 +312,7 @@ class data2D:
 		sqw(w1,'0,.1,12')
 		"""
 		
-		n,r=lhs('both')
+		n,r=funcreturns.lhs_info('both')
 		wksp_out=r[0]
 		#ei= (wksp_in.getRun().getLogData("Ei").value)
 		#wksp_in=mtd[wksp_in]
@@ -339,7 +338,7 @@ class data2D:
 		sqw(w1,'0,.1,12')
 		"""
 		try:
-			n,r=lhs('both')
+			n,r=funcreturns.lhs_info('both')
 			wksp_out=r[0]
 			#ei= (wksp_in.getRun().getLogData("Ei").value)
 			SofQW(wksp_in,OutputWorkspace=wksp_out,QAxisBinning=qbin,EMode="Direct",EFixed=str(ei))
@@ -484,7 +483,7 @@ class data2D:
 #	"""
 #	transpose workspace
 #	"""
-#	n,r=lhs('both')
+#	n,r=funcreturns.lhs_info('both')
 #	wksp_out=r[0]
 #	Transpose(InputWorkspace=wksp_in,OutputWorkspace=wksp_out)
 #	return mtd[wksp_out]
