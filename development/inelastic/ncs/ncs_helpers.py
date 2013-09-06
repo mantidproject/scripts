@@ -1,26 +1,34 @@
 ##
-##
+## Just helpers for now to keep alot of the unimportant details out of the way
+## This will all be refactored when it gets incorporated properly
 ##
 import numpy as np
 
+#----------------------------------------------------------------------------------------
 def preprocess(data_ws, options):
     """Runs a set of preprocessing steps on the workspace
     before fitting based on the given options
     @param data_ws :: The workspace containing the data to process
-    @param fit_options :: An object of type ReducitonOptions containing
+    @param fit_options :: An object of type ReductionOptions containing
                           the required parameters
     @returns The result workspace
     """
     if options.has_been_set("smooth_points"):
         pts = options.smooth_points
-        print "Smoothing data using %d neighbours" % pts
-        from mantid.simpleapi import SmoothData
-        data_ws = SmoothData(InputWorkspace=data_ws, OutputWorkspace=data_ws, NPoints=[pts])
+        if pts > 0:
+            print "Smoothing data using %d neighbours" % pts
+            from mantid.simpleapi import SmoothData
+            data_ws = SmoothData(InputWorkspace=data_ws, OutputWorkspace=data_ws, NPoints=[pts])
+        else:
+            raise ValueError("Invalid number of points for smoothing: '%d'."
+                             " Value must be greater than zero. Set to None to turn off smoothing" % pts)
 
     if options.has_been_set("bad_data_error"):
         mask_data(data_ws, options.bad_data_error)
         
     return data_ws
+
+#----------------------------------------------------------------------------------------
 
 def mask_data(workspace, error_threshold, verbose=False):
     """
@@ -60,7 +68,7 @@ def run_fitting(data_ws, fit_options):
         @param fit_options :: An object of type FitOptions containing
                               the parameters 
     """
-    from mantid.simpleapi import Fit, RenameWorkspace
+    from mantid.simpleapi import RenameWorkspace, mtd
     
     # Move to validate member
     # If FSE free, then sears flags should be off
@@ -77,18 +85,36 @@ def run_fitting(data_ws, fit_options):
     if fit_options.has_been_set("background_order"):
         print "Including background using Chebyshev polynomial of order=%d" % fit_options.background_order
 
-    
+    #### Run fitting first time using constraints matrix to reduce active parameter set ######
     function_str = fit_options.create_function_str()
     constraints = fit_options.create_constraints_str()
     ties = fit_options.create_ties_str()
+    _do_fit(function_str, data_ws, constraints, ties, max_iter=5000)
+    
+    #### Run fitting first time using constraints matrix to reduce active parameter set ######
+    params_ws = mtd["__fit_Parameters"]
+    param_values = {}
+    for row in params_ws:
+        values = row.values()
+        param_values[values[0]] = values[1]
+
+    function_str = fit_options.create_function_str(param_values)
+    reduced_chi_square = _do_fit(function_str, data_ws, constraints, ties, max_iter=1)
 
     ws_prefix = "__fit"
-    Fit(function_str,data_ws,Ties=ties,Constraints=constraints,Output=ws_prefix,
-        CreateOutput=True,OutputCompositeMembers=True,MaxIterations=5000)
-    
     fit_suffixes = ('_Parameters','_NormalisedCovarianceMatrix','_Workspace')
     for suffix in fit_suffixes:
-        RenameWorkspace(InputWorkspace=ws_prefix + suffix,OutputWorkspace=fit_options.output_prefix + suffix)
+        RenameWorkspace(InputWorkspace=ws_prefix + suffix,OutputWorkspace="raw" + suffix)
+    
+    return reduced_chi_square, mtd["raw_Parameters"]
+
+def _do_fit(function_str, data_ws, constraints, ties, max_iter):
+    from mantid.simpleapi import Fit
+
+    results = Fit(function_str,data_ws,Ties=ties,Constraints=constraints,Output="__fit",
+                  CreateOutput=True,OutputCompositeMembers=True,MaxIterations=max_iter, 
+                  Minimizer="Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08")
+    return results[1] # reduced chi-squared
 
 #----------------------------------------------------------------------------------------
 class ReductionOptions(object):
@@ -125,9 +151,15 @@ class ReductionOptions(object):
         are consistent"""
         pass
         
-    def create_function_str(self):
+    def create_function_str(self, param_values=None):
         """
-        Creates the function string to pass to fit
+            Creates the function string to pass to fit
+        
+            @param param_values :: A dict of key/values specifying the parameter values
+            that have already been calculated. If None then the ComptonScatteringCountRate
+            function, along with the constraints matrix, is used rather than the standard CompositeFunction.
+            It is assumed that the standard CompositeFunction is used when running the fit for a
+            second time to compute the errors with everything free
         """
         def to_space_sep_str(collection):
             _str = ""
@@ -137,21 +169,77 @@ class ReductionOptions(object):
         hermite_str = to_space_sep_str(self.hermite_coeffs)
         ws_index = self.workspace_index
 
-        function_str = "composite=CompositeFunction,NumDeriv=1;"
+        all_free = (param_values is not None)
+        
+        if all_free:
+            function_str = "composite=CompositeFunction,NumDeriv=1;"
+        else:
+            function_str = "composite=ComptonScatteringCountRate,NumDeriv=1%s;"
+            matrix_str = self.create_matrix_string(self.constraints)
+            if matrix_str == "":
+                function_str = function_str % ""
+            else:
+                function_str = function_str % (",IntensityConstraints=" + matrix_str)
+
         # Currently, it is assumed that the first mass is always  proton/deuterium
         for index, mass in enumerate(self.masses):
-            # Main function
             function_str += "name=%s,%s;"
+            par_value_prefix = "f%d." % (index)
+            if all_free:
+                width = param_values[par_value_prefix + "Width"]
+            else:
+                widths = self.widths[index]
+                if hasattr(widths, "__len__"):
+                    width = widths[1]
+                else:
+                    width = widths
+
             if index == 0:
                 func_name = "GramCharlierComptonProfile"
-                params = "WorkspaceIndex=%d,Mass=%f,HermiteCoeffs=%s" \
-                  % (ws_index,mass,hermite_str)
+                params = "WorkspaceIndex=%d,Mass=%f,HermiteCoeffs=%s,Width=%f" \
+                  % (ws_index,mass,hermite_str,width)
+                if all_free:
+                    par_names = ["FSECoeff"]
+                    for i,c in enumerate(self.hermite_coeffs):
+                        if c > 0:
+                            par_names.append("C_%d" % (2*i))
+                    for par_name in par_names:
+                        params += ",%s=%f" % (par_name,param_values[par_value_prefix + par_name])
             else:
                 func_name = "GaussianComptonProfile"
-                params = "WorkspaceIndex=%d,Mass=%f" % (ws_index,mass)
+                params = "WorkspaceIndex=%d,Mass=%f,Width=%f" % (ws_index,mass,width)
+                if all_free:
+                    par_name = "Intensity"
+                    params += ",%s=%f" % (par_name,param_values[par_value_prefix + par_name])
             function_str = function_str % (func_name, params)
         
         return function_str.rstrip(";")
+
+    def create_matrix_string(self, constraints_tuple):
+        """Returns a string for the value of the Matrix of intensity
+        constraint values
+        """
+        if self.constraints is None or len(self.constraints) == 0:
+            return ""
+        
+        if hasattr(self.constraints[0], "__len__"):
+            nrows = len(self.constraints)
+            ncols = len(self.constraints[0])
+        else:
+            nrows = 1
+            # without trailing comma a single-element tuple is automatically 
+            # converted to just be the element
+            ncols = len(self.constraints)
+            # put back in sequence
+
+        matrix_str = "\"Matrix(%d|%d)%s\""
+        values = ""
+        for row in self.constraints:
+            for val in row:
+                values += "%f|" % val
+        values = values.rstrip("|")
+        matrix_str = matrix_str % (nrows, ncols, values)
+        return matrix_str
 
     def create_constraints_str(self):
         """Returns the string of constraints for this Fit
@@ -166,7 +254,7 @@ class ReductionOptions(object):
                 constraints += "%f < %s < %f," % (widths[0], par_name, widths[2])
 
         return constraints.rstrip(",")
-    
+   
     def create_ties_str(self):
         """Returns the string of ties for this Fit
         """
@@ -180,44 +268,6 @@ class ReductionOptions(object):
             if not hasattr(widths, "__len__"):
                 # Fixed width
                 ties += "%s=%f," % (par_name,widths)
-
-        ### Stoichiometry/Intensity constraints
-        nmasses = len(self.masses)
-        c_free = self.hermite_coeffs
-        n_c = len(c_free)
-        constraints = self.constraints
-        # Make sure it is a list of lists
-        if type(constraints[0]) != list:
-            constraints = [constraints]
-        
-        for aeq_i in constraints:
-            # The first value in the aeq list relates to the first mass. We need to expand the
-            # matrix to incorporate the hermite polynomial coeffs that are used instead of the Gaussian
-            intensity_pars = ["f%d.Intensity" % index for index in range(1,nmasses)]
-            firstmass_aeq = aeq_i[0]
-            aeq_i = aeq_i[1:]
-            for back_index, coeff in enumerate(reversed(c_free)):
-                if coeff == 1:
-                    aeq_i.insert(0, firstmass_aeq) #prepend
-                    intensity_pars.insert(0,"f0.C_%d" % (2*(n_c - 1 - back_index)) ) #Even coefficents
-        
-            # Make list of tuples (coeff,par_name) that contribute
-            lhs_terms = []
-            for coeff, par_name in zip(aeq_i, intensity_pars):
-                if abs(coeff) > 0.0:
-                    lhs_terms.append((coeff,par_name))
-            
-            # Pick first par name to go on lhs of tie expression.
-            # and rearrange so everything else is on the the RHS of aeq_i*x_i = 0
-            lhs = lhs_terms[0]
-            rhs = lhs_terms[1:]
-            denominator = -1.0*lhs[0]
-            rhs = map(lambda term: (term[0]/denominator,term[1]), rhs)
-            # Now form p=a*b+c*d...
-            rhs_str = ""
-            for coeff, param in rhs:
-                rhs_str += "%+f*%s" % (coeff,param) # +f prints +/- with number
-            ties += lhs[1] + "=" + rhs_str.lstrip("+") + ","
             
         ## FSE constraint
         if not self.k_free:
@@ -236,10 +286,20 @@ class ReductionOptions(object):
         Raises a AttributeError if the name is unknown
         """
         if name in self._options:
+            # Make sure the constraints tuple is still a tuple
+            # If first element looks like sequence we have more than 1 constraint
+            # or the tuple was created with a trailing comma and is 1 in size.
+            # If the first element is not a sequence a single-element tuple was created without a 
+            # trailing comma so the tuple was stripped
+            if name == "constraints" and (value is not None) \
+                    and (len(value) > 0 and not hasattr(value[0], "__len")):
+                    value = (value,) # note trailing comma
             self._options[name] = value
         else:
             raise AttributeError("Unknown attribute %s. "
                             "Allowed names (%s)" % (name, str(self._options.keys())))
+
+
             
     def __getattr__(self, name):
         """Return the named attribute's value.
@@ -257,4 +317,5 @@ class ReductionOptions(object):
         self.generate_function_str()
     
 #----------------------------------------------------------------------------------------
-
+        
+    

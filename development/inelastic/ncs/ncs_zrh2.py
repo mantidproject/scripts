@@ -14,14 +14,14 @@ import math
 ## file)
 ################################################################################
 
-runs = "15039-15045"
+runs = "14188-14195"
 spectra = "135"
 diff_type="SingleDifference" # Allowed values=Single,Double,Thick
 ip_file = "IP0004_10.par"
 
 print "Loading spectra %s from runs %s" % (spectra,runs)
-raw_ws = LoadVesuvio(Filename=runs, SpectrumList=spectra,
-                                     Mode=diff_type,InstrumentParFile=ip_file)
+raw_ws = LoadVesuvio(Filename=runs, SpectrumList=spectra, 
+                     Mode=diff_type,InstrumentParFile=ip_file)
 
 raw_ws = CropWorkspace(raw_ws,XMin=50.0,XMax=562.0)
 
@@ -57,16 +57,16 @@ reducer_options.sears_flag = 1
 #-------------------------------------------------------------------
 
 ## Mass distributions
-reducer_options.masses = [1.0079, 16.0, 27.0, 133.0]
+reducer_options.masses = [1.0079, 27.0, 91]
 ## Widths - A list same length as masses list
 ##    Constrained Width: The entry should contain 3 numbers (low,value,high)
 ##    Fixed Width: The entry should be a single value, the width
-reducer_options.widths = [(2,5,7), 10, 13, 30]
+reducer_options.widths = [(2,5,7), 13, (20,40,60)]
 
 ## Intensity constraints
 ##   Aeq*X = 0
 ## where Aeq is a matrix of size (nconstraints,nmasses)
-reducer_options.constraints = ([0,1,0,-4])
+reducer_options.constraints = None
 
 #################################################################################
 ## Run
@@ -125,7 +125,6 @@ if nc > n_active_c:
         c_best.append(0.0)
         del_c_best.append(0.0)
 
-print c_best
 #######################################
 # Peak areas are normalized to the sum
 #######################################

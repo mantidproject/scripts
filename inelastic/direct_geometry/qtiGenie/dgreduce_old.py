@@ -1,76 +1,83 @@
-from utils import *
-from DirectEnergyConversion import *
-#from mantid.api import Workspace
+#from utils import *
+#from DirectEnergyConversion import *
+from mantid.simpleapi import *
+import DirectEnergyConversion as DRC 
+from mantid.api import Workspace
+from mantid.kernel import funcreturns
 import CommonFunctions as common
 import time as time
 import numpy
-from mantid.simpleapi import *
+import os
+DRC = reload(DRC)
 
 def setup(instname):
     """
     setup('mar')
     setup redcution parameters from instname_parameter.xml file
     """
-    global reducer, inst_name,bleed_switch,rate,pixels
+    global reducer, inst_name,van_mass,bleed_switch,rate,pixels
+    # debugging (allows to reload changed DirectEnergyConversion package from Mantid)
+
     if instname=='MAR' or instname=='mar':
          print 'setup mari'
          inst_name='MAR'
-         reducer = setup_reducer('MARI')
+         reducer = DRC.setup_reducer('MARI')
          bleed_switch=False
          rate=0.0
          pixels=0
     elif instname=='MER' or instname=='mer':
          print 'setup merlin'
          inst_name='MER'
-         reducer = setup_reducer('MERLIN')
+         reducer = DRC.setup_reducer('MERLIN')
          bleed_switch=True
          rate=0.01
          pixels=80
     elif instname=='MAP' or instname=='map':
          print 'setup maps'
          inst_name='MAP'
-         reducer = setup_reducer('MAPS')
+         reducer = DRC.setup_reducer('MAPS')
          bleed_switch=False
          rate=0.0
          pixels=0.0
     elif instname=='LET' or instname=='let':
          print 'setup let'
          inst_name='LET'
-         reducer = setup_reducer('LET')
-         bleed_switch=False
+         reducer = DRC.setup_reducer('LET')
+         bleed_switch=True
          rate=0.01
          pixels=80
     elif instname=='ARCS' or instname=='arcs':
          print 'setup Arcs'
          inst_name='ARC'
-         reducer = setup_reducer('ARCS')
+         reducer = DRC.setup_reducer('ARCS')
          bleed_switch=False
          rate=0.01
          pixels=80
     elif instname=='SEQ' or instname=='seq':
          print 'setup Sequoia'
          inst_name='SEQ'
-         reducer = setup_reducer('SEQUOIA')
+         reducer = DRC.setup_reducer('SEQUOIA')
          bleed_switch=False
          rate=0.01
          pixels=80
     elif instname=='CNCS' or instname=='cncs':
          print 'setup cncs'
          inst_name='SEQ'
-         reducer = setup_reducer('CNCS')
+         reducer = DRC.setup_reducer('CNCS')
          bleed_switch=False
          rate=0.01
          pixels=80
     elif instname=='HYSPEC' or instname=='hyspec':
          print 'setup hyspec'
          inst_name='SEQ'
-         reducer = setup_reducer('HYSPEC')
+         reducer = DRC.setup_reducer('HYSPEC')
          bleed_switch=False
          rate=0.01
          pixels=80
     else:
          print 'Instrument name not defined'
          return        
+    van_mass=reducer.get_default_parameter('vanadium-mass') 
     
        
 def set_cal_file(ws='',cal_file_name=''):
@@ -110,7 +117,7 @@ def set_cal_file(ws='',cal_file_name=''):
     LoadDetectorInfo(Workspace=targWSName,DataFilename= cal_file_name,RelocateDets=True)
     reducer.det_cal_file_ws = mtd[targWSName];
                 
-    
+        
 def help(*args):
     print 'available keywords for dgreduce with default values'
     print 'norm_method- normalistion monitor-1,monitor-2,uamph'
@@ -203,10 +210,11 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
     hardmaskOnly=Filename :load a hardmask and use as only mask
     
     """
-    global reducer, rm_zero,inst_name,bleed_switch,rate,pixels
+    global reducer, rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
     print 'DGreduce run for ',inst_name,'run number ',sample_run
     try:
-        n,r=lhs('both')
+        n,r=funcreturns.lhs_info('both')
+        #n,r=lhs('both')
         wksp_out=r[0]
     except:
         if sample_run == 0:
@@ -421,7 +429,8 @@ def arb_units(wb_run,sample_run,ei_guess,rebin,map_file,**kwargs):
               hard_mask=HardMaskFile)
               
     reducer.spectra_masks=masking
-    fail_list=get_failed_spectra_list(masking)
+    #fail_list=get_failed_spectra_list(masking)
+    fail_list,n_total_spectra =get_failed_spectra_list_from_masks(masking)
     
     print 'Diag found ', len(fail_list),'bad spectra'
     
@@ -509,7 +518,7 @@ def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess
     """ 
     #available keywords
     #abs_units_van_range
-    global reducer, rm_zero,inst_name,bleed_switch,rate,pixels
+    global reducer, rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
     print 'DGreduce run for ',inst_name,'run number ',sample_run
     print 'Output will be in absolute units of mb/str/mev/fu'
     try:
@@ -691,7 +700,7 @@ def abs_units_old(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess
         reducer.monovan_integr_range=[-40,40]
     
     #reducer.van_rmm =50.94
-    reducer.van_mass=reducer.get_default_parameter('vanadium-mass')
+    reducer.van_mass=van_mass
     #sample info
     reducer.sample_mass=samp_mass
     reducer.sample_rmm =samp_rmm
@@ -876,16 +885,16 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
     """     
     #available keywords
     #abs_units_van_range
-    global reducer, rm_zero,inst_name,bleed_switch,rate,pixels
+    global reducer, rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
     print 'DGreduce run for ',inst_name,'run number ',sample_run
     print 'Output will be in absolute units of mb/str/mev/fu'
 
     #reducer.van_rmm =50.94
-    reducer.van_mass=reducer.get_default_parameter('vanadium-mass')
+    reducer.van_mass=van_mass
     #sample info
     reducer.sample_mass=samp_mass
     reducer.sample_rmm =samp_rmm
-    print 'Using vanadium mass: ',reducer.van_mass
+    print 'Using vanadium mass: ',van_mass
     print '        sample mass: ',samp_mass    
     print '        sample_rmm : ',samp_rmm 
    # check if mono-vanadium is provided as multiple files list or just put in brackets ocasionally
@@ -1124,7 +1133,8 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
               bleed_pixels=pixels,
               hard_mask=HardMaskFile)
            
-    
+    fail_list,n_total_spectra =get_failed_spectra_list_from_masks(masking)    
+    print 'first Diag found ', len(fail_list),'bad spectra out of: ',n_total_spectra,' ws spectra'
    
     if kwargs.has_key('use_sam_msk_on_monovan') and kwargs.get('use_sam_msk_on_monovan')==True:
          print 'applying sample run mask to mono van'
@@ -1155,11 +1165,12 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
               hard_mask=HardMaskFile)
                    
          total_mask=masking+masking2               
-         reducer.spectra_masks=total_mask              
-         fail_list=get_failed_spectra_list('total_mask')
+         reducer.spectra_masks=total_mask  
+         fail_list,n_total_spectra =get_failed_spectra_list_from_masks(total_mask)
+         #fail_list=get_failed_spectra_list('total_mask')
     
     
-    print 'Diag found ', len(fail_list),'bad spectra '
+    print 'Diag found ', len(fail_list),'bad spectra out of: ',n_total_spectra,' ws spectra'
     
     
     
@@ -1196,7 +1207,8 @@ def abs_units(wb_run,sample_run,mono_van,wb_mono,samp_rmm,samp_mass,ei_guess,reb
     
     if mtd.doesExist(results_name)==False:
         RenameWorkspace(InputWorkspace=deltaE_wkspace_sample,OutputWorkspace=results_name)
-    RenameWorkspace(InputWorkspace=results_name,OutputWorkspace=wksp_out)
+    if results_name != wksp_out:
+        RenameWorkspace(InputWorkspace=results_name,OutputWorkspace=wksp_out)
     Divide(LHSWorkspace=wksp_out,RHSWorkspace='AbsFactor',OutputWorkspace=wksp_out)
     DeleteWorkspace(Workspace='AbsFactor')
     return mtd[wksp_out]
@@ -1222,7 +1234,7 @@ def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
                   will use the detector calibraion from the specified file NOT the
                   input raw file
     """
-    global reducer,rm_zero,inst_name,bleed_switch,rate,pixels
+    global reducer,rm_zero,inst_name,van_mass,bleed_switch,rate,pixels
     print 'DGreduce run for ',inst_name,'run number ',sample_run
     try:
         n,r=lhs('both')
@@ -1310,6 +1322,25 @@ def chunk(wb_run,sample_run,ei_guess,rebin,mapingfile,nchunk,**kwargs):
     print 'Elapsed time =',time.time()-start_time, 's'
     return mtd[wksp_out]
 
+def get_failed_spectra_list_from_masks(masking_wksp):
+    """Compile a list of spectra numbers that are marked as
+       masked in the masking workspace
+
+    Input:
+     masking_workspace -  A special masking workspace containing masking data
+    """
+    if type(masking_wksp) == str:
+        masking_wksp = mtd[masking_wksp]
+    
+    failed_spectra = []
+    n_spectra = masking_wksp.getNumberHistograms()
+    for i in xrange(n_spectra):
+        if masking_wksp.readY(i)[0] >0.99 : # spectrum is masked
+            failed_spectra.append(masking_wksp.getSpectrum(i).getSpectrumNo())
+
+    return (failed_spectra,n_spectra)
+
+
 
 def get_failed_spectra_list(diag_workspace):
     """Compile a list of spectra numbers that are marked as
@@ -1321,17 +1352,20 @@ def get_failed_spectra_list(diag_workspace):
     """
     if type(diag_workspace) == str:
         diag_workspace = mtd[diag_workspace]
-    
+
+    if hasattr(diag_workspace, "getAxis") == False:
+        raise ValueError("Invalid input to get_failed_spectra_list. "
+                         "A workspace handle or name is expected")
+        
+    spectra_axis = diag_workspace.getAxis(1)
     failed_spectra = []
     for i in range(diag_workspace.getNumberHistograms()):
-      try:
-        det = diag_workspace.getDetector(i)
-      except RuntimeError:
-        continue
-  
-    if det.isMasked():
-       spectrum = diag_workspace.getSpectrum(i)
-       failed_spectra.append(spectrum.getSpectrumNo())
+        try:
+            det = diag_workspace.getDetector(i)
+        except RuntimeError:
+            continue
+        if det.isMasked():
+            failed_spectra.append(spectra_axis.spectraNumber(i))
 
     return failed_spectra
 
@@ -1342,13 +1376,13 @@ def sum_files(accumulator, files):
          for filename in files:
               print 'Summing run ',filename,' to workspace ',accumulator
               temp = common.load_run(filename, force=False)
-              if mtd.workspaceExists(accumulator)==False:
+              if not mtd.doesExist(accumulator):
                    #check for existance of output workpsace if false clone and zero
                    print 'create output file'
-                   CloneWorkspace(temp,accumulator)
+                   CloneWorkspace(temp,OutputWorkspace=accumulator)
                    CreateSingleValuedWorkspace(OutputWorkspace="tmp",DataValue="0",ErrorValue="0")
                    Multiply(LHSWorkspace=accumulator,RHSWorkspace="tmp",OutputWorkspace=accumulator)
-              Plus(accumulator, temp, accumulator)
+              Plus(accumulator, temp, OutputWorkspace=accumulator)
          return accumulator
 
 

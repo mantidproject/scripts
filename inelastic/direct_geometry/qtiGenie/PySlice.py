@@ -1,14 +1,12 @@
-from utils import *
-from mantidsimple import *
-import MantidFramework 
-MantidFramework.mtd.initialise()
+#from utils import *
+from mantid.simpleapi import *
+from mantid.kernel import funcreturns
 from mantidplot import *
 from DirectEnergyConversion import *
 import time as time
 import dgreduce
 import inspect
 import numpy
-import qti
 
 
 
@@ -64,11 +62,11 @@ def sqw(wksp_in,qbin):
 	sqw(w1,'0,.1,12')
 	"""
 	try:
-		n,r=lhs('both')
+		n,r=funcreturns.lhs_info('both')
 		wksp_out=r[0]
-		ei= (wksp_in.getSampleDetails().getLogData("Ei").value)
+		ei= (wksp_in.getRun().getLogData("Ei").value)
 
-		SofQW2(wksp_in,wksp_out,QAxisBinning=qbin,EMode="Direct",EFixed=str(ei))
+		SofQW2(wksp_in, OutputWorkspace=wksp_out,QAxisBinning=qbin,EMode="Direct",EFixed=str(ei))
 		Transpose(InputWorkspace=wksp_out,OutputWorkspace=wksp_out)
 		return mtd[wksp_out]
 	except:
@@ -162,7 +160,7 @@ def cut(wksp,min,max,**kwargs):
 
 def plotFromQtiTable(tb_in,labelx,labely,title):
 	global active_layer, graph
-	graph=qti.app.plot(tb_in,(1,2,3),2)
+	graph=plot(tb_in,(1,2,3),2)
 	active_layer = graph.activeLayer()
 	#l.setLineColor(1, 2)
 	active_layer.setTitle(title)
@@ -180,7 +178,7 @@ def plotOverFromQtiTable(tb_in,labelx,labely,title):
 
 #def makeCurrent():
 #	global active_layer, graph
-#	gr=qti.app.currentGraph()
+#	gr=currentGraph()
 
 def fillqtitable(wksp_in,xvec,datY,daterr,label):
 	outdat=createqtiTable(label,wksp_in.getNumberHistograms()+1)
@@ -201,7 +199,7 @@ def transpose(wksp_in):
 	"""
 	transpose workspace
 	"""
-	n,r=lhs('both')
+	n,r=funcreturns.lhs_info('both')
 	wksp_out=r[0]
 	Transpose(InputWorkspace=wksp_in,OutputWorkspace=wksp_out)
 	return mtd[wksp_out]
@@ -209,8 +207,8 @@ def transpose(wksp_in):
 def createqtiTable(*args):
 #create a qti table of length arg1 with name arg0
 	if len(args)==0:
-		out=qti.app.newTable()
+		out=newTable()
 	if len(args)==2:
-		out=qti.app.newTable(args[0],args[1],3)
+		out=newTable(args[0],args[1],3)
 		out.setColumnRole(3, 5)
 	return out 
