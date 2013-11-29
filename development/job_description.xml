@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<job_description>
+
+  <!-- -->
+  <job branch_ID ="7529" >
+    <build type ="Release"  skip_this="False"/>
+    <build type ="Debug" skip_this="False"/>
+    <build type ="RelWithDebInfo" skip_this="False"/>
+  </job>
+
+  <!--  For testing non-existing branch -->
+  <job branch_ID ="6171" mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
+    <!--    <build type ="Release" minmal_build = "True"/> -->
+    <build type ="Debug"/>
+    <build type ="Release"/>
+  </job>
+  <job branch_ID ="7645" mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
+    <!--    <build type ="Release" minmal_build = "True"/> -->
+    <build type ="Debug"/>
+    <build type ="Release"/>
+  </job>
+
+  
+  <!--  For testing  working branch, build in master folder so that all test subprojecrs in test folders can be used -->
+  <job branch_ID ="master" skip_this="True">
+    <build type ="Release"  skip_this="False"/>
+    <build type ="Debug" skip_this="False"/>
+    <build type ="RelWithDebInfo" skip_this="False"/>
+  </job>
+  <!--  Clean master for testing and comparing against the test branch located in master -->
+  <job branch_ID ="master" mantid_root="d:/Data/Mantid_GIT_test" build_on_base="True" clean_build="False" skip_this="True">
+    <build type ="Release"/>
+    <build type ="Debug"/>
+    <build type ="RelWithDebInfo"/>
+  </job>
+
+
+  <!--  For testing branch, which has its own build and will be in master_BrNo folder
+  <job branch_ID ="8095"  mantid_root="d:/Data/Mantid_GIT_test" merge_to="master"  skip_this="True">
+    <build type ="Release"/>
+    <build type ="Debug" skip_this="True"/>
+    <build type ="RelWithDebInfo" skip_this="True"/>
+  </job>
+
+   -->
+
+</job_description>
