@@ -4,6 +4,9 @@ import sys
 import subprocess
 import shutil
 import datetime
+import inspect
+import copy
+import numpy as np
 from xml.dom import minidom
 
 
@@ -80,41 +83,70 @@ class br():
 
         return err
 
-    def build_single_proj(self,args):
-        """
-        build single project from command line:
 
-        >>br build [*Release|Debug|DebWithRel] [*Full|Fast] [*Old|Clean]
+    def build_single_proj(self,*args):
+        """ build single project from command line:
+
+        >>br build [*Release|Debug|DWRI|All,Main] [*Full|Fast] [*Old|Clean]
 
         assumes that the branch to build is checked out 
+        where DWRI means DebugWithReleaseInfo, All -- all three builds and Main == [Debug & Release]
+        Full/Fast -- build full project or minimal projects sufficient to build Mantid
+        Old/Clean -- try to build the project over existing branch or clean project first.
+
         """
-        for arg in args:
-            print " transferred argument: ",arg
+        accepted_args ={"Type":"*Release|Debug|DWRI|All|Main","Kind":"*Full|Fast","Freshness":"*Old|Clean",'RepoPath':"$Path"};
+       
+        provided=self.parse_args(accepted_args,*args);
+        for key,val in provided.iteritems():
+            print " transferred argument: ",key,' val=',val;
 
         env =  self.get_environment_from_batch_command(self._set_up_env)
+
+        cur_path = os.getcwd()+'/';  
+        if len(provided['RepoPath']) > 0:
+            os.chdir(repo_path);
+
+
         branchID = self.find_cur_branch_id();
         if len(branchID)==0:
             repo_path =  self._MANTID_Loc;
-            cur_path = os.getcwd()+'/';
             os.chdir(repo_path)           
             branchID = self.find_cur_branch_id();
             if len(branchID)==0:
                 raise EnvironmentError("Can not swich to default GIT repository location")
-            os.chdir(cur_path);
+
         else:
             repo_path = os.getcwd()+'/';
 
         # where to build the project
-        build_path= self.find_target_build_path(branchID,repo_path,False);
+        build_path= self.find_target_build_path(branchID,branchID,repo_path,False);
         short = False;
+        if provided['Kind']=='Fast':
+            short  = True;
         build_clean = False
-        build_type = 'Release'
-        self.build_project(env,repo_path,build_path,True,short,build_clean,build_type)
+        if provided['Freshness']=='Clean':
+            build_clean  = True;
 
+        build_types = provided['Type'];
+        if len(build_types)== 1:
+            if build_types[0]=='All':
+                build_types = ['Release','Debug','DebugWithReleaseInfo'];
+            if build_types[0]=='DWRI' :
+                build_types = ['DebugWithReleaseInfo']
+            if build_types[0] == 'Main':
+                build_types = ['Debug','Release'];
+
+        for build_type in build_types:
+            if build_type=='DWRI':
+                build_type = 'DebugWithReleaseInfo';
+            self.build_project(env,repo_path,build_path,True,short,build_clean,build_type)
+            build_clean = False;
+
+        os.chdir(cur_path);
 
     def build_project(self,env,repo_path,build_path,first_build=True,short=False,build_clean=False,buildType=None):
-        """
-        Build current project using cmake and msbuild
+        """   Build current project using cmake and msbuild
 
         env   -- enviromental variables necessary to build the project
         build_path -- the folder to build the project 
@@ -222,7 +254,7 @@ class br():
 
            return rez;
 
-    def find_target_build_path(self,branch_id,merge_id,repo_root,build_on_base):
+    def find_target_build_path(self,branch_id,merge_id,repo_root,build_on_base=False):
         """
         Build target build path from defaults or add branch ID to it
         """
@@ -517,18 +549,33 @@ class br():
 
 
     def run_batch_job(self,*argi):
-        """
-        runs batch job described by the job description file provided as argument
+        """ runs batch job described by the job description file provided as argument
 
-        Usage: br batch [job_description_file]
+        Usage: 
+        >>br batch [job_description_file]
+        >>br test [job_description_file]
 
         job_description_file is xml file with the information understood by cron_job. It can be full file path or file name 
-        for file availible in the search path
+        for file available in the search path
 
-        if no job description file provided, default job file is used.       
+        if no job description file provided, default job description file job_description.xml is used.       
+        
+        >>br test [job_description_file] 
+        or 
+        >>br batch test [job_description_file] 
+        
+        option provided, the script does not build the projects described in the xml file but just mergres/pulls git and creates appropriate branches
+
+        This option is used to test if merges/working with git goes smoothly for all jobs described in the file before running 
+        the builds themselves (which usually takes long time to complete)
+        The results of this test are placed into “job_description_file”.log file
         """
         default_job_descr = 'job_description.xml'
-        batch_par = argi[0];
+        accepted_args ={"Type":"*batch|test","file":"$File"};
+
+        provided=self.parse_args(accepted_args,*argi);
+
+        batch_par = provided['File'];
         if len(batch_par) < 1:
             job_descr = default_job_descr 
         else:
@@ -537,8 +584,11 @@ class br():
         if not os.path.exists(job_descr):
             raise RuntimeError("Can not find job description file: {0}".format(job_descr))
 
-        #self.cron_job(job_descr,True); # Dry run
-        self.cron_job(job_descr); 
+        if provided['Type']=='batch':
+            self.cron_job(job_descr); 
+        else:
+            self.cron_job(job_descr,True); # Dry run
+
 
 
     def append_log(self,string_to_add):
@@ -649,34 +699,176 @@ class br():
         log_head=datetime.datetime.now().strftime(":%B,%d,%Y::%I:%M%p::")
         self.append_log(("{0} finished Mantid cron job {1}\n"+
                          "--------------------------------\n").format(log_head,job_description_file))     
-    def help(self,**kwargs):
+    @staticmethod
+    def parse_args(accept_args,*args):
         """
+        Generic parser for arbitrary input arguments selected from the range provided :
         """
-        if len(kwargs) == 0:
-            print "Usage: >>br de[bug]|re[lease]||cr[on]|[dwr|DebWithRelInfo] parameters "
-            print "Where paramerers are the option specific values namely: "
-            print ""
-            print "br debug|release|DebWithRelInfo [fast]  -- build debug/release/debug with release version of the build"
-            print "Where ""fast"" if present means minumal rebuild. The build occurs for the branch and repository you are currently in."
-            print "If working directory is not the Git repository, br changes to default git repository, defined in the script"
+        def process_argi(defaultVal,sample,foundAt,possibilities,*argi):
+
+           #if len(argi) == 1:        
+           #     if type(argi) == type(()):
+           #         argi = argi[0]
+
+           if len(argi) == 0:
+               result = defaultVal;
+               if len(possibilities)>1:
+                    return [result]
+               else:
+                    return result
+        
+           result = [];
+           for ic in range(0,len(argi)): 
+               if foundAt[ic] :
+                  continue
+               argument = argi[ic];
+               if len(possibilities) == 1 :
+                   if possibilities[0][0] == '$':
+                       result = argument;
+                       foundAt[ic] = True;
+                       return result;
+               if type(argument)==str and argument in sample:
+
+                   for case in possibilities:
+                       if argument in case:
+                           result.append(case.strip('*'));
+                           foundAt[ic] = True;
+                
+           if len(result) == 0:
+               result = defaultVal;
+               if len(possibilities)>1:
+                   result = [defaultVal];
+           return result;
+
+        # init;
+        rez_keys = accept_args.keys();
+        result ={key : [] for key in rez_keys};
+    
+        found_arg = np.zeros(len(args),dtype=bool)
+        # loop over all possible arguments
+        for key,pos_values in accept_args.iteritems():
+            possibilities = pos_values.split('|');
+            default = "";
+            for poss in possibilities:
+                if '*' in poss:  # found default value
+                    default = poss.strip('*');
+                      
+                    break
+            result[key]= process_argi(default,pos_values,found_arg,possibilities,*args);
+
+        if len(args) > 0 and not(np.all(found_arg)):
+            for i in xrange(len(args)):
+                if not found_arg[i]:
+                    print 'Invalid agument: ',args[i]
+            raise KeyError("Unknown input argument")
+
+        return result;
+
+    def help(self,options=None,**kwarg ):
+        """ Prints help for the module
+        """
+        print "Script to build Mantid branches "
+        print " Usage: \n>>br option [sub-options] "
+
+        if options is None:
+            print " Type: \n>>br help for list of options "
+            return;
+
+        print " Where known options are: "
+        for key in options:
+            print key,"\t :\t",
+            print options[key].__doc__
+        print "Type: \n>>br help option for more information about this option (not yet implemented)"
+        #print "br debug|release|DebWithRelInfo [fast]  -- build debug/release/debug with release version of the build"
+        #print "Where ""fast"" if present means minumal rebuild. The build occurs for the branch and repository you are currently in."
+        #print "If working directory is not the Git repository, br changes to default git repository, defined in the script"
+
+def test_parse_arg():
+    builder = br();
+    accepted_args ={"Type":"*Release|Debug|DWRI|All|Main","Kind":"*Full|Fast","Freshness":"*Old|Clean"};
+
+    def myAssertEq(x,y):
+         if(x != y) :
+             print 'Assert fail: x={0}, y={1} '.format(x,y)
+
+    #arg=builder.parse_args(accepted_args,[]);
+    #myAssertEq(arg['Type'][0],'Release')
+    #myAssertEq(arg['Kind'][0],'Full');
+    #myAssertEq(arg['Freshness'][0],'Old')   
+    
+    argis = [];
+    arg=builder.parse_args(accepted_args,*argis);
+    myAssertEq(arg['Type'][0],'Release')
+    myAssertEq(arg['Kind'][0],'Full');
+    myAssertEq(arg['Freshness'][0],'Old')   
+
+    argis = ['Deb','Cle'];
+    arg=builder.parse_args(accepted_args,*argis);
+    myAssertEq(arg['Type'][0],'Debug')
+    myAssertEq(arg['Kind'][0],'Full');
+    myAssertEq(arg['Freshness'][0],'Clean')   
+
+    argis = ['Deb','DWRI','Cle'];
+    arg=builder.parse_args(accepted_args,*argis);
+    myAssertEq(arg['Type'][0],'Debug')
+    myAssertEq(arg['Type'][1],'DWRI')
+    myAssertEq(arg['Kind'][0],'Full');
+    myAssertEq(arg['Freshness'][0],'Clean')   
+
+    accepted_args ={"Type":"*batch|test","file":"$File"};
+    argis =['test','SomeFile'];
+    parsed=builder.parse_args(accepted_args,*argis);
+    myAssertEq(parsed['Type'][0],'test')
+    myAssertEq(parsed['file'],'SomeFile')
+
+    argis=['OtherFile']
+    parsed=builder.parse_args(accepted_args,*argis);
+    myAssertEq(parsed['file'],'OtherFile')
+    myAssertEq(parsed['Type'][0],'batch')
+
+    argis=['OtherFile','test']
+    parsed=builder.parse_args(accepted_args,*argis);
+    myAssertEq(parsed['file'],'OtherFile')
+    myAssertEq(parsed['Type'][0],'test')
+
+    argis=['OtherFile','rubbish1','rubbish2']
+    parsed=builder.parse_args(accepted_args,*argis);
+    myAssertEq(parsed['file'],'OtherFile')
+    myAssertEq(parsed['Type'][0],'batch')
+
+    exit(0);
+
 if __name__ == '__main__':
     builder = br();
     nargi = len(sys.argv);
+
+    #test_parse_arg();
     if nargi <2:
         builder.help()
-        exit
+        sys.exit(-1);
 
+
+    #builder.parse_args();
+    params = sys.argv[2:nargi];
+    known_options={};
+    known_options['build']= lambda : builder.build_single_proj(*params)
+    known_options['batch']=lambda : builder.run_batch_job(*params)
+    known_options['help'] =lambda : builder.help(known_options)
+     
+    known_options['build'].__doc__  = (inspect.getdoc(builder.build_single_proj)).split('\n',1)[0];
+    known_options['batch'].__doc__ = (inspect.getdoc(builder.run_batch_job)).split('\n',1)[0];
+    known_options['help'].__doc__  = (inspect.getdoc(builder.help)).split('\n',1)[0];
+
+
+    
     option = sys.argv[1].lower();
 
-    known_options={};
-    known_options['proj']=lambda : builder.build_single_proj(sys.argv[2:nargi])
-    known_options['batch']=lambda : builder.run_batch_job(sys.argv[2:nargi])
 
     if option in known_options:
          known_options[option]();
     else:
         print "br Unknown parameter: ",option
-        builder.help()
+        builder.help(**known_options)
 
     #builder.cron_job(job_name)
     
