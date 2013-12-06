@@ -1,3 +1,13 @@
+"""
+Script to simplify building Mantid on Windows and testing tickets
+
+Intended to run antomatically and build number of Mantid instances on Windows without user interaction.
+Currently works as cron script which executes the tasks, described in job_description.xml file.
+Automatically pulls remote branches, merges testing tickets to temporary branches and makes Mantid instances for project analysis.
+
+Logs results into log file. 
+
+"""
 #!/usr/bin/python
 import os
 import sys
@@ -21,22 +31,22 @@ class br():
         # cmake parameters:
         self._cmake_par = ['-G','Visual Studio 11 Win64','-DCONSOLE=ON','-DMAKE_VATES=ON','-DENABLE_CPACK=ON','-DQT_ASSISTANT_FETCH_IMAGES=OFF','-DUSE_PRECOMPILED_HEADERS=ON','-DParaView_DIR=d:/programming/ParaView-3.98.1-source/win64']
 
-        # default mantid git repository location:
+        # default Mantid git repository location:
         self._MANTID_Loc='c:/Mantid/'
         #self._MANTID_Loc='d:/Data/Mantid_GIT_dev/'
         #self._MANTID_Loc='d:/Data/Mantid_GIT/'
 
         # build location with respect to the Mantid Git repository location
         self._MANT_Build_relLoc='Code/builds/'
-        # mantid path template specifying all additional references to libraries to build Mantid
+        # Mantid path template specifying all additional references to libraries to build Mantid
         self._MANTID_Path_base='c:/programming/Paraview_3_28Dev/bin;{MANTID}Code/Third_Party/lib/win64;{MANTID}/Code/Third_Party/lib/win64/Python27;{PATH}'
         # set PATH=C:\Builds\ParaView-3.98.1-source\build\bin\Release;%WORKSPACE%\Code\Third_Party\lib\win64;%WORKSPACE%\Code\Third_Party\lib\win64\Python27;%PATH%
-        # mantid projects necessary for short build (minimal projects to start Mantid):
+        # Mantid projects necessary for short build (minimal projects to start Mantid):
         self._MANTID_short=['Framework','MantidPlot','MantidQT/Python']
 
-        # cmd: the command processor for the enviroment to build the project and the batch files to set up necessary enviroment
+        # cmd: the command processor for the environment to build the project and the batch files to set up necessary environment
         self._cmd = 'cmd.exe /s /c "{0} && echo "{1}" && set"'
-        # the bat file used to set up enviroment or nothing if the enviroment to build has been set up globally on the current machine
+        # the bat file used to set up environment for visual studio and C++ or nothing if the environment to build has been set up globally on the current machine
         self._set_up_env = 'c:/programming/VS2012/VC/vcvarsall.bat';
 
         # default file name for the log file
@@ -148,11 +158,11 @@ class br():
     def build_project(self,env,repo_path,build_path,first_build=True,short=False,build_clean=False,buildType=None):
         """   Build current project using cmake and msbuild
 
-        env   -- enviromental variables necessary to build the project
+        env   -- enviromental variables necessary to build the project (run C++ and tools)
         build_path -- the folder to build the project 
         short -- if minimal rebuild, namely minimal number of projects to start Mantid gui is needed 
         build_clean -- delete the target project build directory if its already exist
-        buildType   -- The type of the build, make understants (Debug, Release etc...)
+        buildType   -- The type of the build, make understands (Debug, Release etc...)
 
         assumes that the brunch to build is current branch
         """
@@ -304,7 +314,9 @@ class br():
         branch id is a piece of string or number, which identifies the branch.
         (e.g. the ticket number)
 
-        it assumes that the current folder is a git folder
+        if exclude_service is True, ignores branches which start with __
+        
+        assumes that the current folder is a git folder
         """
 
         # get the names of all branches in the repository
@@ -412,11 +424,13 @@ class br():
     def prepare_working_branch(self,archive_path,merge_to_ID,branch_id,dry_run=False):
         """
         method checks if the branch identified by ID is present, 
-        merges it with specified branch ID and 
-        returns the GIT name of branch to build.
+        merges it with specified branch ID or checks existing branch out and 
+        returns the GIT name of the branch to build.
         The name is constructed from the branch id(s) if the branch do not exist. 
 
-        returns tupe (err,branch_name) if everything is ok err is empty string
+        returns tupe (err,branch_name). If everything is ok err is empty string
+        
+        current branch in GIT repository becomes the branch with name branch_name
         """
 
         current_dir=os.getcwd();
@@ -456,7 +470,7 @@ class br():
         #-------------------------------------------------------------------------------------------
 
         # the branch which will be created from two source branches (e.g for testing). 
-        # It sould not be real branch present on Git or branch which contan any reasonable 
+        # It should not be real branch present on Git or branch which contain any reasonable 
         # information on it
         holdon_br_name = self.build_target_br_name(merge_to_ID,branch_id);
         if holdon_br_name == current_branch: # merge both branches into it
@@ -484,6 +498,7 @@ class br():
     @staticmethod  
     def merge_2current(br1_local,br1_remote):
         """
+        merge branches, specified as the arguments into current GIT branch.
         """
         if len(br1_local)>0:
             err= subprocess.call(['git','merge',br1_local])
@@ -602,7 +617,7 @@ class br():
 
 
     def cron_job(self,job_description_file,dry_run=False):
-        """ method processes job description file and runs all mantid build job described there
+        """ method processes job description file and runs all Mantid build job described there
         """
 
         # found job description file and prepare log file with the same name
@@ -622,7 +637,7 @@ class br():
         self.append_log(mess);
 
 
-        # parce job description file
+        # parse job description file
         try:
             domObj=minidom.parse(job_description_file)
         except Exception as error:
@@ -689,10 +704,10 @@ class br():
                 except RuntimeError, err:
                      #log_head=datetime.datetime.now().strftime(":%B,%d,%Y::%I:%M%p::")
                      log_head='+'.ljust(len(log_head))
-                     self.append_log("{0} ERR: {1} while builging target project {2}\n".format(log_head,str(err),build_type))
+                     self.append_log("{0} ERR: {1} while building target project {2}\n".format(log_head,str(err),build_type))
                      
 
-                # second buid type should not be clean as it will wipe out the first build regardless of the first run was successfull or not
+                # second build type should not be clean as it will wipe out the first build regardless of the first run was successful or not
                 clean_build = False
 
 
