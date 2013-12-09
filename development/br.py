@@ -33,6 +33,9 @@ class br():
 
         # default Mantid git repository location:
         self._MANTID_Loc='c:/Mantid/'
+        # the file with user properties, located in mantid repository root and used as basic generic properties file (not to set 
+        # commont searh/data directories, paraview path etc. for each build)
+        self._prop_file ='Mantid.user.properties'
         #self._MANTID_Loc='d:/Data/Mantid_GIT_dev/'
         #self._MANTID_Loc='d:/Data/Mantid_GIT/'
 
@@ -42,7 +45,7 @@ class br():
         self._MANTID_Path_base='c:/programming/Paraview_3_28Dev/bin;{MANTID}Code/Third_Party/lib/win64;{MANTID}/Code/Third_Party/lib/win64/Python27;{PATH}'
         # set PATH=C:\Builds\ParaView-3.98.1-source\build\bin\Release;%WORKSPACE%\Code\Third_Party\lib\win64;%WORKSPACE%\Code\Third_Party\lib\win64\Python27;%PATH%
         # Mantid projects necessary for short build (minimal projects to start Mantid):
-        self._MANTID_short=['Framework','MantidPlot','MantidQT/Python']
+        self._MANTID_short={'Framework':'Framework.vcxproj','MantidPlot':'MantidPlot.vcxproj','MantidQT/Python':'mantidqtpython.vcxproj'}
 
         # cmd: the command processor for the environment to build the project and the batch files to set up necessary environment
         self._cmd = 'cmd.exe /s /c "{0} && echo "{1}" && set"'
@@ -132,10 +135,10 @@ class br():
         # where to build the project
         build_path= self.find_target_build_path(branchID,branchID,repo_path,False);
         short = False;
-        if provided['Kind']=='Fast':
+        if provided['Kind'][0]=='fast':
             short  = True;
         build_clean = False
-        if provided['Freshness']=='Clean':
+        if provided['Freshness'][0]=='Clean':
             build_clean  = True;
 
         build_types = provided['Type'];
@@ -154,6 +157,19 @@ class br():
             build_clean = False;
 
         os.chdir(cur_path);
+
+    @staticmethod
+    def buildProjName(proj_name):
+        """
+        Build name of Mantid sub-project from short (sub) project name.
+
+        The project name is the name of visual studio project runnable by nmake/cmake 
+        """
+
+        names = proj_name.split('/');
+        name = "".join(names);
+        return name+'.vcxproj'
+
 
     def build_project(self,env,repo_path,build_path,first_build=True,short=False,build_clean=False,buildType=None):
         """   Build current project using cmake and msbuild
@@ -201,21 +217,27 @@ class br():
         # run msbuild
         if short :
             # process minimal set of projects, necessary to start and run Mantid
-            for proj in self._MANTID_short:
-                os.chdir(build_path+'/'+proj)
-                err=self.run_build(proj+'.vcxproj',buildType,env);
+            for dir,proj_name in self._MANTID_short.iteritems():
+                os.chdir(build_path+'/'+dir)
+                err=self.run_build(proj_name,buildType,env);
                 if err>0:
                     errMessage="Can not execute msbuild for :"+proj+'.vcxproj';
                     break
         else:
             errMessage="Can not execute msbuild for : Mantid.sln"
             err=self.run_build('Mantid.sln',buildType,env);
-   
+
 
         # return back to the source directory
         os.chdir(current_dir);
         if err != 0:
             raise RuntimeError(errMessage)
+        else: # copy Mantid.parameters to target build directory if prop file exist and target properties does not
+            prop_file = os.path.join(repo_path,self._prop_file);
+            if os.path.exists(prop_file):
+                targ_file = os.path.join(repo_path,buildType,self._prop_file)
+                if not os.path.exists(targ_file):
+                    shutil.copyfile(prop_file,targ_file);
 
 
     def get_environment_from_batch_command(self,env_cmd):
@@ -291,12 +313,13 @@ class br():
 
         # get the names of the current branch of the the repository
         result = subprocess.check_output(['git','rev-parse','--abbrev-ref','HEAD']) # 
+        result=result.rstrip();
         rez = result.split('/');
         if len(rez)>1:
             result = rez[-1];
         rez = result.split('_')
         if len(rez) == 1:
-            return rez
+            return rez[0]
 
         result = "";
         for parts in rez:
@@ -583,7 +606,7 @@ class br():
 
         This option is used to test if merges/working with git goes smoothly for all jobs described in the file before running 
         the builds themselves (which usually takes long time to complete)
-        The results of this test are placed into “job_description_file”.log file
+        The results of this test are placed into "job_description_file".log file
         """
         default_job_descr = 'job_description.xml'
         accepted_args ={"Type":"*batch|test","file":"$File"};
@@ -736,10 +759,11 @@ class br():
            for ic in range(0,len(argi)): 
                if foundAt[ic] :
                   continue
-               argument = argi[ic];
+               argument = argi[ic].lower();
                if len(possibilities) == 1 :
                    if possibilities[0][0] == '$':
-                       result = argument;
+                       # it is a file name. Mind the case
+                       result = argi[ic];
                        foundAt[ic] = True;
                        return result;
                if type(argument)==str and argument in sample:
@@ -762,6 +786,7 @@ class br():
         found_arg = np.zeros(len(args),dtype=bool)
         # loop over all possible arguments
         for key,pos_values in accept_args.iteritems():
+            pos_values    = pos_values.lower();
             possibilities = pos_values.split('|');
             default = "";
             for poss in possibilities:
@@ -877,8 +902,9 @@ if __name__ == '__main__':
 
     
     option = sys.argv[1].lower();
-
-
+    # for testing this repository
+    #os.chdir(r'd:\Data\Mantid_GIT_test')
+    
     if option in known_options:
          known_options[option]();
     else:
