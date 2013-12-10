@@ -128,8 +128,8 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
     if simulation:
         # Just set what we have been given
         param_values = fit_options.create_param_table()
-        constraints=None
-        ties=None
+        constraints = None
+        ties = None
     else:
         #### Run fitting first time using constraints matrix to reduce active parameter set ######
         function_str = fit_options.create_function_str()
@@ -139,11 +139,7 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
     
         #### Run second time using standard CompositeFunction & no constraints matrix to
         #### calculate correct reduced chisq ####
-        params_ws = mtd["__fit_Parameters"]
-        param_values = {}
-        for row in params_ws:
-            values = row.values()
-            param_values[values[0]] = values[1]
+        param_values = mtd["__fit_Parameters"]
 
     function_str = fit_options.create_function_str(param_values)
     max_iter = 0 if simulation else 1
@@ -253,14 +249,20 @@ class FitOptions(object):
         """
             Creates the function string to pass to fit
         
-            @param param_values :: A dict of key/values specifying the parameter values
+            @param param_values :: A dict/tableworkspace of key/values specifying the parameter values
             that have already been calculated. If None then the ComptonScatteringCountRate
             function, along with the constraints matrix, is used rather than the standard CompositeFunction.
             It is assumed that the standard CompositeFunction is used when running the fit for a
             second time to compute the errors with everything free
         """
         all_free = (param_values is not None)
-        
+        if isinstance(param_values, mantid.api.ITableWorkspace):
+            params_ws = param_values
+            param_values = {}
+            for row in params_ws:
+                values = row.values()
+                param_values[values[0]] = values[1]
+
         if all_free:
             function_str = "composite=CompositeFunction,NumDeriv=1;"
         else:
@@ -475,7 +477,6 @@ class FitOptions(object):
         """
         self.generate_function_str()
     
-
 #----------------------------------------------------------------------------------------
 
 def display_fit_output(reduced_chi_square, params_ws, fit_options):
@@ -656,3 +657,20 @@ def display_fit_output(reduced_chi_square, params_ws, fit_options):
         
     print message
     return message
+
+#----------------------------------------------------------------------------------------
+def gamma_correct(input_data,fit_options, params_ws,index=None):
+    """
+        Run the CalculateGammaBackground to produce a workspace
+        corrected for gamma background & the value of the 
+        background itself
+        @param input_data The original TOF data
+        @param fit_options Options used for the fit that produced the parameters
+        @param params_ws Parameters from a Fit that define how to compute the mass spectra
+    """
+    from mantid.simpleapi import CalculateGammaBackground
+
+    func_str = fit_options.create_function_str(params_ws)
+    background,corrected = CalculateGammaBackground(InputWorkspace=input_data, ComptonFunction=func_str,
+                                                    WorkspaceIndexList=fit_options.workspace_index)
+    return background, corrected
