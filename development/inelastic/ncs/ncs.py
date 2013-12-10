@@ -2,9 +2,13 @@
 ## Just helpers for now to keep alot of the unimportant details out of the way
 ## This will all be refactored when it gets incorporated properly
 ##
+import mantid
+
 import math
 import numpy as np
 import types
+
+MTD_VER3 = (mantid.__version__[0] == "3")
 
 #----------------------------------------------------------------------------------------
 def preprocess(data_ws, options):
@@ -133,7 +137,8 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
         ties = fit_options.create_ties_str()
         _do_fit(function_str, data_ws, constraints, ties, max_iter=5000)
     
-        #### Run fitting first time using constraints matrix to reduce active parameter set ######
+        #### Run second time using standard CompositeFunction & no constraints matrix to
+        #### calculate correct reduced chisq ####
         params_ws = mtd["__fit_Parameters"]
         param_values = {}
         for row in params_ws:
@@ -154,14 +159,22 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
 def _do_fit(function_str, data_ws, constraints, ties, max_iter):
     from mantid.simpleapi import Fit, ScaleX
 
-    ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e-06)
+    # From mantid 3 onwards the tof data is required to be in seconds for the fitting
+    # in order to re-use the standard Mantid Polynomial function. This polynomial simply
+    # accepts the data "as is" in the workspace so if it is in microseconds then the
+    # we would have to either implement a another wrapper to translate or write another
+    # Polynomial.
+    # The simplest option is to put the data in seconds here and then put it back afterward
+    if MTD_VER3:
+        ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e-06)
 
     results = Fit(function_str,data_ws,Ties=ties,Constraints=constraints,Output="__fit",
                   CreateOutput=True,OutputCompositeMembers=True,MaxIterations=max_iter, 
                   Minimizer="Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08")
     
-    ScaleX(InputWorkspace='__fit_Workspace',OutputWorkspace='__fit_Workspace',Operation='Multiply',Factor=1e06)
-    ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e06)
+    if MTD_VER3:
+        ScaleX(InputWorkspace='__fit_Workspace',OutputWorkspace='__fit_Workspace',Operation='Multiply',Factor=1e06)
+        ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e06)
     
     return results[1] # reduced chi-squared
 
@@ -462,6 +475,7 @@ class FitOptions(object):
         """
         self.generate_function_str()
     
+
 #----------------------------------------------------------------------------------------
 
 def display_fit_output(reduced_chi_square, params_ws, fit_options):
