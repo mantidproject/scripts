@@ -195,7 +195,9 @@ class br():
         build_exists = os.path.exists(build_path);
 
         if build_clean and build_exists:
+            print "Clean build: removing existing project from: {0}".format(build_path);
             shutil.rmtree(build_path,True)
+            print "           : finished removing existing project ---------------------";
             build_exists=os.path.exists(build_path)
 
         if not build_exists:
@@ -232,10 +234,10 @@ class br():
         os.chdir(current_dir);
         if err != 0:
             raise RuntimeError(errMessage)
-        else: # copy Mantid.parameters to target build directory if prop file exist and target properties does not
+        else: # copy Mantid.parameters to target build directory if prop file exist and target properties file does not
             prop_file = os.path.join(repo_path,self._prop_file);
             if os.path.exists(prop_file):
-                targ_file = os.path.join(repo_path,buildType,self._prop_file)
+                targ_file = os.path.join(build_path,'bin',buildType,self._prop_file)
                 if not os.path.exists(targ_file):
                     shutil.copyfile(prop_file,targ_file);
 
@@ -609,7 +611,7 @@ class br():
         The results of this test are placed into "job_description_file".log file
         """
         default_job_descr = 'job_description.xml'
-        accepted_args ={"Type":"*batch|test","file":"$File"};
+        accepted_args ={"Type":"*batch|test","File":"$File"};
 
         provided=self.parse_args(accepted_args,*argi);
 
@@ -617,12 +619,12 @@ class br():
         if len(batch_par) < 1:
             job_descr = default_job_descr 
         else:
-            job_descr= batch_par[0];
+            job_descr= batch_par;
 
         if not os.path.exists(job_descr):
             raise RuntimeError("Can not find job description file: {0}".format(job_descr))
 
-        if provided['Type']=='batch':
+        if provided['Type'][0]=='batch':
             self.cron_job(job_descr); 
         else:
             self.cron_job(job_descr,True); # Dry run
@@ -719,6 +721,8 @@ class br():
 
                 # Try to build actual project
                 try:
+                     log_head='+'.ljust(len(log_head))
+                     self.append_log("{0} Build parameters: First build: {1}; Fast Build: {2}, Clean Build: {3}\n".format(log_head,str(first_build),str(fast_build),str(clean_build)))
                      self.build_project(env,repo_root,Target_path,first_build,fast_build,clean_build,build_type)
                      # second build do not need cmake to run
                      first_build  = False
