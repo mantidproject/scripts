@@ -141,6 +141,7 @@ class br():
         if provided['Freshness'][0]=='Clean':
             build_clean  = True;
 
+        # Interpret key-words
         build_types = provided['Type'];
         if len(build_types)== 1:
             if build_types[0]=='All':
@@ -150,10 +151,22 @@ class br():
             if build_types[0] == 'Main':
                 build_types = ['Debug','Release'];
 
+        # decide if it is necessary to remove a single (sub) project (Debug, Release etc) or it is better to to wipe out the whole target build branch
+        if build_clean :
+            if len(build_types) > 1:
+                build_single_clean = False;
+                build_clean        = True;
+            else:
+                build_clean        = False;
+                build_single_clean = True;
+        else:
+            build_single_clean = False;
+
+        # Run builds
         for build_type in build_types:
             if build_type=='DWRI':
                 build_type = 'DebugWithReleaseInfo';
-            self.build_project(env,repo_path,build_path,True,short,build_clean,build_type)
+            self.build_project(env,repo_path,build_path,True,short,build_clean,build_type,build_single_clean)
             build_clean = False;
 
         os.chdir(cur_path);
@@ -171,7 +184,7 @@ class br():
         return name+'.vcxproj'
 
 
-    def build_project(self,env,repo_path,build_path,first_build=True,short=False,build_clean=False,buildType=None):
+    def build_project(self,env,repo_path,build_path,first_build=True,short=False,build_all_clean=False,buildType=None,build_single_clean=False):
         """   Build current project using cmake and msbuild
 
         env   -- enviromental variables necessary to build the project (run C++ and tools)
@@ -189,16 +202,21 @@ class br():
         loc_env['PATH'] = env['Path'];
         loc_env['MANTID']= repo_path;
         env['Path']=self._MANTID_Path_base.format(**loc_env);  
-
+        # the path to the particular build flavour (Debug|Release|DebugWithReleaseInfo etc.)
+        build_flavour_path = os.path.join(build_path,'bin',buildType)
 
         current_dir  = os.getcwd();
         build_exists = os.path.exists(build_path);
 
-        if build_clean and build_exists:
+        if build_all_clean and build_exists:
             print "Clean build: removing existing project from: {0}".format(build_path);
             shutil.rmtree(build_path,True)
             print "           : finished removing existing project ---------------------";
             build_exists=os.path.exists(build_path)
+        if build_single_clean and build_exists:
+            print "Clean build: removing existing project flavour from: {0}".format(build_flavour_path);
+            shutil.rmtree(build_path,True)
+            print "           : finished removing existing project flavour ------------";
 
         if not build_exists:
             os.mkdir(build_path);
@@ -237,7 +255,7 @@ class br():
         else: # copy Mantid.parameters to target build directory if prop file exist and target properties file does not
             prop_file = os.path.join(repo_path,self._prop_file);
             if os.path.exists(prop_file):
-                targ_file = os.path.join(build_path,'bin',buildType,self._prop_file)
+                targ_file = os.path.join(build_flavour_path,self._prop_file)
                 if not os.path.exists(targ_file):
                     shutil.copyfile(prop_file,targ_file);
 
