@@ -67,6 +67,34 @@ class br():
         else:
             path = os.getcwd();
             self._log_fname = os.path.join(path,new_fname);
+    @staticmethod
+    def buildProjName(proj_name):
+        """
+        Build name of Mantid sub-project from short (sub) project name.
+
+        The project name is the name of visual studio project runnable by nmake/cmake 
+        """
+
+        names = proj_name.split('/');
+        name = "".join(names);
+        return name+'.vcxproj'
+
+    def find_target_build_path(self,branch_id,merge_id,repo_root,build_on_base=False):
+        """
+        Build target build path from defaults or add branch ID to it
+        """
+        if not(repo_root[len(repo_root)-1] == '/' or repo_root[len(repo_root)-1] == '\\' ):
+            repo_root +='/'
+        if build_on_base :
+            build_path = repo_root+self._MANT_Build_relLoc+'br_master';
+        else:
+            if merge_id == branch_id:
+                build_path = repo_root+self._MANT_Build_relLoc+'br_'+str(branch_id);
+            else:
+                build_path = repo_root+self._MANT_Build_relLoc+'br_'+str(merge_id)+'_'+str(branch_id);
+
+        return build_path;
+
 
     def run_build(self,target,buildType=None,env=None):
         """
@@ -112,7 +140,7 @@ class br():
        
         provided=self.parse_args(accepted_args,*args);
         for key,val in provided.iteritems():
-            print " transferred argument: ",key,' val=',val;
+            print " argument provided : ",key,' val=',val;
 
         env =  self.get_environment_from_batch_command(self._set_up_env)
 
@@ -138,7 +166,7 @@ class br():
         if provided['Kind'][0]=='fast':
             short  = True;
         build_clean = False
-        if provided['Freshness'][0]=='Clean':
+        if provided['Freshness'][0]=='clean':
             build_clean  = True;
 
         # Interpret key-words
@@ -171,17 +199,6 @@ class br():
 
         os.chdir(cur_path);
 
-    @staticmethod
-    def buildProjName(proj_name):
-        """
-        Build name of Mantid sub-project from short (sub) project name.
-
-        The project name is the name of visual studio project runnable by nmake/cmake 
-        """
-
-        names = proj_name.split('/');
-        name = "".join(names);
-        return name+'.vcxproj'
 
 
     def build_project(self,env,repo_path,build_path,first_build=True,short=False,build_all_clean=False,buildType=None,build_single_clean=False):
@@ -214,9 +231,11 @@ class br():
             print "           : finished removing existing project ---------------------";
             build_exists=os.path.exists(build_path)
         if build_single_clean and build_exists:
-            print "Clean build: removing existing project flavour from: {0}".format(build_flavour_path);
-            shutil.rmtree(build_path,True)
-            print "           : finished removing existing project flavour ------------";
+            build_flavour_exists = os.path.exists(build_flavour_path);
+            if build_flavour_exists:
+                print "Clean build: removing existing project flavour from: {0}".format(build_flavour_path);
+                shutil.rmtree(build_flavour_path,True)
+                print "           : finished removing existing project flavour ------------";
 
         if not build_exists:
             os.mkdir(build_path);
@@ -306,21 +325,6 @@ class br():
 
            return rez;
 
-    def find_target_build_path(self,branch_id,merge_id,repo_root,build_on_base=False):
-        """
-        Build target build path from defaults or add branch ID to it
-        """
-        if not(repo_root[len(repo_root)-1] == '/' or repo_root[len(repo_root)-1] == '\\' ):
-            repo_root +='/'
-        if build_on_base :
-            build_path = repo_root+self._MANT_Build_relLoc+'br_master';
-        else:
-            if merge_id == branch_id:
-                build_path = repo_root+self._MANT_Build_relLoc+'br_'+str(branch_id);
-            else:
-                build_path = repo_root+self._MANT_Build_relLoc+'br_'+str(merge_id)+'_'+str(branch_id);
-
-        return build_path;
 
     def find_cur_branch_id(self):
         """
@@ -685,7 +689,7 @@ class br():
             domObj=minidom.parse(job_description_file)
         except Exception as error:
             err_type = type(error)
-            mess = "{0} ERR: problem with job description file: {1} in working folder {2} \n err type: {3}\n".format(log_head,job_description_file,os.getcwd(),err_type);
+            mess = "{0} ERR: problem with job description file: {1} in working folder {2} \n err type: {3} message: {4}\n".format(log_head,job_description_file,os.getcwd(),err_type,error.message);
             self.append_log(mess);
             return
         jobs = domObj.getElementsByTagName("job")
@@ -913,12 +917,15 @@ if __name__ == '__main__':
     #builder.parse_args();
     params = sys.argv[2:nargi];
     known_options={};
-    known_options['build']= lambda : builder.build_single_proj(*params)
+    known_options['build']=lambda : builder.build_single_proj(*params)
     known_options['batch']=lambda : builder.run_batch_job(*params)
+    test_arg = ['test',params[0]];
+    known_options['test'] =lambda : builder.run_batch_job(*test_arg)
     known_options['help'] =lambda : builder.help(known_options)
      
     known_options['build'].__doc__  = (inspect.getdoc(builder.build_single_proj)).split('\n',1)[0];
     known_options['batch'].__doc__ = (inspect.getdoc(builder.run_batch_job)).split('\n',1)[0];
+    known_options['test'].__doc__ = "Test batch job described by xml file provided. Equvalent to:  >>br batch test $filename"
     known_options['help'].__doc__  = (inspect.getdoc(builder.help)).split('\n',1)[0];
 
 
@@ -926,6 +933,7 @@ if __name__ == '__main__':
     option = sys.argv[1].lower();
     # for testing this repository
     #os.chdir(r'd:\Data\Mantid_GIT_test')
+    #os.chdir('C:/mantid');
     
     if option in known_options:
          known_options[option]();
@@ -939,7 +947,7 @@ if __name__ == '__main__':
 #    if 
 # Testing
 #    current_dir=os.getcwd();
-#    os.chdir('C:/mantid');
+#
 
 #    bl,br,cb,bbp=builder.find_full_banch_name("4060")
 
