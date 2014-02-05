@@ -2,9 +2,13 @@
 ## Just helpers for now to keep alot of the unimportant details out of the way
 ## This will all be refactored when it gets incorporated properly
 ##
+import mantid
+
 import math
 import numpy as np
 import types
+
+MTD_VER3 = (mantid.__version__[0] == "3")
 
 #----------------------------------------------------------------------------------------
 def preprocess(data_ws, options):
@@ -124,8 +128,8 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
     if simulation:
         # Just set what we have been given
         param_values = fit_options.create_param_table()
-        constraints=None
-        ties=None
+        constraints = None
+        ties = None
     else:
         #### Run fitting first time using constraints matrix to reduce active parameter set ######
         function_str = fit_options.create_function_str()
@@ -133,12 +137,9 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
         ties = fit_options.create_ties_str()
         _do_fit(function_str, data_ws, constraints, ties, max_iter=5000)
     
-        #### Run fitting first time using constraints matrix to reduce active parameter set ######
-        params_ws = mtd["__fit_Parameters"]
-        param_values = {}
-        for row in params_ws:
-            values = row.values()
-            param_values[values[0]] = values[1]
+        #### Run second time using standard CompositeFunction & no constraints matrix to
+        #### calculate correct reduced chisq ####
+        param_values = mtd["__fit_Parameters"]
 
     function_str = fit_options.create_function_str(param_values)
     max_iter = 0 if simulation else 1
@@ -154,14 +155,22 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
 def _do_fit(function_str, data_ws, constraints, ties, max_iter):
     from mantid.simpleapi import Fit, ScaleX
 
-    ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e-06)
+    # From mantid 3 onwards the tof data is required to be in seconds for the fitting
+    # in order to re-use the standard Mantid Polynomial function. This polynomial simply
+    # accepts the data "as is" in the workspace so if it is in microseconds then the
+    # we would have to either implement a another wrapper to translate or write another
+    # Polynomial.
+    # The simplest option is to put the data in seconds here and then put it back afterward
+    if MTD_VER3:
+        ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e-06)
 
     results = Fit(function_str,data_ws,Ties=ties,Constraints=constraints,Output="__fit",
                   CreateOutput=True,OutputCompositeMembers=True,MaxIterations=max_iter, 
                   Minimizer="Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08")
     
-    ScaleX(InputWorkspace='__fit_Workspace',OutputWorkspace='__fit_Workspace',Operation='Multiply',Factor=1e06)
-    ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e06)
+    if MTD_VER3:
+        ScaleX(InputWorkspace='__fit_Workspace',OutputWorkspace='__fit_Workspace',Operation='Multiply',Factor=1e06)
+        ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e06)
     
     return results[1] # reduced chi-squared
 
@@ -240,14 +249,20 @@ class FitOptions(object):
         """
             Creates the function string to pass to fit
         
-            @param param_values :: A dict of key/values specifying the parameter values
+            @param param_values :: A dict/tableworkspace of key/values specifying the parameter values
             that have already been calculated. If None then the ComptonScatteringCountRate
             function, along with the constraints matrix, is used rather than the standard CompositeFunction.
             It is assumed that the standard CompositeFunction is used when running the fit for a
             second time to compute the errors with everything free
         """
         all_free = (param_values is not None)
-        
+        if isinstance(param_values, mantid.api.ITableWorkspace):
+            params_ws = param_values
+            param_values = {}
+            for row in params_ws:
+                values = row.values()
+                param_values[values[0]] = values[1]
+
         if all_free:
             function_str = "composite=CompositeFunction,NumDeriv=1;"
         else:
@@ -642,3 +657,20 @@ def display_fit_output(reduced_chi_square, params_ws, fit_options):
         
     print message
     return message
+
+#----------------------------------------------------------------------------------------
+def gamma_correct(input_data,fit_options, params_ws,index=None):
+    """
+        Run the CalculateGammaBackground to produce a workspace
+        corrected for gamma background & the value of the 
+        background itself
+        @param input_data The original TOF data
+        @param fit_options Options used for the fit that produced the parameters
+        @param params_ws Parameters from a Fit that define how to compute the mass spectra
+    """
+    from mantid.simpleapi import CalculateGammaBackground
+
+    func_str = fit_options.create_function_str(params_ws)
+    background,corrected = CalculateGammaBackground(InputWorkspace=input_data, ComptonFunction=func_str,
+                                                    WorkspaceIndexList=fit_options.workspace_index)
+    return background, corrected
