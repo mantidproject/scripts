@@ -28,7 +28,7 @@ def plot(workspaces, **kwargs):
           sum:     If supplied and True the given input range on each workspace is summed and 
                    a single curve for each workspace is generated
           fig:     If supplied this window will be used to do the plot rather than creating a new one
-          clrfig:  If True then clear the given window before plotting
+          clrfig:  If True then clear the given window before plotting the user input
     """
     raise_error_if_not_in_gui("plot")
 
@@ -60,8 +60,11 @@ def plot(workspaces, **kwargs):
     # now plot
     from mantidplot import plotSpectrum
     for wksp, indices in plot_src:
-        plot_win = plotSpectrum(wksp, indices, error_bars = with_errors, 
+        plot_win = plotSpectrum(wksp, indices, error_bars = with_errors,
                                 window = plot_win, clearWindow = clrfig)
+        if clrfig:
+            # If clrfig was true then we only want it to clear for the first plot
+            clrfig = False
 
     return plot_win
 
