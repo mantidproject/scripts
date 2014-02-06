@@ -32,17 +32,18 @@ def plot(workspaces, **kwargs):
     """
     raise_error_if_not_in_gui("plot")
 
-    # Get the function that will do the transform form user input to workspace indices
-    range_kw = check_input(**kwargs)
+    # Work with a list of workspace references only
+    workspaces = to_workspace_list(workspaces)
+
+    # parse input
+    range_kw, input_range = check_input(workspaces, **kwargs)
     do_sum = kwargs.get("sum", False)
     with_errors = kwargs.get("errors", False)
     plot_win = kwargs.get("fig", None)
     clrfig = kwargs.get("clrfig", True)
 
-    # Work with a list of workspace references only
-    input_range = kwargs[range_kw]
+    # Get the function that will do the transform from user input to workspace indices
     range_transform_func, range_src = get_transform_func(range_kw, input_range)
-    workspaces = to_workspace_list(workspaces)
 
     if do_sum:
         process_func = sum_range
@@ -81,10 +82,19 @@ def raise_error_if_not_in_gui(cmd):
 
 #----------------------------------------------------------------------------------------
 
-def check_input(**kwargs):
+def check_input(workspaces, **kwargs):
     """
         Raises an error if inputs are not a valid combination
     """
+    # check for single spectrum workspaces that don't require a keyword
+    single_spectrum = True
+    for wksp in workspaces:
+        if wksp.getNumberHistograms() != 1:
+            single_spectrum = False
+
+    if single_spectrum:
+        return "single", 0
+
     range_inputs = ("spectra", "angles", "bank")
     count = 0
     for item in range_inputs:
@@ -99,7 +109,7 @@ def check_input(**kwargs):
     else:
         pass
 
-    return range_kw
+    return range_kw, kwargs[range_kw]
 
 #----------------------------------------------------------------------------------------
 
@@ -142,7 +152,12 @@ def get_transform_func(src_type, src_data):
                         to spectrum numbers
     """
     # Check what type of plot we want
-    if src_type == "spectra":
+    if src_type == "single":
+        def return_zero(workspace, spectra):
+            return 0
+        range_transform_func = return_zero
+        range_src = src_data
+    elif src_type == "spectra":
         range_transform_func = indices_from_spectrum
         range_src = src_data
     elif src_type == "angles":
