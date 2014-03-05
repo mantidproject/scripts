@@ -27,7 +27,7 @@ sys.path.append(stressmodule_dir)
 
 maps_dir = 'd:/Data/MantidSystemTests/Data'
 #data_dir ='d:/Data/isis/Let/June2013'
-data_dir ='d:/Data/Isis/Let/2013_12'
+data_dir ='d:/Data/Mantid_Testing'
 #data_dir = 'd:/ttData'
 ref_data_dir = 'd:/Data/MantidSystemTests/SystemTests/AnalysisTests/ReferenceResults' 
 config.setDataSearchDirs('{0};{1};{2}'.format(data_dir,maps_dir,ref_data_dir))
@@ -42,23 +42,23 @@ config['defaultsave.directory'] = data_dir # folder to save resulting spe/nxspe 
 #sys.path.append(r'C:\Backup\Backup_folder1\work\code\Mantid\builds\all\bin\Debug')
 
 # Find these first
-#modlToRun = ['ISISDirectInelastic']
+modlToRun = ['ISISDirectInelastic']
 #modlToRun = ['PowderDiffProfileCalibrateTest'];
 #testToRun = ['VulcanSeqRefineProfileFromScratch'];
 #modlToRun = ['DirectInelasticDiagnostic'];
 #testToRun = ['DirectInelasticDiagnostic2'];
 #testToRun = ['DirectInelasticDiagnosticSNS','DirectInelasticDiagnostic']
-modlToRun=['ISISIndirectAbsCorTest','ISISIndirectBayesTest','ISISIndirectInelastic','ISISIndirectLoadAsciiTest'];
+#modlToRun=['ISISIndirectAbsCorTest','ISISIndirectBayesTest','ISISIndirectInelastic','ISISIndirectLoadAsciiTest'];
 
 #modlToRun = ['Diffraction_Workflow_Test'];
 #testToRun = ['Diffraction_Workflow_Test']
-#testToRun = ['MARIReductionSum']
+testToRun = ['MARIReductionFromWorkspace']
 #testToRun = ['MERLINReduction']
 #testToRun = ['MARIReductionFromFile','MARIReductionSum']
-#testToRun = ['MARIReductionFromWorkspace','MARIReductionFromFile','MARIReductionSum','MAPSDgreduceReduction','LETReduction','MERLINReduction']
-#testToRun = ['MAPSDgreduceReduction']
+#testToRun = ['MARIReductionFromWorkspace','MARIReductionFromFile','MARIReductionSum','MAPSDgreduceReduction','LETReduction','LETReductionEvent2014Multirep','MERLINReduction']
+testToRun = ['LETReductionEvent2014Multirep']
 #testToRun = ['MARIReductionFromWorkspace','MARIReductionFromFile','MARIReductionSum'];
-testToRun = []
+#testToRun = []
 #,
 
 
@@ -75,6 +75,8 @@ for mod_name in modlToRun:
             if inspect.isclass(class_inst):
                 if name.endswith('Test'):
                     testToRun.append(name);
+                #if hasattr(class_inst, 'runTest') and callable(getattr(class_inst, 'runTest')) and not hasattr(class_inst, "__abstractmethods__"):
+                #    testToRun.append(name);
     #reload(sys.modules['isis_reduction_steps'])
 
     for className in testToRun:
@@ -82,8 +84,9 @@ for mod_name in modlToRun:
             testClass = getattr(module, className)()
             testClass.execute()
         except:
-            #raise
-            print 'Test {0} thrown exception'.format(className);
+            exc_type, exc_value, exc_traceback = sys.exc_info();
+            print 'Test: {0} thrown exception: {1} '.format(className,exc_type);
+            print 'Reason: {0}'.format(exc_value);
         #os.chdir(this_dir)
         #raise
 

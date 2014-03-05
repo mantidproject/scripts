@@ -136,7 +136,7 @@ class br():
         Old/Clean -- try to build the project over existing branch or clean project first.
 
         """
-        accepted_args ={"Type":"*Release|Debug|DWRI|All|Main","Kind":"*Full|Fast","Freshness":"*Old|Clean",'RepoPath':"$Path"};
+        accepted_args ={"Type":"*Release|Debug|RDI|All|Main","Kind":"*Full|Fast","Freshness":"*Old|Clean",'RepoPath':"$Path"};
        
         provided=self.parse_args(accepted_args,*args);
         for key,val in provided.iteritems():
@@ -146,6 +146,7 @@ class br():
 
         cur_path = os.getcwd()+'/';  
         if len(provided['RepoPath']) > 0:
+            repo_path = provided['RepoPath'];
             os.chdir(repo_path);
 
 
@@ -173,9 +174,9 @@ class br():
         build_types = provided['Type'];
         if len(build_types)== 1:
             if build_types[0]=='All':
-                build_types = ['Release','Debug','DebugWithReleaseInfo'];
-            if build_types[0]=='DWRI' :
-                build_types = ['DebugWithReleaseInfo']
+                build_types = ['Release','Debug','RelWithDebInfo'];
+            if build_types[0]=='rdi' :
+                build_types = ['RelWithDebInfo']
             if build_types[0] == 'Main':
                 build_types = ['Debug','Release'];
 
@@ -192,8 +193,8 @@ class br():
 
         # Run builds
         for build_type in build_types:
-            if build_type=='DWRI':
-                build_type = 'DebugWithReleaseInfo';
+            if build_type=='rdi':
+                build_type = 'RelWithDebInfo';
             self.build_project(env,repo_path,build_path,True,short,build_clean,build_type,build_single_clean)
             build_clean = False;
 

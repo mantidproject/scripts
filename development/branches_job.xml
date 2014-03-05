@@ -1,27 +1,42 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
 <job_description>
+  <!--  For testing non-existing branch -->
+  <job branch_ID ="8996" mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" skip_this="False">
+    <!--    <build type ="Release" minmal_build = "True"/> -->
+    <build type ="Debug"/>
+    <build type ="Release"/>
+  </job>
+
+  <job branch_ID ="8808" mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" skip_this="True">
+    <!--    <build type ="Release" minmal_build = "True"/> -->
+    <build type ="Debug"/>
+    <build type ="Release"/>
+  </job>
 
   <!-- -->
-  <job branch_ID ="7529" >
+  <job branch_ID ="8808" clean_build="True"  mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
     <build type ="Release"  skip_this="False"/>
-    <build type ="Debug" skip_this="False"/>
-    <build type ="RelWithDebInfo" skip_this="False"/>
   </job>
 
-  <!--  For testing non-existing branch -->
-  <job branch_ID ="6171" mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
-    <!--    <build type ="Release" minmal_build = "True"/> -->
-    <build type ="Debug"/>
-    <build type ="Release"/>
+  <job branch_ID ="8819" clean_build="True"  mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
+    <build type ="Release"  skip_this="False"/>
   </job>
-  <job branch_ID ="7645" mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
-    <!--    <build type ="Release" minmal_build = "True"/> -->
-    <build type ="Debug"/>
-    <build type ="Release"/>
+  <job branch_ID ="8825" clean_build="True"  mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
+    <build type ="Release"  skip_this="False"/>
+  </job>
+  <job branch_ID ="8753" clean_build="True"  mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
+    <build type ="Release"  skip_this="False"/>
+  </job>
+  <job branch_ID ="8281" clean_build="True"  mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
+    <build type ="Release"  skip_this="False"/>
+  </job>
+  <job branch_ID ="8283" clean_build="True"  mantid_root="d:/Data/Mantid_GIT_test" merge_to="master" >
+    <build type ="Release"  skip_this="False"/>
   </job>
 
   
+  <!-- ************************************************************************************ -->
   <!--  For testing  working branch, build in master folder so that all test subprojecrs in test folders can be used -->
   <job branch_ID ="master" skip_this="True">
     <build type ="Release"  skip_this="False"/>
