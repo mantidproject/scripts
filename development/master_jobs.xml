@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<job_description>
+
+  <!--  For builing current master or  working branch, build in master folder so that all test subprojecrs in test folders can be used -->
+  <job branch_ID ="master" clean_build="True"  skip_this="False" >
+    <build type ="Release"  skip_this="False"/>
+    <build type ="Debug" skip_this="False"/>
+    <build type ="RelWithDebInfo" skip_this="False"/>
+  </job>
+  <!--  Clean master for testing and comparing against the test branch located in master -->
+  <job branch_ID ="master" mantid_root="d:/Data/Mantid_GIT_test" build_on_base="True" clean_build="True" skip_this="False">
+    <build type ="Release"/>
+    <build type ="Debug"/>
+    <build type ="RelWithDebInfo" skip_this="True"/>
+  </job>
+
+
+  <!--  For testing branch, which has its own build and will be in master_BrNo folder
+  <job branch_ID ="8095"  mantid_root="d:/Data/Mantid_GIT_test" merge_to="master"  skip_this="True">
+    <build type ="Release"/>
+    <build type ="Debug" skip_this="True"/>
+    <build type ="RelWithDebInfo" skip_this="True"/>
+  </job>
+
+   -->
+
+</job_description>
