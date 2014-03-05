@@ -8,6 +8,9 @@ import math
 import numpy as np
 import types
 
+if mantid.__gui__:
+    from ncs_plotting import *
+
 MTD_VER3 = (mantid.__version__[0] == "3")
 
 #----------------------------------------------------------------------------------------
