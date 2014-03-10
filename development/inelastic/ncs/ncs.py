@@ -138,7 +138,7 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
         function_str = fit_options.create_function_str()
         constraints = fit_options.create_constraints_str()
         ties = fit_options.create_ties_str()
-        _do_fit(function_str, data_ws, constraints, ties, max_iter=5000)
+        _do_fit(function_str, data_ws, fit_options.workspace_index, constraints, ties, max_iter=5000)
     
         #### Run second time using standard CompositeFunction & no constraints matrix to
         #### calculate correct reduced chisq ####
@@ -146,7 +146,7 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
 
     function_str = fit_options.create_function_str(param_values)
     max_iter = 0 if simulation else 1
-    reduced_chi_square = _do_fit(function_str, data_ws, constraints, ties, max_iter=max_iter)
+    reduced_chi_square = _do_fit(function_str, data_ws, fit_options.workspace_index, constraints, ties, max_iter=max_iter)
 
     ws_prefix = "__fit"
     fit_suffixes = ('_Parameters','_NormalisedCovarianceMatrix','_Workspace')
@@ -155,7 +155,7 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
     
     return reduced_chi_square, mtd["fit_Parameters"]
 
-def _do_fit(function_str, data_ws, constraints, ties, max_iter):
+def _do_fit(function_str, data_ws, index, constraints, ties, max_iter):
     from mantid.simpleapi import Fit, ScaleX
 
     # From mantid 3 onwards the tof data is required to be in seconds for the fitting
@@ -166,8 +166,8 @@ def _do_fit(function_str, data_ws, constraints, ties, max_iter):
     # The simplest option is to put the data in seconds here and then put it back afterward
     if MTD_VER3:
         ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e-06)
-
-    results = Fit(function_str,data_ws,Ties=ties,Constraints=constraints,Output="__fit",
+	
+    results = Fit(function_str,data_ws,WorkspaceIndex=index,Ties=ties,Constraints=constraints,Output="__fit",
                   CreateOutput=True,OutputCompositeMembers=True,MaxIterations=max_iter, 
                   Minimizer="Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08")
     
