@@ -481,10 +481,93 @@ class FitOptions(object):
         self.generate_function_str()
     
 #----------------------------------------------------------------------------------------
+class NormalisedFitResults(object):
+    """
+    Simple data object to store normalised fit results
+    """
+    # Widths
+    widths = []
+    del_widths = []
+    
+    # Peak areas
+    peak_areas = []
+    del_peak_areas = []
+    
+    # Expansion coefficents for protons
+    h_coeffs = {}
+    del_h_coeffs = {}
+
+    # Expansion coefficents for protons normalised to C0
+    h_coeffs_norm = {}
+    del_h_coeffs_norm = {}
+    
+    # FSE term
+    fse_term = {}
+    del_fse = {}
+    
+    # Background
+    bkgd = []
+    del_bkgd = []
+
+#----------------------------------------------------------------------------------------
 
 def display_fit_output(reduced_chi_square, params_ws, fit_options):
+    results = normalise_fit_parameters(params_ws, fit_options)
+
+    message = "\n"
+    message += '\nReduced Chi-Square =%f\n\n' % reduced_chi_square
+    message += 'Fitting in the TOF space\n'
+
     nmasses = len(fit_options.masses)
+    for i in range(nmasses):
+        mass_info = fit_options.masses[i]
+        message += '-'*80 + "\n"
     
+        message += 'The mass M(%d)=%f\n\n' % (i+1,mass_info['value'])
+        
+        message += 'Parameters values in the Y space:\n\n'
+        
+    
+        # --- Currently on displayed in the results log as we can't yet pull them from Fit ---
+        message += 'See results log for resolution parameters w_L1, w_L0 etc\n'
+        
+        message += 'St. dev. of momentum distr. = %f +/- %f\n' % (results.widths[i],results.del_widths[i])
+        message += 'Scatt. int. (area, normalised) = %f +/- %f\n' % (results.peak_areas[i],results.del_peak_areas[i])
+        
+        if mass_info['function'] == 'GramCharlier': # First mass
+            nc = len(mass_info['hermite_coeffs'])
+            for u in range(nc):
+                message += 'Hermite polynomial expansion coefficient c%d = %f +/- %f\n' % (2*u,results.h_coeffs[i][u],
+                                                                                           results.del_h_coeffs[i][u])
+      
+            for u in range(nc):
+                message += 'Hermite polynomial expansion coefficient a%d = c%d/(2^%d*%d!) = %f +/ %f\n' % (2*u,2*u,2*u,u,
+                                                                                                           results.h_coeffs_norm[i][u],results.del_h_coeffs_norm[i][u])
+    
+            message += '\nFSE coefficient k by the k/q He_3(y) expansion member = %f +/- %f\n\n' % (results.fse_term[i], results.del_fse[i])
+            message += 'The coefficient k calculated in a harmonic oscillator model would be k = sigma*sqrt(2)/12 = %f\n\n' % (results.widths[i]*math.sqrt(2)/12)
+        
+
+    if fit_options.has_been_set("background_order"):
+        message += '-'*80 + "\n"
+        message += 'Background was fitted with the polynomial of degree %d:\n' % fit_options.background_order
+        counter = fit_options.background_order
+        for coeff,error in reversed(zip(results.bkgd,results.del_bkgd)):
+            message += 'Polynomial coefficient order %d: %f +/- %f\n' % (counter, coeff, error)
+            counter -= 1
+        message += '-'*80 + "\n"
+        
+    print message
+    return message
+
+def normalise_fit_parameters(params_ws, fit_options):
+    """
+        Takes the raw fit parameters and input options and normalises them
+        accordingly
+        @param params_ws The workspace containing the raw parameter values
+        @param fit_options The options used to produce the fit parameters
+        @returns A NormalisedFitResults object
+    """
     # Widths
     wg_best = []
     del_wg_best = []
@@ -544,6 +627,7 @@ def display_fit_output(reduced_chi_square, params_ws, fit_options):
     del_Av_best_norm = []
     
     # Errors by full differential
+    nmasses = len(fit_options.masses)
     jacobian = np.empty(shape=(nmasses,nmasses))
     for j in range(nmasses):
         for k in range(nmasses):
@@ -608,58 +692,27 @@ def display_fit_output(reduced_chi_square, params_ws, fit_options):
             a_best[func_index].append(c_best[func_index][index]/denom)
             del_a_best[func_index].append(del_c_best[func_index][index]/denom)
     
-    ######################################
-    # Display
-    ######################################
-    message = None
-    
-    message = "\n"
-    message += '\nReduced Chi-Square =%f\n\n' % reduced_chi_square
-    message += 'Fitting in the TOF space\n'
-    
-    for i in range(nmasses):
-        mass_info = fit_options.masses[i]
-        message += '-'*80 + "\n"
-    
-        message += 'The mass M(%d)=%f\n\n' % (i+1,mass_info['value'])
-        
-        message += 'Parameters values in the Y space:\n\n'
-        
-    
-        # --- Currently on displayed in the results log as we can't yet pull them from Fit ---
-        message += 'See results log for resolution parameters w_L1, w_L0 etc\n'
-        # disp(['w_L_1 (FWHM)= ',num2str(w_L1(:,i))])
-        # disp(['w_L_0 (FWHM)= ',num2str(w_L0(:,i))])
-        # disp(['w_T_h_e_t_a (FWHM)= ',num2str(w_theta(:,i))])
-        # disp(['w_F_o_i_l_L_o_r_e_n_t_z (FWHM)= ',num2str(wl(:,i))])
-        # disp(['w_F_o_i_l_G_A_U_S_S (FWHM) = ',num2str(wE_gauss(:,i))])
-        
-        message += 'St. dev. of momentum distr. = %f +/- %f\n' % (wg_best[i],del_wg_best[i])
-        message += 'Scatt. int. (area, normalised) = %f +/- %f\n' % (Av_best_norm[i],del_Av_best_norm[i])
-        
-        if mass_info['function'] == 'GramCharlier': # First mass
-            nc = len(mass_info['hermite_coeffs'])
-            for u in range(nc):
-                message += 'Hermite polynomial expansion coefficient c%d = %f +/- %f\n' % (2*u,c_best[i][u],del_c_best[i][u])
-      
-            for u in range(nc):
-                message += 'Hermite polynomial expansion coefficient a%d = c%d/(2^%d*%d!) = %f +/ %f\n' % (2*u,2*u,2*u,u,a_best[i][u],del_a_best[i][u])
-    
-            message += '\nFSE coefficient k by the k/q He_3(y) expansion member = %f +/- %f\n\n' % (k_best[i], del_k_best[i])
-            message += 'The coefficient k calculated in a harmonic oscillator model would be k = sigma*sqrt(2)/12 = %f\n\n' % (wg_best[i]*math.sqrt(2)/12)
-        
+    # Gather results
+    results = NormalisedFitResults()
+    results.widths = wg_best
+    results.del_widths = del_wg_best
 
-    if fit_options.has_been_set("background_order"):
-        message += '-'*80 + "\n"
-        message += 'Background was fitted with the polynomial of degree %d:\n' % fit_options.background_order
-        counter = fit_options.background_order
-        for coeff,error in reversed(zip(bkgd,d_bkgd)):
-            message += 'Polynomial coefficient order %d: %f +/- %f\n' % (counter, coeff, error)
-            counter -= 1
-        message += '-'*80 + "\n"
-        
-    print message
-    return message
+    results.peak_areas = Av_best_norm
+    results.del_peak_areas = del_Av_best_norm
+
+    results.h_coeffs = c_best
+    results.del_h_coeffs = del_c_best
+
+    results.h_coeffs_norm = a_best
+    results.del_h_coeffs_norm = del_a_best
+
+    results.fse_term = k_best
+    results.del_fse = del_k_best
+
+    results.bkgd = bkgd
+    results.del_bkgd = d_bkgd
+
+    return results
 
 #----------------------------------------------------------------------------------------
 def gamma_correct(input_data,fit_options, params_ws,index=None):
