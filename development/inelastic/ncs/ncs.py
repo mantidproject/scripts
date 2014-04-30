@@ -611,12 +611,15 @@ def normalise_fit_parameters(params_ws, fit_options):
     for index, mass_info in enumerate(fit_options.masses):
         if 'hermite_coeffs' not in mass_info:
             continue
-        nc = len(mass_info['hermite_coeffs'])
+        hflags = mass_info['hermite_coeffs']
+        nc = len(hflags)
         n_active_c = len(c_best[index])
-        if nc > n_active_c:
-            for i in range(n_active_c,nc):
-                c_best[index].append(0.0)
-                del_c_best[index].append(0.0)
+        if n_active_c == nc:
+            continue
+        for j in range(nc):
+            if hflags[j] == 0:
+                c_best[index].insert(j,0.0)
+                del_c_best[index].insert(j,0.0)
     
     #######################################
     # Peak areas are normalized to the sum
@@ -654,8 +657,7 @@ def normalise_fit_parameters(params_ws, fit_options):
     ##########################################
     # Expansion coefficients normalized to C_0
     ##########################################
-    # Insert zeroes for those that are off
-    # and compute reduced coefficients
+    # Compute reduced coefficients
     a_best = {}
     del_a_best = {}
     
