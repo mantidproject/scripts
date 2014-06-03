@@ -88,20 +88,17 @@ def run_fit(data_ws, fit_options):
         @param fit_options :: An object of type FitOptions containing
                               the parameters 
     """
-    return _run_fit_impl(data_ws, fit_options, simulation=False)
+    if fit_options.global_fit:
+        return _run_global_fit_impl(data_ws, fit_options, simulation=False)
+    else:
+        return _run_fit_impl(data_ws, fit_options, simulation=False)
 
 #----------------------------------------------------------------------------------------
 
-def _run_fit_impl(data_ws, fit_options, simulation=False):
+def _display_info(fit_options, simulation):
     """
-        Run the Fit algorithm with the given options on the input data
-        @param data_ws :: The workspace containing the data to fit too
-        @param fit_options :: An object of type FitOptions containing
-                              the parameters
-        @param simulation :: If true then only a single iteration is run
+    Display info about the fitting function.
     """
-    from mantid.simpleapi import RenameWorkspace, mtd
-
     if simulation:
         print "-- Simulation Options Summary --"
     else:
@@ -127,6 +124,20 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
         print display
     if fit_options.has_been_set("background_order"):
         print "Including background using polynomial of order=%d" % fit_options.background_order
+    
+#----------------------------------------------------------------------------------------
+
+def _run_fit_impl(data_ws, fit_options, simulation=False):
+    """
+        Run the Fit algorithm with the given options on the input data
+        @param data_ws :: The workspace containing the data to fit too
+        @param fit_options :: An object of type FitOptions containing
+                              the parameters
+        @param simulation :: If true then only a single iteration is run
+    """
+    from mantid.simpleapi import RenameWorkspace, mtd
+
+    _display_info(fit_options,simulation)
 
     if simulation:
         # Just set what we have been given
@@ -147,13 +158,15 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
     function_str = fit_options.create_function_str(param_values)
     max_iter = 0 if simulation else 1
     reduced_chi_square = _do_fit(function_str, data_ws, fit_options.workspace_index, constraints, ties, max_iter=max_iter)
-
+    
     ws_prefix = "__fit"
     fit_suffixes = ('_Parameters','_NormalisedCovarianceMatrix','_Workspace')
     for suffix in fit_suffixes:
         RenameWorkspace(InputWorkspace=ws_prefix + suffix,OutputWorkspace="fit" + suffix)
     
     return reduced_chi_square, mtd["fit_Parameters"]
+
+#----------------------------------------------------------------------------------------
 
 def _do_fit(function_str, data_ws, index, constraints, ties, max_iter):
     from mantid.simpleapi import Fit, ScaleX
@@ -166,7 +179,7 @@ def _do_fit(function_str, data_ws, index, constraints, ties, max_iter):
     # The simplest option is to put the data in seconds here and then put it back afterward
     if MTD_VER3:
         ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e-06)
-	
+
     results = Fit(function_str,data_ws,WorkspaceIndex=index,Ties=ties,Constraints=constraints,Output="__fit",
                   CreateOutput=True,OutputCompositeMembers=True,MaxIterations=max_iter, 
                   Minimizer="Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08")
@@ -174,6 +187,87 @@ def _do_fit(function_str, data_ws, index, constraints, ties, max_iter):
     if MTD_VER3:
         ScaleX(InputWorkspace='__fit_Workspace',OutputWorkspace='__fit_Workspace',Operation='Multiply',Factor=1e06)
         ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e06)
+    
+    return results[1] # reduced chi-squared
+
+#----------------------------------------------------------------------------------------
+
+def _run_global_fit_impl(data_ws, fit_options, simulation=False):
+    """
+        Run the Fit algorithm with the given options on the input data
+        @param data_ws :: The workspace containing the data to fit too
+        @param fit_options :: An object of type FitOptions containing
+                              the parameters
+        @param simulation :: If true then only a single iteration is run
+    """
+    from mantid.simpleapi import RenameWorkspace, mtd
+    
+    if not fit_options.global_fit:
+        raise RuntimeError('This is not a global fit.')
+    
+    nspec = data_ws.getNumberHistograms()
+
+    _display_info(fit_options,simulation)
+
+    if simulation:
+        # Just set what we have been given
+        param_values = fit_options.create_param_table()
+    else:
+        #### Run fitting first time using constraints matrix to reduce active parameter set ######
+        function_str = fit_options.create_global_function_str(nspec)
+        reduced_chi_square = _do_global_fit(function_str, data_ws, max_iter=5000)
+    
+        #### Run second time using standard CompositeFunction & no constraints matrix to
+        #### calculate correct reduced chisq ####
+        param_values = mtd["fit_Parameters"]
+
+    function_str = fit_options.create_global_function_str(nspec,param_values)
+    max_iter = 0 if simulation else 1
+    reduced_chi_square = _do_global_fit(function_str, data_ws, max_iter=max_iter)
+
+    return reduced_chi_square, mtd["fit_Parameters"]
+
+#----------------------------------------------------------------------------------------
+
+def _do_global_fit(function_str, data_ws, max_iter):
+    from mantid.simpleapi import Fit, ScaleX
+
+    # From mantid 3 onwards the tof data is required to be in seconds for the fitting
+    # in order to re-use the standard Mantid Polynomial function. This polynomial simply
+    # accepts the data "as is" in the workspace so if it is in microseconds then the
+    # we would have to either implement a another wrapper to translate or write another
+    # Polynomial.
+    # The simplest option is to put the data in seconds here and then put it back afterward
+    if MTD_VER3:
+        ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e-06)
+        
+    nspec = data_ws.getNumberHistograms()
+    # no need to output the calc workspaces after the constrained fit, only parameters 
+    output_params_only = max_iter >= 2
+    kwargs = {\
+              'WorkspaceIndex': 0,
+              'MaxIterations': max_iter,
+              'Minimizer': "Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08",
+              'Output': 'fit',
+              'CreateOutput': True,
+              'OutputCompositeMembers': True,
+              }
+    
+    if output_params_only:
+        kwargs['OutputParametersOnly'] = True
+    
+    for i in range(1,nspec):
+        kwargs['InputWorkspace_' + str(i)] = data_ws
+        kwargs['WorkspaceIndex_' + str(i)] = i
+
+    results = Fit( function_str, data_ws, **kwargs )
+    
+    if MTD_VER3:
+        ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e06)
+        if not output_params_only:
+            for i in range(0,nspec):
+                ws_name = 'fit_Workspace_%s' % i
+                ScaleX(InputWorkspace=ws_name,OutputWorkspace=ws_name,Operation='Multiply',Factor=1e06)
     
     return results[1] # reduced chi-squared
 
@@ -195,7 +289,8 @@ class FitOptions(object):
           "masses" : None,
           "constraints":None,
           "workspace_index":None,
-          "output_prefix":None
+          "output_prefix":None,
+          "global_fit": False,
         }
         object.__setattr__(self, "_options", options)
         defaults = {
@@ -258,13 +353,17 @@ class FitOptions(object):
             It is assumed that the standard CompositeFunction is used when running the fit for a
             second time to compute the errors with everything free
         """
+        import re
         all_free = (param_values is not None)
         if isinstance(param_values, mantid.api.ITableWorkspace):
             params_ws = param_values
             param_values = {}
             for row in params_ws:
                 values = row.values()
-                param_values[values[0]] = values[1]
+                param_name = values[0]
+                if self.global_fit:
+                    param_name = re.sub('^f\d+\.','',param_name)
+                param_values[param_name] = values[1]
 
         if all_free:
             function_str = "composite=CompositeFunction,NumDeriv=1;"
@@ -298,10 +397,11 @@ class FitOptions(object):
                     else:
                         width = widths
 
-                params = "WorkspaceIndex=%d,Mass=%f,Width=%f" % (self.workspace_index,mass,width)
+                #params = "WorkspaceIndex=%d,Mass=%f,Width=%f" % (self.workspace_index,mass,width)
+                params = "Mass=%f,Width=%f" % (mass,width)
                 if all_free:
-                    par_name = "Intensity"
-                    params += ",%s=%f" % (par_name,param_values[par_value_prefix + par_name])
+                    param_name = "Intensity"
+                    params += ",%s=%f" % (param_name,param_values[par_value_prefix + param_name])
                 local_function_str = "name=%s,%s;" % (func_name,params)
             else:
                 raise ValueError("Unknown function type: '%s'. Allowed values are: GramCharlier, Gaussian")
@@ -321,11 +421,11 @@ class FitOptions(object):
             if all_free:
                 func_index = len(self.masses)
                 for power in range (0,self.background_order+1):
-                    par_name = 'A%d' % (power)
-                    comp_par_name = 'f%d.%s' % (func_index,par_name)
-                    background_str += ",%s=%f" % (par_name,param_values[comp_par_name])
+                    param_name = 'A%d' % (power)
+                    comp_par_name = 'f%d.%s' % (func_index,param_name)
+                    background_str += ",%s=%f" % (param_name,param_values[comp_par_name])
             function_str += "%s" % background_str.rstrip(",")
-        
+            
         return function_str.rstrip(";")
 
     def create_gram_charlier_function(self, mass_info, all_free, param_values, par_value_prefix):
@@ -357,8 +457,7 @@ class FitOptions(object):
         hermite_coeffs = mass_info['hermite_coeffs']
         hermite_str = to_space_sep_str(hermite_coeffs)
 
-        params = "WorkspaceIndex=%d,Mass=%f,HermiteCoeffs=%s,Width=%f" \
-          % (self.workspace_index,mass,hermite_str,width)
+        params = "Mass=%f,HermiteCoeffs=%s,Width=%f" % (mass,hermite_str,width)
         if all_free:
             par_names = ["FSECoeff"]
             for i,c in enumerate(hermite_coeffs):
@@ -438,12 +537,51 @@ class FitOptions(object):
                 sears_flag = mass_info['sears_flag']
                 par_name = "%sFSECoeff" % par_value_prefix
                 if sears_flag == 1:
-                    value = "%sWidth*sqrt(2)/12" % par_value_prefix
+                    value = "%sWidth*%s" % (par_value_prefix,"sqrt(2)/12")#math.sqrt(2.)/12.0)
                 else:
                     value = "0"
                 ties += "%s=%s," % (par_name, value)
 
         return ties.rstrip(",")
+
+    def create_global_function_str(self, n, param_values=None):
+        """
+            Creates the function string to pass to fit for a multi-dataset (global) fitting
+            
+            @param n :: A number of datasets (spectra) to be fitted simultaneously. 
+        
+            @param param_values :: A dict/tableworkspace of key/values specifying the parameter values
+            that have already been calculated. If None then the ComptonScatteringCountRate
+            function, along with the constraints matrix, is used rather than the standard CompositeFunction.
+            It is assumed that the standard CompositeFunction is used when running the fit for a
+            second time to compute the errors with everything free
+        """
+        
+        # create a local function to fit a single spectrum
+        f = self.create_function_str(param_values)
+        # insert an attribute telling the function which spectrum it should be applied to
+        i = f.index(';')
+        # $domains=i means "function index == workspace index"
+        fun_str = f[:i] + ',$domains=i' + f[i:]
+        
+        # append the constrints and ties within the local function 
+        fun_str += ';constraints=(' + self.create_constraints_str() + ')'
+        ties = self.create_ties_str()
+        if len(ties) > 0:
+            fun_str += ';ties=(' + ties + ')'
+
+        # initialize a string for composing the global ties        
+        global_ties = 'f0.f0.Width'
+        # build the multi-dataset function by joining local functions of the same type
+        global_fun_str = 'composite=MultiDomainFunction'
+        for i in range(n):
+            global_fun_str += ';(' + fun_str + ')'
+            if i > 0:
+                global_ties = 'f' + str(i) + '.f0.Width=' + global_ties
+        # add the global ties
+        global_fun_str += ';ties=(' + global_ties + ')'
+        
+        return global_fun_str
 
     def __setattr__(self, name, value):
         """Only allows those attributes that we have defined. 
@@ -512,6 +650,10 @@ class NormalisedFitResults(object):
 #----------------------------------------------------------------------------------------
 
 def display_fit_output(reduced_chi_square, params_ws, fit_options):
+    if fit_options.global_fit:
+        print "Output for global fit isn't implemented yet."
+        return
+    
     results = normalise_fit_parameters(params_ws, fit_options)
 
     message = "\n"
@@ -732,3 +874,4 @@ def gamma_correct(input_data,fit_options, params_ws,index=None):
     background,corrected = CalculateGammaBackground(InputWorkspace=input_data, ComptonFunction=func_str,
                                                     WorkspaceIndexList=fit_options.workspace_index)
     return background, corrected
+
