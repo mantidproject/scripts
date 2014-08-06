@@ -884,29 +884,52 @@ def calculate_resolution(input_data, mass, index=0):
 
         @param input_data The original TOF data
         @param mass The mass defining the recoil peak in AMU
+        @param index An optional index to specify the spectrum to use
     """
-    from mantid.simpleapi import AlgorithmManager, mtd
+def calculate_resolution(input_data, mass, index=0):
+    """
+        Run the VesuvioResolution function to produce a workspace
+        with the value of the Vesuvio resolution.
+
+        @param input_data The original TOF data
+        @param mass The mass defining the recoil peak in AMU
+        @param index Index to specify the spectrum to use (default=0)
+    """
+    from mantid.api import AlgorithmManager, AnalysisDataService
+    from mantid.kernel.funcreturns import lhs_info
+
+    # Grab the name of the variable that this function call is assigned to
+    try:
+        output_name = lhs_info("names")[0]
+    except IndexError:
+        # No variable specified
+        name_stem = str(input_data)
+        output_name = name_stem + "_res" + str(index)
     
-    name_stem = str(input_data)
-    output_name = name_stem + "_resolution"
     function = "name=VesuvioResolution, Mass=%f" % mass
     
     # execute the resolution function using fit.
     # functions can't currently be executed as stand alone objects,
     # so for now we will run fit with zero iterations to achieve the same result.
-    fit = mantid.api.AlgorithmManager.createUnmanaged('Fit')        
+    fit = mantid.api.AlgorithmManager.createUnmanaged('Fit')
     fit.initialize()
     fit.setChild(True)
-    fit.setAlwaysStoreInADS(True)
     fit.setLogging(False)
-    mantid.simpleapi._set_properties(fit, function, input_data, MaxIterations=0, 
-                                     CreateOutput=True, Output=name_stem)
+    mantid.simpleapi._set_properties(fit, function, input_data, MaxIterations=0,
+                                     CreateOutput=True, Output=output_name,WorkspaceIndex=index)
     fit.execute()
+    values_ws = fit.getProperty("OutputWorkspace").value
 
-    ExtractSingleSpectrum(name_stem + "_Workspace", WorkspaceIndex=1, OutputWorkspace=output_name)
+    # extract just the function values
+    extract = mantid.api.AlgorithmManager.createUnmanaged('ExtractSingleSpectrum')
+    extract.initialize()
+    extract.setChild(True)
+    extract.setLogging(False)
+    extract.setProperty("InputWorkspace", values_ws)
+    extract.setProperty("OutputWorkspace", "__unused_for_child")
+    extract.setProperty("WorkspaceIndex", 1)
+    extract.execute()
+    calculated = extract.getProperty("OutputWorkspace").value
+    AnalysisDataService.addOrReplace(output_name, calculated)
 
-    DeleteWorkspace(name_stem + "_Workspace")
-    DeleteWorkspace(name_stem + "_Parameters")
-    DeleteWorkspace(name_stem + "_NormalisedCovarianceMatrix")
-
-    return mtd[output_name]
+    return calculated
