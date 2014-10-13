@@ -886,15 +886,6 @@ def calculate_resolution(input_data, mass, index=0):
         @param mass The mass defining the recoil peak in AMU
         @param index An optional index to specify the spectrum to use
     """
-def calculate_resolution(input_data, mass, index=0):
-    """
-        Run the VesuvioResolution function to produce a workspace
-        with the value of the Vesuvio resolution.
-
-        @param input_data The original TOF data
-        @param mass The mass defining the recoil peak in AMU
-        @param index Index to specify the spectrum to use (default=0)
-    """
     from mantid.api import AlgorithmManager, AnalysisDataService
     from mantid.kernel.funcreturns import lhs_info
 
