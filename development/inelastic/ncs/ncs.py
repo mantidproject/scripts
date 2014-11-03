@@ -35,7 +35,7 @@ def preprocess(data_ws, options):
 
     if options.has_been_set("bad_data_error"):
         mask_data(data_ws, options.bad_data_error)
-        
+
     return data_ws
 
 #----------------------------------------------------------------------------------------
@@ -58,7 +58,7 @@ def mask_data(workspace, error_threshold, verbose=False):
         raise RuntimeError("Expected 2D array of errors, found %dD" % len(errors.shape))
 
     indices = np.where(errors > error_threshold) # Indices in 2D matrix where errors above threshold
-    # The output is a tuple of 2 arrays where the indices from each array are paired to 
+    # The output is a tuple of 2 arrays where the indices from each array are paired to
     # give the correct inndex in the original 2D array.
     x_data = workspace.readX(0)
 
@@ -75,10 +75,10 @@ def run_simulation(data_ws, fit_options):
         Run the Fit algorithm with a single iteration with the given options on the input data
         @param data_ws :: The workspace containing the data to fit too
         @param fit_options :: An object of type FitOptions containing
-                              the parameters 
+                              the parameters
     """
     return _run_fit_impl(data_ws, fit_options, simulation=True)
-    
+
 #----------------------------------------------------------------------------------------
 
 def run_fit(data_ws, fit_options):
@@ -86,7 +86,7 @@ def run_fit(data_ws, fit_options):
         Run the Fit algorithm with the given options on the input data
         @param data_ws :: The workspace containing the data to fit too
         @param fit_options :: An object of type FitOptions containing
-                              the parameters 
+                              the parameters
     """
     if fit_options.global_fit:
         return _run_global_fit_impl(data_ws, fit_options, simulation=False)
@@ -124,7 +124,7 @@ def _display_info(fit_options, simulation):
         print display
     if fit_options.has_been_set("background_order"):
         print "Including background using polynomial of order=%d" % fit_options.background_order
-    
+
 #----------------------------------------------------------------------------------------
 
 def _run_fit_impl(data_ws, fit_options, simulation=False):
@@ -150,7 +150,7 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
         constraints = fit_options.create_constraints_str()
         ties = fit_options.create_ties_str()
         _do_fit(function_str, data_ws, fit_options.workspace_index, constraints, ties, max_iter=5000)
-    
+
         #### Run second time using standard CompositeFunction & no constraints matrix to
         #### calculate correct reduced chisq ####
         param_values = mtd["__fit_Parameters"]
@@ -158,12 +158,12 @@ def _run_fit_impl(data_ws, fit_options, simulation=False):
     function_str = fit_options.create_function_str(param_values)
     max_iter = 0 if simulation else 1
     reduced_chi_square = _do_fit(function_str, data_ws, fit_options.workspace_index, constraints, ties, max_iter=max_iter)
-    
+
     ws_prefix = "__fit"
     fit_suffixes = ('_Parameters','_NormalisedCovarianceMatrix','_Workspace')
     for suffix in fit_suffixes:
         RenameWorkspace(InputWorkspace=ws_prefix + suffix,OutputWorkspace="fit" + suffix)
-    
+
     return reduced_chi_square, mtd["fit_Parameters"]
 
 #----------------------------------------------------------------------------------------
@@ -181,13 +181,13 @@ def _do_fit(function_str, data_ws, index, constraints, ties, max_iter):
         ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e-06)
 
     results = Fit(function_str,data_ws,WorkspaceIndex=index,Ties=ties,Constraints=constraints,Output="__fit",
-                  CreateOutput=True,OutputCompositeMembers=True,MaxIterations=max_iter, 
+                  CreateOutput=True,OutputCompositeMembers=True,MaxIterations=max_iter,
                   Minimizer="Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08")
-    
+
     if MTD_VER3:
         ScaleX(InputWorkspace='__fit_Workspace',OutputWorkspace='__fit_Workspace',Operation='Multiply',Factor=1e06)
         ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e06)
-    
+
     return results[1] # reduced chi-squared
 
 #----------------------------------------------------------------------------------------
@@ -201,10 +201,10 @@ def _run_global_fit_impl(data_ws, fit_options, simulation=False):
         @param simulation :: If true then only a single iteration is run
     """
     from mantid.simpleapi import RenameWorkspace, mtd
-    
+
     if not fit_options.global_fit:
         raise RuntimeError('This is not a global fit.')
-    
+
     nspec = data_ws.getNumberHistograms()
 
     _display_info(fit_options,simulation)
@@ -216,7 +216,7 @@ def _run_global_fit_impl(data_ws, fit_options, simulation=False):
         #### Run fitting first time using constraints matrix to reduce active parameter set ######
         function_str = fit_options.create_global_function_str(nspec)
         reduced_chi_square = _do_global_fit(function_str, data_ws, max_iter=5000)
-    
+
         #### Run second time using standard CompositeFunction & no constraints matrix to
         #### calculate correct reduced chisq ####
         param_values = mtd["fit_Parameters"]
@@ -240,9 +240,9 @@ def _do_global_fit(function_str, data_ws, max_iter):
     # The simplest option is to put the data in seconds here and then put it back afterward
     if MTD_VER3:
         ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e-06)
-        
+
     nspec = data_ws.getNumberHistograms()
-    # no need to output the calc workspaces after the constrained fit, only parameters 
+    # no need to output the calc workspaces after the constrained fit, only parameters
     output_params_only = max_iter >= 2
     kwargs = {\
               'WorkspaceIndex': 0,
@@ -252,23 +252,23 @@ def _do_global_fit(function_str, data_ws, max_iter):
               'CreateOutput': True,
               'OutputCompositeMembers': True,
               }
-    
+
     if output_params_only:
         kwargs['OutputParametersOnly'] = True
-    
+
     for i in range(1,nspec):
         kwargs['InputWorkspace_' + str(i)] = data_ws
         kwargs['WorkspaceIndex_' + str(i)] = i
 
     results = Fit( function_str, data_ws, **kwargs )
-    
+
     if MTD_VER3:
         ScaleX(InputWorkspace=data_ws,OutputWorkspace=data_ws,Operation='Multiply',Factor=1e06)
         if not output_params_only:
             for i in range(0,nspec):
                 ws_name = 'fit_Workspace_%s' % i
                 ScaleX(InputWorkspace=ws_name,OutputWorkspace=ws_name,Operation='Multiply',Factor=1e06)
-    
+
     return results[1] # reduced chi-squared
 
 #----------------------------------------------------------------------------------------
@@ -279,7 +279,7 @@ class FitOptions(object):
     _options = {}
     # Defaults
     _defaults = {}
-    
+
     def __init__(self):
         options = {
           "smooth_points":None,
@@ -307,13 +307,13 @@ class FitOptions(object):
         """Checks that the current options
         are consistent"""
         pass
-    
+
     def create_param_table(self):
         """Returns a dictionary of parameters that can be used
         to simulate a fit
         @todo cut down copy-and-paste here!
         """
-        
+
         param_values = {}
         for index, mass_info in enumerate(self.masses):
             par_value_prefix = "f%d." % (index)
@@ -341,12 +341,12 @@ class FitOptions(object):
 
         return param_values
 
-#-------------------------------------------------------------------------------------------------------------        
+#-------------------------------------------------------------------------------------------------------------
 
     def create_function_str(self, param_values=None):
         """
             Creates the function string to pass to fit
-        
+
             @param param_values :: A dict/tableworkspace of key/values specifying the parameter values
             that have already been calculated. If None then the ComptonScatteringCountRate
             function, along with the constraints matrix, is used rather than the standard CompositeFunction.
@@ -425,7 +425,7 @@ class FitOptions(object):
                     comp_par_name = 'f%d.%s' % (func_index,param_name)
                     background_str += ",%s=%f" % (param_name,param_values[comp_par_name])
             function_str += "%s" % background_str.rstrip(",")
-            
+
         return function_str.rstrip(";")
 
     def create_gram_charlier_function(self, mass_info, all_free, param_values, par_value_prefix):
@@ -474,13 +474,13 @@ class FitOptions(object):
         """
         if self.constraints is None or len(self.constraints) == 0:
             return ""
-        
+
         if hasattr(self.constraints[0], "__len__"):
             nrows = len(self.constraints)
             ncols = len(self.constraints[0])
         else:
             nrows = 1
-            # without trailing comma a single-element tuple is automatically 
+            # without trailing comma a single-element tuple is automatically
             # converted to just be the element
             ncols = len(self.constraints)
             # put back in sequence
@@ -507,11 +507,11 @@ class FitOptions(object):
                 constraints += "%f < %s < %f," % (widths[0], par_name, widths[2])
 
         return constraints.rstrip(",")
-   
+
     def create_ties_str(self):
         """Returns the string of ties for this Fit
         """
-        
+
         ties = ""
         # Widths
         for index, mass_info in enumerate(self.masses):
@@ -522,7 +522,7 @@ class FitOptions(object):
             if not hasattr(widths, "__len__"):
                 # Fixed width
                 ties += "%s=%f," % (par_name,widths)
-            
+
             func_type = mass_info['function']
             if func_type == "GramCharlier":
                 if 'k_free' not in mass_info:
@@ -531,7 +531,7 @@ class FitOptions(object):
                 ## FSE constraint
                 if k_free:
                     continue
-                    
+
                 if 'sears_flag' not in mass_info:
                     raise RuntimeError("Fixed k requested for mass %d but no sears_flag argument was found" % (index+1))
                 sears_flag = mass_info['sears_flag']
@@ -547,30 +547,30 @@ class FitOptions(object):
     def create_global_function_str(self, n, param_values=None):
         """
             Creates the function string to pass to fit for a multi-dataset (global) fitting
-            
-            @param n :: A number of datasets (spectra) to be fitted simultaneously. 
-        
+
+            @param n :: A number of datasets (spectra) to be fitted simultaneously.
+
             @param param_values :: A dict/tableworkspace of key/values specifying the parameter values
             that have already been calculated. If None then the ComptonScatteringCountRate
             function, along with the constraints matrix, is used rather than the standard CompositeFunction.
             It is assumed that the standard CompositeFunction is used when running the fit for a
             second time to compute the errors with everything free
         """
-        
+
         # create a local function to fit a single spectrum
         f = self.create_function_str(param_values)
         # insert an attribute telling the function which spectrum it should be applied to
         i = f.index(';')
         # $domains=i means "function index == workspace index"
         fun_str = f[:i] + ',$domains=i' + f[i:]
-        
-        # append the constrints and ties within the local function 
+
+        # append the constrints and ties within the local function
         fun_str += ';constraints=(' + self.create_constraints_str() + ')'
         ties = self.create_ties_str()
         if len(ties) > 0:
             fun_str += ';ties=(' + ties + ')'
 
-        # initialize a string for composing the global ties        
+        # initialize a string for composing the global ties
         global_ties = 'f0.f0.Width'
         # build the multi-dataset function by joining local functions of the same type
         global_fun_str = 'composite=MultiDomainFunction'
@@ -580,18 +580,18 @@ class FitOptions(object):
                 global_ties = 'f' + str(i) + '.f0.Width=' + global_ties
         # add the global ties
         global_fun_str += ';ties=(' + global_ties + ')'
-        
+
         return global_fun_str
 
     def __setattr__(self, name, value):
-        """Only allows those attributes that we have defined. 
+        """Only allows those attributes that we have defined.
         Raises a AttributeError if the name is unknown
         """
         if name in self._options:
             # Make sure the constraints tuple is still a tuple
             # If first element looks like sequence we have more than 1 constraint
             # or the tuple was created with a trailing comma and is 1 in size.
-            # If the first element is not a sequence a single-element tuple was created without a 
+            # If the first element is not a sequence a single-element tuple was created without a
             # trailing comma so the tuple was stripped
             if name == "constraints" and (value is not None) \
                     and (len(value) > 0 and not hasattr(value[0], "__len")):
@@ -602,7 +602,7 @@ class FitOptions(object):
                             "Allowed names (%s)" % (name, str(self._options.keys())))
 
 
-            
+
     def __getattr__(self, name):
         """Return the named attribute's value.
         Raises a NameError if the name is unknown
@@ -612,12 +612,12 @@ class FitOptions(object):
         except KeyError:
             raise AttributeError("Unknown attribute %s. "
                             "Allowed names (%s)" % (name, str(self._options.keys())))
-            
+
     def __str__(self):
         """Returns a string representation of the object
         """
         self.generate_function_str()
-    
+
 #----------------------------------------------------------------------------------------
 class NormalisedFitResults(object):
     """
@@ -626,11 +626,11 @@ class NormalisedFitResults(object):
     # Widths
     widths = []
     del_widths = []
-    
+
     # Peak areas
     peak_areas = []
     del_peak_areas = []
-    
+
     # Expansion coefficents for protons
     h_coeffs = {}
     del_h_coeffs = {}
@@ -638,11 +638,11 @@ class NormalisedFitResults(object):
     # Expansion coefficents for protons normalised to C0
     h_coeffs_norm = {}
     del_h_coeffs_norm = {}
-    
+
     # FSE term
     fse_term = {}
     del_fse = {}
-    
+
     # Background
     bkgd = []
     del_bkgd = []
@@ -653,7 +653,7 @@ def display_fit_output(reduced_chi_square, params_ws, fit_options):
     if fit_options.global_fit:
         print "Output for global fit isn't implemented yet."
         return
-    
+
     results = normalise_fit_parameters(params_ws, fit_options)
 
     message = "\n"
@@ -664,31 +664,31 @@ def display_fit_output(reduced_chi_square, params_ws, fit_options):
     for i in range(nmasses):
         mass_info = fit_options.masses[i]
         message += '-'*80 + "\n"
-    
+
         message += 'The mass M(%d)=%f\n\n' % (i+1,mass_info['value'])
-        
+
         message += 'Parameters values in the Y space:\n\n'
-        
-    
+
+
         # --- Currently on displayed in the results log as we can't yet pull them from Fit ---
         message += 'See results log for resolution parameters w_L1, w_L0 etc\n'
-        
+
         message += 'St. dev. of momentum distr. = %f +/- %f\n' % (results.widths[i],results.del_widths[i])
         message += 'Scatt. int. (area, normalised) = %f +/- %f\n' % (results.peak_areas[i],results.del_peak_areas[i])
-        
+
         if mass_info['function'] == 'GramCharlier': # First mass
             nc = len(mass_info['hermite_coeffs'])
             for u in range(nc):
                 message += 'Hermite polynomial expansion coefficient c%d = %f +/- %f\n' % (2*u,results.h_coeffs[i][u],
                                                                                            results.del_h_coeffs[i][u])
-      
+
             for u in range(nc):
                 message += 'Hermite polynomial expansion coefficient a%d = c%d/(2^%d*%d!) = %f +/ %f\n' % (2*u,2*u,2*u,u,
                                                                                                            results.h_coeffs_norm[i][u],results.del_h_coeffs_norm[i][u])
-    
+
             message += '\nFSE coefficient k by the k/q He_3(y) expansion member = %f +/- %f\n\n' % (results.fse_term[i], results.del_fse[i])
             message += 'The coefficient k calculated in a harmonic oscillator model would be k = sigma*sqrt(2)/12 = %f\n\n' % (results.widths[i]*math.sqrt(2)/12)
-        
+
 
     if fit_options.has_been_set("background_order"):
         message += '-'*80 + "\n"
@@ -698,7 +698,7 @@ def display_fit_output(reduced_chi_square, params_ws, fit_options):
             message += 'Polynomial coefficient order %d: %f +/- %f\n' % (counter, coeff, error)
             counter -= 1
         message += '-'*80 + "\n"
-        
+
     print message
     return message
 
@@ -762,7 +762,7 @@ def normalise_fit_parameters(params_ws, fit_options):
             if hflags[j] == 0:
                 c_best[index].insert(j,0.0)
                 del_c_best[index].insert(j,0.0)
-    
+
     #######################################
     # Peak areas are normalized to the sum
     #######################################
@@ -770,7 +770,7 @@ def normalise_fit_parameters(params_ws, fit_options):
     Av_best_sum = np.sum(Av_best)
     Av_best_norm = Av_best/Av_best_sum
     del_Av_best_norm = []
-    
+
     # Errors by full differential
     nmasses = len(fit_options.masses)
     jacobian = np.empty(shape=(nmasses,nmasses))
@@ -783,35 +783,35 @@ def normalise_fit_parameters(params_ws, fit_options):
             else:
                 df_j_k_r = Av_best[k]/(Av_best_sum+0.01*Av_best[k])
                 df_j_k_l = Av_best[k]/(Av_best_sum-0.01*Av_best[k])
-                
+
             jacobian[j][k] = (df_j_k_r - df_j_k_l)/epsilon_k
-    
+
     for j in range(nmasses):
-        del_Av_best_norm_j = 0.0 
+        del_Av_best_norm_j = 0.0
         for k in range(nmasses):
             df_j_k = jacobian[j][k]
             Av_best_k = Av_best[k]
             del_Av_best_k = del_Av_best[k]
             del_Av_best_norm_j += (df_j_k*del_Av_best_k)**2
-    
+
         del_Av_best_norm.append(math.sqrt(del_Av_best_norm_j))
-    
+
     ##########################################
     # Expansion coefficients normalized to C_0
     ##########################################
     # Compute reduced coefficients
     a_best = {}
     del_a_best = {}
-    
+
     for func_index in c_best.keys():
         a_best[func_index] = []
         del_a_best[func_index] = []
-        
+
         c0 = c_best[func_index][0]
         dc0 = del_c_best[func_index][0]
-        if c0 == 0.0: 
+        if c0 == 0.0:
             c0 = 1
-    
+
         if func_index in k_best:
             try:
                 k_free = fit_options.masses[func_index]['k_free']
@@ -822,7 +822,7 @@ def normalise_fit_parameters(params_ws, fit_options):
                 k_best[func_index] = k_best[func_index]/c0
             else:
                 del_k_best[func_index] = del_wg_best[func_index]*math.sqrt(2)/12
-    
+
         # Normalise expansion coefficients
         hermite_coeffs = fit_options.masses[func_index]['hermite_coeffs']
         for index, flag in enumerate(hermite_coeffs):
@@ -835,7 +835,7 @@ def normalise_fit_parameters(params_ws, fit_options):
             denom = (2**npoly)*math.factorial(index)
             a_best[func_index].append(c_best[func_index][index]/denom)
             del_a_best[func_index].append(del_c_best[func_index][index]/denom)
-    
+
     # Gather results
     results = NormalisedFitResults()
     results.widths = wg_best
@@ -862,7 +862,7 @@ def normalise_fit_parameters(params_ws, fit_options):
 def gamma_correct(input_data,fit_options, params_ws,index=None):
     """
         Run the CalculateGammaBackground to produce a workspace
-        corrected for gamma background & the value of the 
+        corrected for gamma background & the value of the
         background itself
         @param input_data The original TOF data
         @param fit_options Options used for the fit that produced the parameters
@@ -880,7 +880,7 @@ def gamma_correct(input_data,fit_options, params_ws,index=None):
 def calculate_resolution(input_data, mass, index=0):
     """
         Run the VesuvioResolution function to produce a workspace
-        with the value of the Vesuvio resolution. 
+        with the value of the Vesuvio resolution.
 
         @param input_data The original TOF data
         @param mass The mass defining the recoil peak in AMU
@@ -896,9 +896,9 @@ def calculate_resolution(input_data, mass, index=0):
         # No variable specified
         name_stem = str(input_data)
         output_name = name_stem + "_res" + str(index)
-    
+
     function = "name=VesuvioResolution, Mass=%f" % mass
-    
+
     # execute the resolution function using fit.
     # functions can't currently be executed as stand alone objects,
     # so for now we will run fit with zero iterations to achieve the same result.
