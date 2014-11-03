@@ -924,3 +924,115 @@ def calculate_resolution(input_data, mass, index=0):
     AnalysisDataService.addOrReplace(output_name, calculated)
 
     return calculated
+
+#-------------------------------------------------------------------------------------------
+    class MSOptions(object):
+    """
+        Holds parameters for multiple scattering calculation
+    """
+
+    def __init__(self):
+        # Beam dimensions
+        self.beam_radius = 2.5 # cm
+
+        # Sample dimensions
+        self.sample_height = None
+        self.sample_width = None
+        self.sample_depth = None
+
+        # Sample composition
+        # one list per mass = (mass, cross section, s.d. J(y))
+        self.atom_props = []
+        self.sample_density = None # g/cm^3
+
+        # Algorithm properties
+        self.randseed = 123456789
+        self.nscatters = 3
+        self.nruns = 10
+        self.nevents = 50000
+        self.smooth_neighbours = 3
+        self.scale_factor = 1.0
+
+def mssub(input_data, ms_options, keep_calculated=True):
+    """
+        Calculates the contributions from multiple scattering
+        on the input data from the set of given options
+        @param input_data Data workspace
+        @param ms_options The set of options for the calculation
+        @param keep_calculated If true, don't delete the workspaces containing the contributions
+    """
+    from mantid.simpleapi import (CalculateMSVesuvio, CreateSampleShape,
+                                  DeleteWorkspace, SmoothData, Minus)
+
+    # Create the sample shape
+    # Input dimensions are expected in CM
+    CreateSampleShape(InputWorkspace=input_data,
+                      ShapeXML=create_cuboid_xml(ms_options.sample_height/100.,
+                                                 ms_options.sample_width/100.,
+                                                 ms_options.sample_depth/100.))
+
+    # Massage options into how algorithm expects them
+    nmasses, atom_props = flatten_atom_props(ms_options.atom_props)
+    totalS, multS = str(input_data) + "_totsc", str(input_data) + "_mssc"
+
+    # Calculation
+    CalculateMSVesuvio(InputWorkspace=input_data, NoOfMasses=nmasses,
+                       SampleDensity=ms_options.sample_density,
+                       AtomicProperties=atom_props,
+                       BeamRadius=ms_options.beam_radius,
+                       TotalScatteringWS=totalS, MultipleScatteringWS=multS)
+    # Smooth the output
+    SmoothData(InputWorkspace=totalS, OutputWorkspace=totalS,
+               NPoints=ms_options.smooth_neighbours)
+    SmoothData(InputWorkspace=multS, OutputWorkspace=multS,
+               NPoints=ms_options.smooth_neighbours)
+
+    # Optional scale
+    if ms_options.scale_factor != 1.0:
+        Scale(InputWorkspace=totalS, OutputWorkspace=totalS,
+              Factor=ms_options.scale_factor, Operation=Multiply)
+        Scale(InputWorkspace=multS, OutputWorkspace=multS,
+              Factor=ms_options.scale_factor, Operation=Multiply)
+
+    subtname = str(input_data) + "_mssub"
+    subtracted = Minus(LHSWorkspace=input_data, RHSWorkspace=totalS,
+                       OutputWorkspace=subtname)
+    # Cleanup
+    if not keep_calculated:
+        DeleteWorkspace(totalS)
+        DeleteWorkspace(multS)
+
+    return subtracted
+
+#----------------------------------------------------------------------------------------
+
+def create_cuboid_xml(height, width, depth):
+    """
+        Create the XML string to describe a cuboid of the given dimensions
+
+        @param height Height in metres (Y coordinate)
+        @param width Width in metres (X coordinate)
+        @param depth Depth in metres (Z coordinate)
+    """
+    half_height, half_width, half_thick = 0.5*height, 0.5*width, 0.5*depth
+    xml_str = \
+      " <cuboid id=\"sample-shape\"> " \
+      + "<left-front-bottom-point x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width,-half_height,half_thick) \
+      + "<left-front-top-point x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, half_height, half_thick) \
+      + "<left-back-bottom-point x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, -half_height, -half_thick) \
+      + "<right-front-bottom-point x=\"%f\" y=\"%f\" z=\"%f\" /> " % (-half_width, -half_height, half_thick) \
+      + "</cuboid>"
+    return xml_str
+
+#----------------------------------------------------------------------------------------
+
+def flatten_atom_props(atoms):
+    """
+        Flattens a nested list atomic properties, while
+        keeping track of the number of atoms in the list
+
+        @param atoms A nested list of atom properties
+    """
+    nmasses = len(atoms)
+    flat_props = [prop for atom in atoms for prop in atom]
+    return nmasses, flat_props
