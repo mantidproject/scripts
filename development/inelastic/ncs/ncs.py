@@ -926,7 +926,7 @@ def calculate_resolution(input_data, mass, index=0):
     return calculated
 
 #-------------------------------------------------------------------------------------------
-    class MSOptions(object):
+class MSOptions(object):
     """
         Holds parameters for multiple scattering calculation
     """
