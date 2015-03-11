@@ -602,11 +602,14 @@ class EVSCalibrationFit(PythonAlgorithm):
       @param output_name - name to call the loaded workspace
     """
     try:
-      LoadVesuvio(Filename=ws_name, Mode=self._mode, OutputWorkspace=output_name, SpectrumList=range(self._spec_list[0], self._spec_list[-1]+1)) 
-    except Exception:
-      LoadRaw('EVS' + ws_name + '.raw', OutputWorkspace=output_name, SpectrumMin=self._spec_list[0], SpectrumMax=self._spec_list[-1])
-      ConvertToDistribution(output_name)
-      pass
+      LoadVesuvio(Filename=ws_name, Mode=self._mode, OutputWorkspace=output_name, 
+                  SpectrumList="%d-%d" % (self._spec_list[0], self._spec_list[-1]),
+                  EnableLogging=False) 
+    except RuntimeError:
+      LoadRaw('EVS' + ws_name + '.raw', OutputWorkspace=output_name,
+              SpectrumMin=self._spec_list[0], SpectrumMax=self._spec_list[-1],
+              EnableLogging=False)
+      ConvertToDistribution(output_name, EnableLogging=False)
 
 #----------------------------------------------------------------------------------------
     
