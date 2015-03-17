@@ -1178,7 +1178,7 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
       data = data.tolist()
 
     for i, value in enumerate(data):
-      table_ws.setCell(column_name, offset+i, value)
+      table_ws.setCell(column_name, int(offset+i), value)
 
 #----------------------------------------------------------------------------------------
 
