@@ -1,8 +1,8 @@
-""" 
+"""
   Calibration algorithms for the VESUVIO spectrometer. This file provides two Mantid algorithms: EVSCalibrationFit and EVSCalibrationAnalysis. EVSCalibrationFit
   is used to fit m peaks to n spectra. The positions of the peaks are esitmated using the supplied instrument parameter file and the d-spacings of the sample (if provided)
-  and provides support for both Voigt and Gaussian functions. EVSCalibrationAnalysis uses EVSCalibrationFit to calculate instrument parameters using the output of 
-  the fitting and the and an existing instrument parameter file. 
+  and provides support for both Voigt and Gaussian functions. EVSCalibrationAnalysis uses EVSCalibrationFit to calculate instrument parameters using the output of
+  the fitting and the and an existing instrument parameter file.
 
   The procedures used here are based upon those descibed in: Calibration of an electron volt neutron spectrometer, Nuclear Instruments and Methods in Physics Research A
   (15 October 2010), doi:10.1016/j.nima.2010.09.079 by J. Mayers, M. A. Adams
@@ -66,7 +66,7 @@ MEV_CONVERSION = 1.602176487e-22
 
 def calculate_r_theta(sample_mass, thetas):
   """
-    Returns the ratio of the final neutron velocity to the initial neutron velocity 
+    Returns the ratio of the final neutron velocity to the initial neutron velocity
     as a function of the scattering angle theta and atomic mass of lead and a neutron.
 
     @param sample_mass - mass of the sample in amu
@@ -94,7 +94,7 @@ def load_instrument_parameters(file_path, table_name):
 
   table_ws.addColumn('double', 'Spectrum')
   table_ws.addColumn('double', 'theta')
-  table_ws.addColumn('double', 't0') 
+  table_ws.addColumn('double', 't0')
   table_ws.addColumn('double', 'L0')
   table_ws.addColumn('double', 'L1')
 
@@ -121,7 +121,7 @@ def read_table_column(table_name, column_name, spec_list=DETECTOR_RANGE):
   else:
 	lower = spec_list[0]
 	upper = spec_list[0]
-	
+
   column_values = mtd[table_name].column(column_name)
   return np.array(column_values[lower-offset:upper+1-offset])
 
@@ -133,7 +133,7 @@ class EVSCalibrationFit(PythonAlgorithm):
     return "Fits peaks to a list of spectra using the mass or the d-spacings (for bragg peaks) of the sample."
 
   def PyInit(self):
-    
+
     self.declareProperty(StringArrayProperty("Samples", Direction.Input),
       doc="Sample run numbers to fit peaks to.")
 
@@ -163,7 +163,7 @@ class EVSCalibrationFit(PythonAlgorithm):
 
     self.declareProperty(FloatArrayProperty('Energy', [ENERGY_ESTIMATE], FloatArrayMandatoryValidator(), Direction.Input),
       doc='List of estimated expected energies for peaks. Optional: the default is %f' % ENERGY_ESTIMATE)
-    
+
     self.declareProperty(FileProperty('InstrumentParameterFile', '', action=FileAction.OptionalLoad, extensions=["par"]),
       doc='Filename of the instrument parameter file.')
 
@@ -172,12 +172,12 @@ class EVSCalibrationFit(PythonAlgorithm):
 
     self.declareProperty('CreateOutput', False,
       doc='Create fitting workspaces for each of the parameters.')
-    
+
     self.declareProperty('OutputWorkspace', '', StringMandatoryValidator(),
       doc="Name to call the output workspace.")
 
 #----------------------------------------------------------------------------------------
-  
+
   def PyExec(self):
     self._setup()
     self._preprocess()
@@ -186,7 +186,7 @@ class EVSCalibrationFit(PythonAlgorithm):
         self._fit_bragg_peaks()
     else:
         self._fit_peaks()
-    
+
     #create output of fit if required.
     if self._create_output and not self._fitting_bragg_peaks:
       self._generate_fit_workspaces()
@@ -196,7 +196,7 @@ class EVSCalibrationFit(PythonAlgorithm):
       DeleteWorkspace(self._param_table)
 
 #----------------------------------------------------------------------------------------
-  
+
   def _setup(self):
     """
       Setup parameters for fitting.
@@ -250,15 +250,15 @@ class EVSCalibrationFit(PythonAlgorithm):
       base = os.path.basename(self._param_file)
       self._param_table = os.path.splitext(base)[0]
       load_instrument_parameters(self._param_file, self._param_table)
-    
+
     #check if we're fitting bragg peaks
     self._fitting_bragg_peaks = len(self._d_spacings) > 0
     if self._fitting_bragg_peaks:
       self._ws_crop_range = BRAGG_PEAK_CROP_RANGE
       self._fit_window_range = 1000
-    
+
 #----------------------------------------------------------------------------------------
-  
+
   def _preprocess(self):
     """
       Preprocess a workspace. This include optionally dividing by a background
@@ -267,14 +267,14 @@ class EVSCalibrationFit(PythonAlgorithm):
 
     xmin, xmax = self._ws_crop_range
     CropWorkspace(self._sample, XMin=xmin, XMax=xmax, OutputWorkspace=self._sample)
-    
+
     if len(self._bkg_run_numbers) > 0:
       self._load_files(self._bkg_run_numbers, self._background)
-      
+
       RebinToWorkspace(WorkspaceToRebin=self._background, WorkspaceToMatch=self._sample, OutputWorkspace=self._background)
       CropWorkspace(self._background, XMin=xmin, XMax=xmax, OutputWorkspace=self._background)
       Divide(self._sample, self._background, OutputWorkspace=self._sample)
-      
+
       DeleteWorkspace(self._background)
 
     ReplaceSpecialValues(self._sample, NaNValue=0, NaNError=0, InfinityValue=0, InfinityError=0, OutputWorkspace=self._sample)
@@ -292,10 +292,10 @@ class EVSCalibrationFit(PythonAlgorithm):
     param_names = ['f0.A0', 'f0.A1']
     for i in xrange(num_peaks):
       param_names += ['f' + str(i) + '.' + name for name in self._func_param_names.values()]
-    
+
     err_names = [name + '_Err' for name in param_names]
     col_names = [element for tupl in zip(param_names, err_names) for element in tupl]
-      
+
     mtd[peaks_table].addColumn('int', 'Spectrum')
     for name in col_names:
         mtd[peaks_table].addColumn('double', name)
@@ -303,7 +303,7 @@ class EVSCalibrationFit(PythonAlgorithm):
     output_workspaces = []
     for i, peak_estimates_list in enumerate(peak_positions.transpose()):
         self._prog_reporter.report("Fitting to spectrum %d" % i)
-	
+
         spec_number = self._spec_list[0]+i
         peak_table = self._sample + '_peaks_table_%d' % spec_number
         find_peak_params = self._get_find_peak_parameters(spec_number, peak_estimates_list)
@@ -320,10 +320,10 @@ class EVSCalibrationFit(PythonAlgorithm):
 
         #build function string
         func_string = self._build_multiple_peak_function(peak_params)
-        
+
         #select min and max x range for fitting
         positions = [params[position] for params in peak_params]
-        
+
         if len(positions) < 1:
             raise RuntimeError("FindPeaks could not find a peaks with the given parameters: %s" % find_peak_params)
 
@@ -333,7 +333,7 @@ class EVSCalibrationFit(PythonAlgorithm):
         #fit function to workspace
         fit_output_name = self._output_workspace_name + '_Spec_%d' % spec_number
         status, chi2, ncm, params, fws = Fit(Function=func_string, InputWorkspace=self._sample, IgnoreInvalidData=True,
-                                             StartX=xmin, EndX=xmax, WorkspaceIndex=i, 
+                                             StartX=xmin, EndX=xmax, WorkspaceIndex=i,
                                              CalcErrors=True, Output=fit_output_name,
                                              Minimizer='Levenberg-Marquardt,RelError=1e-8')
 
@@ -361,14 +361,14 @@ class EVSCalibrationFit(PythonAlgorithm):
 
 
 #----------------------------------------------------------------------------------------
-  
+
   def _fit_peaks(self):
     """
       Fit peaks to time of flight data.
 
       This uses the Mantid algorithms FindPeaks and Fit. Estimates for the centre of the peaks
-      are found using either the energy or d-spacings provided. It creates a group workspace 
-      containing one table workspace per peak with parameters for each detector. 
+      are found using either the energy or d-spacings provided. It creates a group workspace
+      containing one table workspace per peak with parameters for each detector.
     """
 
     peak_positions = self._estimate_peak_positions()
@@ -392,7 +392,7 @@ class EVSCalibrationFit(PythonAlgorithm):
         peak_table = '__' + self._sample + '_peaks_table_%d_%d' % (i,j)
         find_peak_params = self._get_find_peak_parameters(spec_number, [peak_centre])
         FindPeaks(InputWorkspace=self._sample, WorkspaceIndex=j, PeaksList=peak_table, **find_peak_params)
-        
+
         #extract data from table
         if mtd[peak_table].rowCount() > 0:
           peak_params = mtd[peak_table].row(0)
@@ -415,7 +415,7 @@ class EVSCalibrationFit(PythonAlgorithm):
           logger.warning('Could not specify fit window. Using full spectrum x range.')
 
         status, chi2, ncm, params, fws = Fit(Function=func_string, InputWorkspace=self._sample, IgnoreInvalidData=True,
-                                             StartX=xmin, EndX=xmax, WorkspaceIndex=j, 
+                                             StartX=xmin, EndX=xmax, WorkspaceIndex=j,
                                              CalcErrors=True, Output=fit_output_name,
                                              Minimizer='Levenberg-Marquardt,RelError=1e-8')
 
@@ -428,15 +428,15 @@ class EVSCalibrationFit(PythonAlgorithm):
         row = [element for tupl in zip(row_values, row_errors) for element in tupl]
 
         mtd[peaks_table].addRow([spec_number] + row)
-        
+
         self._parameter_tables.append(peaks_table)
         self._peak_fit_workspaces.append(fws.name())
-        
+
         DeleteWorkspace(ncm)
         DeleteWorkspace(params)
         if not self._create_output:
           DeleteWorkspace(fws)
-        
+
       self._fit_workspaces.append(self._peak_fit_workspaces)
 
     GroupWorkspaces(self._parameter_tables, OutputWorkspace=self._output_workspace_name + '_Peak_Parameters')
@@ -458,7 +458,7 @@ class EVSCalibrationFit(PythonAlgorithm):
 
     if self._fitting_bragg_peaks:
         find_peak_params['PeakPositionTolerance'] = 0
-            
+
         if spec_number >= FRONTSCATTERING_RANGE[0]:
             find_peak_params['MinGuessedPeakWidth'] = 60
             find_peak_params['FWHM'] = 70
@@ -470,7 +470,7 @@ class EVSCalibrationFit(PythonAlgorithm):
         find_peak_params['FitWindows'] = [[peak-30, peak+30] for peak in peak_centre]
         find_peak_params['FitWindows'] = [peak for pair in find_peak_params['FitWindows'] for peak in pair]
 
-    
+
     return find_peak_params
 
 #----------------------------------------------------------------------------------------
@@ -490,7 +490,7 @@ class EVSCalibrationFit(PythonAlgorithm):
 
       err_names = [name + '_Err' for name in param_names]
       col_names = [element for tupl in zip(param_names, err_names) for element in tupl]
-      
+
       mtd[peaks_table].addColumn('int', 'Spectrum')
       for name in col_names:
         mtd[peaks_table].addColumn('double', name)
@@ -584,10 +584,10 @@ class EVSCalibrationFit(PythonAlgorithm):
         if '-' in run:
           sample_range = run.split('-')
           sample_range = map(int, sample_range)
-        
+
           for i in xrange(*sample_range):
             yield str(i)
-        
+
         else:
           yield run
 
@@ -602,9 +602,9 @@ class EVSCalibrationFit(PythonAlgorithm):
       @param output_name - name to call the loaded workspace
     """
     try:
-      LoadVesuvio(Filename=ws_name, Mode=self._mode, OutputWorkspace=output_name, 
+      LoadVesuvio(Filename=ws_name, Mode=self._mode, OutputWorkspace=output_name,
                   SpectrumList="%d-%d" % (self._spec_list[0], self._spec_list[-1]),
-                  EnableLogging=False) 
+                  EnableLogging=False)
     except RuntimeError:
       LoadRaw('EVS' + ws_name + '.raw', OutputWorkspace=output_name,
               SpectrumMin=self._spec_list[0], SpectrumMax=self._spec_list[-1],
@@ -612,7 +612,7 @@ class EVSCalibrationFit(PythonAlgorithm):
       ConvertToDistribution(output_name, EnableLogging=False)
 
 #----------------------------------------------------------------------------------------
-    
+
   def _build_linear_background_function(self, peak, tie_gradient=False):
     """
       Builds a string describing a peak function that can be passed to Fit.
@@ -639,7 +639,7 @@ class EVSCalibrationFit(PythonAlgorithm):
     """
 
     fit_func = 'name=%s, ' % self._peak_function
-    
+
     prefix = ''#f0.'
     func_list = [name + '=' + str(peak[prefix + name]) for name in self._func_param_names.values()]
     fit_func += ', '.join(func_list) + ';'
@@ -680,17 +680,17 @@ class EVSCalibrationFit(PythonAlgorithm):
       @param peak - dictionary containing the parameters for the function
       @return the function string
     """
-    
+
     if(len(peak) == 0):
         return ''
-    
+
     fit_func = self._build_linear_background_function(peak)
     fit_func += self._build_peak_function(peak)
 
     return fit_func
 
 #----------------------------------------------------------------------------------------
-  
+
   def _read_param_column(self, column_name, spec_list=DETECTOR_RANGE):
     """
       Read a column from a table workspace and return the data as an array.
@@ -713,14 +713,14 @@ class EVSCalibrationFit(PythonAlgorithm):
     for i, peak_fits in enumerate(fit_workspaces):
       ws_name = self._output_workspace_name + '_%d_Workspace' % i
       ExtractSingleSpectrum(InputWorkspace=self._sample, WorkspaceIndex=i, OutputWorkspace=ws_name)
-     
+
       #transfer fits to individual spectrum
       peak_collection = WorkspaceFactory.create(mtd[ws_name], NVectors=len(peak_fits))
       data_x = mtd[ws_name].readX(0)
 
       ax = TextAxis.create(len(peak_fits)+2)
       ax.setLabel(0, "Data")
-      
+
       for j, peak in enumerate(peak_fits):
         peak_x = mtd[peak].readX(0)
         peak_y = mtd[peak].readY(1)
@@ -729,10 +729,10 @@ class EVSCalibrationFit(PythonAlgorithm):
         index = np.where(data_x == peak_x[0])[0]
         data_y = peak_collection.dataY(j)
         data_y[index:index + peak_y.size] = peak_y
-        
+
         data_e = peak_collection.dataE(j)
         data_e[index:index + peak_e.size] = peak_e
-        
+
         peak_collection.setX(j, data_x)
         peak_collection.setY(j, data_y)
         peak_collection.setE(j, data_e)
@@ -740,7 +740,7 @@ class EVSCalibrationFit(PythonAlgorithm):
         ax.setLabel(j+1, "Peak_%d" % (j+1))
 
         DeleteWorkspace(peak)
-        
+
       peak_ws = "__tmp_peak_workspace"
       mtd.addOrReplace(peak_ws, peak_collection)
       AppendSpectra(ws_name, peak_ws, ValidateInputs=False, OutputWorkspace=ws_name)
@@ -768,7 +768,7 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
 
   def summary(self):
     return "Calculates the calibration parameters for the EVS intrument."
-  
+
   def PyInit(self):
 
     self.declareProperty(StringArrayProperty("Samples", Direction.Input),
@@ -776,6 +776,12 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
 
     self.declareProperty(StringArrayProperty("Background", Direction.Input),
       doc="Run numbers to use as a background.")
+
+    spectrum_validator = IntArrayBoundedValidator()
+    spectrum_validator.setLower(DETECTOR_RANGE[0])
+    spectrum_validator.setUpper(DETECTOR_RANGE[1])
+    self.declareProperty(IntArrayProperty('SpectrumRange', DETECTOR_RANGE, spectrum_validator, Direction.Input),
+      doc='Spectrum range to use. Default is the total range (%d,%d)' % tuple(DETECTOR_RANGE))
 
     self.declareProperty(FileProperty('InstrumentParameterFile', '', action=FileAction.Load, extensions=["par"]),
         doc="Filename of the instrument parameter file.")
@@ -788,7 +794,7 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     self.declareProperty(FloatArrayProperty('DSpacings', [], greaterThanZero, Direction.Input),
       doc="List of d-spacings used to estimate the positions of peaks in TOF.")
 
-    self.declareProperty('Iterations', 2, validator=IntBoundedValidator(lower=1), 
+    self.declareProperty('Iterations', 2, validator=IntBoundedValidator(lower=1),
       doc="Number of iterations to perform. Default is 2.")
 
     self.declareProperty('CreateOutput', False,
@@ -800,12 +806,12 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     self.declareProperty('CreateIPFile', False,
       doc="Whether to save the output as an IP file. \
           This file will use the same name as the OutputWorkspace and will be saved to the default save directory.")
-    
+
     self.declareProperty('OutputWorkspace', '', StringMandatoryValidator(),
       doc="Name to call the output workspace.")
 
 #----------------------------------------------------------------------------------------
-  
+
   def PyExec(self):
     self._setup()
     self._current_workspace = self._output_workspace_name + '_Iteration_0'
@@ -819,17 +825,17 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
                                 InstrumentParameterWorkspace=self._param_table, Mass=U_MASS, Energy=U_PEAK_ENERGIES, OutputWorkspace=L0_fit, CreateOutput=self._create_output)
       self._L0_peak_fits = L0_fit + '_Peak_Parameters'
       self._calculate_incident_flight_path(self._L0_peak_fits, FRONTSCATTERING_RANGE)
-      
+
       #calculate t0 on a U backscattering run
-      t0_fit = self._current_workspace + '_t0'      
-      self._run_calibration_fit(Samples=U_BACKSCATTERING_SAMPLE, Background=U_BACKSCATTERING_BACKGROUND, SpectrumRange=BACKSCATTERING_RANGE, 
+      t0_fit = self._current_workspace + '_t0'
+      self._run_calibration_fit(Samples=U_BACKSCATTERING_SAMPLE, Background=U_BACKSCATTERING_BACKGROUND, SpectrumRange=BACKSCATTERING_RANGE,
                                 InstrumentParameterWorkspace=self._param_table, Mass=U_MASS, Energy=U_PEAK_ENERGIES, OutputWorkspace=t0_fit, CreateOutput=self._create_output)
       self._t0_peak_fits = t0_fit + '_Peak_Parameters'
       self._calculate_backscattering_time_delay(self._t0_peak_fits, BACKSCATTERING_RANGE)
     else:
       #Just copy values over from parameter file
-      t0 = read_table_column(self._param_table, 't0', DETECTOR_RANGE)
-      L0 = read_table_column(self._param_table, 'L0', DETECTOR_RANGE)
+      t0 = read_table_column(self._param_table, 't0', self._detector_range)
+      L0 = read_table_column(self._param_table, 'L0', self._detector_range)
       self._set_table_column(self._current_workspace, 't0', t0)
       self._set_table_column(self._current_workspace, 'L0', L0)
 
@@ -838,63 +844,63 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     for i in xrange(self._iterations):
       #calibrate L1 and E1
       E1_fit = self._current_workspace + '_E1'
-      self._run_calibration_fit(Samples=self._samples, Function='Voigt', Mode='SingleDifference', SpectrumRange=DETECTOR_RANGE,
+      self._run_calibration_fit(Samples=self._samples, Function='Voigt', Mode='SingleDifference', SpectrumRange=self._detector_range,
                                 InstrumentParameterWorkspace=self._param_table, Mass=self._sample_mass, OutputWorkspace=E1_fit, CreateOutput=self._create_output)
       self._E1_peak_fits = mtd[E1_fit + '_Peak_Parameters'].getNames()[0]
-      self._calculate_final_energy(self._E1_peak_fits, DETECTOR_RANGE) 
-      self._calculate_final_flight_path(DETECTOR_RANGE)
-      
+      self._calculate_final_energy(self._E1_peak_fits, self._detector_range)
+      self._calculate_final_flight_path(self._detector_range)
+
       #calibrate theta
       theta_fit = self._current_workspace + '_theta'
-      self._run_calibration_fit(Samples=self._samples, Background=self._background, Function='Voigt', Mode='FoilOut', SpectrumRange=DETECTOR_RANGE,
+      self._run_calibration_fit(Samples=self._samples, Background=self._background, Function='Voigt', Mode='FoilOut', SpectrumRange=self._detector_range,
                                 InstrumentParameterWorkspace=self._param_table, DSpacings=self._d_spacings, OutputWorkspace=theta_fit, CreateOutput=self._create_output)
       self._theta_peak_fits = theta_fit + '_Peak_Parameters'
-      self._calculate_scattering_angle(self._theta_peak_fits, DETECTOR_RANGE)
+      self._calculate_scattering_angle(self._theta_peak_fits, self._detector_range)
 
       #make the fitted parameters for this iteration the input to the next iteration.
-      table_group.append(self._current_workspace)      
+      table_group.append(self._current_workspace)
       self._param_table = self._current_workspace
 
       if i < self._iterations-1:
-        self._current_workspace = self._output_workspace_name + '_Iteration_%d' % (i+1) 
+        self._current_workspace = self._output_workspace_name + '_Iteration_%d' % (i+1)
         self._create_calib_parameter_table(self._current_workspace)
 
         #copy over L0 and t0 parameters to new table
-        t0 = read_table_column(self._param_table, 't0', DETECTOR_RANGE)
-        t0_error = read_table_column(self._param_table, 't0_Err', DETECTOR_RANGE)
-        L0 = read_table_column(self._param_table, 'L0', DETECTOR_RANGE)
-        L0_error = read_table_column(self._param_table, 'L0_Err', DETECTOR_RANGE)
+        t0 = read_table_column(self._param_table, 't0', self._detector_range)
+        t0_error = read_table_column(self._param_table, 't0_Err', self._detector_range)
+        L0 = read_table_column(self._param_table, 'L0', self._detector_range)
+        L0_error = read_table_column(self._param_table, 'L0_Err', self._detector_range)
 
         self._set_table_column(self._current_workspace, 't0', t0)
         self._set_table_column(self._current_workspace, 'L0', L0)
         self._set_table_column(self._current_workspace, 't0_Err', t0)
         self._set_table_column(self._current_workspace, 'L0_Err', L0)
-      
+
     GroupWorkspaces(','.join(table_group), OutputWorkspace=self._output_workspace_name)
-    
+
     if self._make_IP_file:
       ws_name = mtd[self._output_workspace_name].getNames()[-1]
-      self._save_instrument_parameter_file(ws_name, DETECTOR_RANGE)
+      self._save_instrument_parameter_file(ws_name, self._detector_range)
 
 #----------------------------------------------------------------------------------------
 
   def _run_calibration_fit(self, *args, **kwargs):
     """
-      Runs EVSCalibrationFit using the AlgorithmManager. 
+      Runs EVSCalibrationFit using the AlgorithmManager.
 
-      This allows the calibration script to be run directly from the 
+      This allows the calibration script to be run directly from the
       script window after Mantid has started.
 
       @param args - positional arguments to the algorithm
       @param kwargs - key word arguments to the algorithm
-    """ 
+    """
     from mantid.simpleapi import _set_properties
     alg = AlgorithmManager.create('EVSCalibrationFit')
     alg.initialize()
     alg.setRethrows(True)
     _set_properties(alg, *args, **kwargs)
     alg.execute()
-    
+
 #----------------------------------------------------------------------------------------
 
   def _calculate_backscattering_time_delay(self, table_name, spec_list):
@@ -907,15 +913,15 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     """
     t0_param_table = self._current_workspace + '_t0_back_Parameters'
     self._fit_linear(table_name, t0_param_table)
-    
+
     t0 = np.asarray(mtd[t0_param_table].column('A0'))
     t0_error = np.asarray(mtd[t0_param_table].column('A0_Err'))
-    
+
     self._set_table_column(self._current_workspace, 't0', t0, spec_list)
     self._set_table_column(self._current_workspace, 't0_Err', t0_error, spec_list)
 
     DeleteWorkspace(t0_param_table)
-    
+
 #----------------------------------------------------------------------------------------
 
   def _calculate_incident_flight_path(self, table_name, spec_list):
@@ -929,22 +935,22 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     """
     L0_param_table = self._current_workspace + '_L0_Parameters'
     self._fit_linear(table_name, L0_param_table)
-    
+
     t0 = np.asarray(mtd[L0_param_table].column('A0'))
     L0 = np.asarray(mtd[L0_param_table].column('A1'))
 
-    spec_range = DETECTOR_RANGE[1]+1 - DETECTOR_RANGE[0]
+    spec_range = self._detector_range[1]+1 - self._detector_range[0]
     mean_t0 = np.empty(spec_range)
     mean_L0 = np.empty(spec_range)
     t0_error = np.empty(spec_range)
-    L0_error = np.empty(spec_range)    
+    L0_error = np.empty(spec_range)
 
     mean_t0.fill(np.mean(t0))
     mean_L0.fill(np.mean(L0))
 
     t0_error.fill(scipy.stats.sem(t0))
     L0_error.fill(scipy.stats.sem(L0))
-    
+
     self._set_table_column(self._current_workspace, 't0', mean_t0)
     self._set_table_column(self._current_workspace, 't0_Err', t0_error)
     self._set_table_column(self._current_workspace, 'L0', mean_L0)
@@ -968,25 +974,25 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     E1_error = read_table_column(self._current_workspace, 'E1_Err', spec_list)
     t0 = read_table_column(self._current_workspace, 't0', spec_list)
     L0 = read_table_column(self._current_workspace, 'L0', spec_list)
-    
+
     old_L1 = read_table_column(self._param_table, 'L1', spec_list)
 
     #Deviation of fitted E1 from nominal E1.
     deviation_E1 = nominal_E1 - E1
     dtv = deviation_E1*0.039
-    
+
     v1 = np.sqrt(nominal_E1 / 5.2276e-6)
     delta_L1 = dtv*v1*1E-6
     L1 = old_L1 + delta_L1
 
     #Calculate error in L1.
     error_deviation_E1= nominal_E1-E1+E1_error
-    ddtv=error_deviation_E1*0.039 
-    
+    ddtv=error_deviation_E1*0.039
+
     #Change in L1 required to give E1=4897+DE1.
-    error_delta_L1=ddtv*v1*1E-6 
+    error_delta_L1=ddtv*v1*1E-6
     L1_error=np.absolute(error_delta_L1-delta_L1)
-    
+
     self._set_table_column(self._current_workspace, 'L1', L1, spec_list)
     self._set_table_column(self._current_workspace, 'L1_Err', L1_error, spec_list)
 
@@ -1021,14 +1027,14 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     sin_theta = ((peak_centres - t0) * scipy.constants.h) / (scipy.constants.m_n * d_spacings * 2 * (L0+L1))
     theta = np.arcsin(sin_theta) * 2
     theta = np.degrees(theta)
-    
+
     masked_theta = np.ma.masked_array(theta, np.isnan(theta)) #ignore NaNs from a bad fit
     masked_theta = np.mean(masked_theta, axis=0)
     theta_error = scipy.stats.sem(peak_centres)
-    
+
     #if every peaks was a bad fit, replace it with the average value.
     masked_theta = masked_theta.filled(masked_theta.mean())
-    
+
     self._set_table_column(self._current_workspace, 'theta', masked_theta, spec_list)
     self._set_table_column(self._current_workspace, 'theta_Err', theta_error, spec_list)
 
@@ -1043,11 +1049,11 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     """
     t0 = read_table_column(self._current_workspace, 't0', spec_list)
     L0 = read_table_column(self._current_workspace, 'L0', spec_list)
-    
+
     L1 = read_table_column(self._param_table, 'L1', spec_list)
     theta = read_table_column(self._param_table, 'theta', spec_list)
     r_theta = calculate_r_theta(self._sample_mass, theta)
-    
+
     peak_centres = read_table_column(peak_table, 'f1.LorentzPos', spec_list)
     E1_error = read_table_column(peak_table, 'f1.LorentzPos_Err', spec_list)
 
@@ -1068,6 +1074,7 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     """
     self._samples = self.getProperty("Samples").value
     self._background = self.getProperty("Background").value
+    self._detector_range = self.getProperty("SpectrumRange").value
     self._param_file = self.getProperty("InstrumentParameterFile").value
     self._sample_mass = self.getProperty("Mass").value
     self._d_spacings = self.getProperty("DSpacings").value.tolist()
@@ -1096,9 +1103,9 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     table_ws = mtd[ws_name]
     table_ws.addColumn('int', 'Spectrum')
 
-    for value in xrange(DETECTOR_RANGE[0], DETECTOR_RANGE[1]+1):
+    for value in xrange(self._detector_range[0], self._detector_range[1]+1):
       table_ws.addRow([value])
-    
+
     column_names = ['t0','t0_Err','L0','L0_Err','L1','L1_Err','E1','E1_Err','theta','theta_Err']
     for name in column_names:
       table_ws.addColumn('double', name)
@@ -1111,13 +1118,13 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
       on the x. The intercept is the value of t0 and the gradient is the value of L0/L-Total.
 
       @param table_workspace_group - workspace group containing the fitted parameters of the peaks.
-      @param output_table - name to call the fit workspace.  
+      @param output_table - name to call the fit workspace.
     """
     #extract fit data to workspace
     peak_workspaces = []
     for i, param_ws in enumerate(mtd[table_workspace_group].getNames()):
       temp_peak_data = '__temp_peak_ws_%d' % i
-      ConvertTableToMatrixWorkspace(InputWorkspace=param_ws, OutputWorkspace=temp_peak_data, 
+      ConvertTableToMatrixWorkspace(InputWorkspace=param_ws, OutputWorkspace=temp_peak_data,
                                     ColumnX='Spectrum', ColumnY='f1.PeakCentre')
       peak_workspaces.append(temp_peak_data)
 
@@ -1134,12 +1141,12 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     for i in range(num_spectra):
       mtd[peak_workspace].setX(i, np.asarray(NEUTRON_VELOCITY))
 
-    ReplaceSpecialValues(peak_workspace, NaNValue=0, NaNError=0, InfinityValue=0, InfinityError=0, 
+    ReplaceSpecialValues(peak_workspace, NaNValue=0, NaNError=0, InfinityValue=0, InfinityError=0,
                          OutputWorkspace=peak_workspace)
 
     #perform linear fit on peak centres
     func_string = 'name=LinearBackground, A0=0, A1=0;'
-    PlotPeakByLogValue(Input=plot_peak_indicies, Function=func_string, 
+    PlotPeakByLogValue(Input=plot_peak_indicies, Function=func_string,
                        FitType='Individual', CreateOutput=False, OutputWorkspace=output_table)
     DeleteWorkspace(peak_workspace)
 
@@ -1164,8 +1171,8 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     else:
       if len(data) < (spec_list[1]+1 - spec_list[0]):
         raise ValueError("Not enough data from spectrum range.")
-      
-      offset = spec_list[0] - DETECTOR_RANGE[0]
+
+      offset = spec_list[0] - self._detector_range[0]
 
     if isinstance(data, np.ndarray):
       data = data.tolist()
@@ -1184,7 +1191,7 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     """
     file_header = b'\t'.join(['plik', 'det', 'theta', 't0', 'L0', 'L1']) + '\n'
     fmt = "%d  %d  %.4f  %.4f  %.3f  %.4f"
-    
+
     det = read_table_column(ws_name, 'Spectrum', spec_list)
     t0 = read_table_column(ws_name, 't0', spec_list)
     L0 = read_table_column(ws_name, 'L0', spec_list)
@@ -1204,4 +1211,4 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
 
 #----------------------------------------------------------------------------------------
 
-AlgorithmFactory.subscribe(EVSCalibrationAnalysis)  
+AlgorithmFactory.subscribe(EVSCalibrationAnalysis)
