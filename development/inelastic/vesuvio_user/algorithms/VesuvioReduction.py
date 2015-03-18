@@ -4,12 +4,17 @@ from mantid.kernel import *
 from mantid.api import *
 
 # Loading difference modes
-_DIFF_MODES = ["double", "single"]
+_DIFF_MODES = ("double", "single")
 # Fitting modes
-_FIT_MODES = ["bank", "spectrum"]
+_FIT_MODES = ("bank", "spectrum")
 # Spectra ranges
-_BACKWARD_SPECTRA = [3, 134]
-_FORWARD_SPECTRA = [135, 198]
+_BACKWARD_SPECTRA = (3, 134)
+_BACKWARD_BANKS = ((3, 46), (47, 90), (91, 134))
+_FORWARD_SPECTRA = (135, 198)
+_FORWARD_BANKS = ((135, 142), (143, 150), (151, 158), (159, 166),
+                  (167, 174), (175, 182), (183, 190), (191, 198))
+# Crop range (VMS defaults)
+_TOF_RANGE = [50, 562]
 
 class VesuvioReduction(DataProcessorAlgorithm):
 
@@ -89,11 +94,11 @@ class VesuvioReduction(DataProcessorAlgorithm):
 
     def PyExec(self):
         """Run the processing"""
-        loaded_data = self._load_data()
+        loaded_data = self._load_and_crop_data()
 
         self.setProperty("OutputWorkspace", loaded_data)
 
-    def _load_data(self):
+    def _load_and_crop_data(self):
         """
            Load the data and return the workspace
         """
@@ -111,9 +116,11 @@ class VesuvioReduction(DataProcessorAlgorithm):
         kwargs = {"Filename": self.getProperty("Runs").value,
                   "Mode": diff_mode, "InstrumentParFile": self.getProperty("IPFilename").value,
                   "SpectrumList": spectra}
-
-        alg = self._execute_child_alg("LoadVesuvio", **kwargs)
-        return alg.getProperty("OutputWorkspace").value
+        loader = self._execute_child_alg("LoadVesuvio", **kwargs)
+        full_range = loader.getProperty("OutputWorkspace").value
+        cropper = self._execute_child_alg("CropWorkspace", InputWorkspace=full_range,
+                                          XMin=_TOF_RANGE[0], XMax=_TOF_RANGE[1])
+        return cropper.getProperty("OutputWorkspace").value
 
     def _execute_child_alg(self, name, **kwargs):
         alg = self.createChildAlgorithm(name)

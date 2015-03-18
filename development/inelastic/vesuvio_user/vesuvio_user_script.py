@@ -29,12 +29,10 @@ fit_mode = 'bank'
 # Example 3: "forward" will process all spectra in the forward scattering banks
 spectra = 'forward'
 
-# Masses and properties for fit. These are different lists that
-# combine to give the overall properties for the masses
-#
-# 'masses' defines the actual mass values
+# Masses and properties for fit.
+#   'masses' defines the actual mass values
 masses = [1.0079, 33, 27, 133]
-# 'functions' defines the type of profile function in a fit for each mass and should match the length of masses
+#   'functions' defines the type of profile function in a fit for each mass and should match the length of masses
 # 'GramCharlier' should generally be used for the first mass only. There are extra
 #  keys required if it used:
 #    'hermite_coeffs': A list of 1/0 to indicate whether a given coefficient is included
@@ -42,7 +40,6 @@ masses = [1.0079, 33, 27, 133]
 #    'sears_flag': If k is fixed then sears_flag=1 fixes k=sqrt(2)/12 whereas sears_flag=0
 #                 fixes k=0
 functions = ["GramCharlier", "Gaussian", "Gaussian", "Gaussian"]
-
 # 'fixed_widths' defines the values of those widths that are fixed and should match the length of masses
 # A 0 should be used for a width that will not be fixed.
 fixed_widths = [0, 10, 13, 30]

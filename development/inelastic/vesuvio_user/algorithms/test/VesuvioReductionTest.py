@@ -23,6 +23,8 @@ class VesuvioReductionTest(unittest.TestCase):
         output_ws = alg.getProperty("OutputWorkspace").value
 
         self.assertEqual(64, output_ws.getNumberHistograms())
+        self.assertAlmostEqual(50.0, output_ws.readX(0)[0])
+        self.assertAlmostEqual(562.0, output_ws.readX(0)[-1])
 
     # -------------- Failure cases ------------------
 
