@@ -12,9 +12,10 @@ from mantid.simpleapi import VesuvioReduction
 
 # Specify the run(s) to process. Can be either a single number or a list of
 # two numbers defining ranges
-# Example: 14188 will process the single run
-# Example 2: [14188, 14195] will process the range 14188-14195
-runs = [15039, 15045]
+# Example: "15039" will process the single run
+# Example 2: "15039-15045" will process the sum of range 14188-15045
+# Example 2: "15039,15045" will process the sum of 14188,15045
+runs = "15039-15045"
 
 # Fitting mode. Options are:
 #    bank: spectra from each bank are summed and each bank is then fitted separately
@@ -28,25 +29,26 @@ fit_mode = 'bank'
 # Example 3: "forward" will process all spectra in the forward scattering banks
 spectra = 'forward'
 
-# Masses. Each mass is specified by a Python dictionary and then combined into a
-# list of masses. The dictionary should have the following keys:
-#   'value': the actual mass in amu
-#   'widths': a single number for a fixed with or a list of 3 numbers,
-#             [min,start,max] for a fitted width
-#   'function': Name of the fit function. Options: 'Gaussian', 'GramCharlier'
+# Masses and properties for fit. These are different lists that
+# combine to give the overall properties for the masses
 #
+# 'masses' defines the actual mass values
+masses = [1.0079, 33, 27, 133]
+# 'functions' defines the type of profile function in a fit for each mass and should match the length of masses
 # 'GramCharlier' should generally be used for the first mass only. There are extra
-# keys required if it used:
-#   'hermite_coeffs': A list of 1/0 to indicate whether a given coefficient is included
-#   'k_free': True/False to indicate whether k is either fixed or remains free
-#   'sears_flag': If k is fixed then sears_flag=1 fixes k=sqrt(2)/12 whereas sears_flag=0
+#  keys required if it used:
+#    'hermite_coeffs': A list of 1/0 to indicate whether a given coefficient is included
+#    'k_free': True/False to indicate whether k is either fixed or remains free
+#    'sears_flag': If k is fixed then sears_flag=1 fixes k=sqrt(2)/12 whereas sears_flag=0
 #                 fixes k=0
-mass1 = {'value': 1.0079, 'widths':[2, 5, 7], 'function': 'GramCharlier',
-         'hermite_coeffs': [1, 0, 0], 'k_free': True, 'sears_flag': 1}
-mass2 = {'value': 16.0, 'widths': 10, 'function': 'Gaussian'}
-mass3 = {'value': 27.0, 'widths': 13, 'function': 'Gaussian'}
-mass4 = {'value': 133.0, 'widths': 30, 'function': 'Gaussian'}
-masses = [mass1, mass2, mass3, mass4]
+functions = ["GramCharlier", "Gaussian", "Gaussian", "Gaussian"]
+
+# 'fixed_widths' defines the values of those widths that are fixed and should match the length of masses
+# A 0 should be used for a width that will not be fixed.
+fixed_widths = [0, 10, 13, 30]
+# 'width_ranges' is only required if there are some unfixed widths above. If there are none set this to an
+# empty list, else there should be 3 values (min,default,max) per unfixed mass.
+width_ranges = [2, 5, 7]
 
 # Intensity constraints. Can be None or a tuple of lists defining the required
 # constraints to be imposed between the intensity values for each mass.
@@ -61,18 +63,17 @@ constraints = ([0, 1, 0, -4])
 # Calibration file specifying the detector positions and parameter values
 ip_file = 'IP0004_10.par'
 
-# Spectra summing. Only applicable if the fit_mode='spectra'. If True then all input
-# spectra are summed together and processed
-sum_spectra = True
-
 # Differencing mode. You should rarely need to modify this. Options are:
-#    double
 #    single
-diff_mode = 'double'
+#    double
+diff_mode = 'single'
 
 # --------------------------------------------------------------------------------
 # Processing
 # --------------------------------------------------------------------------------
-#VesuvioReduction(Runs=runs
-# , Spectra=spectra)
-mantid.api.AlgorithmManager.create("VesuvioReduction").initialize()
+outws = VesuvioReduction(Runs=runs,
+                 Masses=masses,
+                 FixedWidths=fixed_widths,
+                 WidthConstraints=width_ranges,
+                 MassProfiles=functions,
+                 DifferenceMode=diff_mode)
