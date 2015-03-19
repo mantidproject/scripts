@@ -31,7 +31,7 @@ spectra = 'forward'
 
 # Masses and properties for fit.
 #   'masses' defines the actual mass values
-masses = [1.0079, 33, 27, 133]
+masses = [1.0079, 16, 27, 133]
 #   'functions' defines the type of profile function in a fit for each mass and should match the length of masses
 # 'GramCharlier' should generally be used for the first mass only. There are extra
 #  keys required if it used:
@@ -68,7 +68,7 @@ diff_mode = 'single'
 # --------------------------------------------------------------------------------
 # Processing
 # --------------------------------------------------------------------------------
-outws = VesuvioReduction(Runs=runs,
+fitted, params = VesuvioReduction(Runs=runs, IPFilename=ip_file,
                  Masses=masses,
                  FixedWidths=fixed_widths,
                  WidthConstraints=width_ranges,

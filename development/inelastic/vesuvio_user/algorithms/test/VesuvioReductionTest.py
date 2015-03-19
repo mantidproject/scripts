@@ -12,19 +12,23 @@ class VesuvioReductionTest(unittest.TestCase):
 
     # -------------- Success cases ------------------
 
-    def test_single_run_produces_correct_output(self):
-        alg = self._create_algorithm(Runs="15039",
+    def test_single_run_produces_correct_output_workspace_index0(self):
+        alg = self._create_algorithm(Runs="15039", IPFilename="IP0004_10.par",
                                      Masses=[1.0079, 33, 27, 133],
                                      FixedWidths=[0, 10, 13, 30],
                                      WidthConstraints=[2, 5, 7],
                                      MassProfiles=["GramCharlier",
                                                    "Gaussian", "Gaussian", "Gaussian"])
         alg.execute()
-        output_ws = alg.getProperty("OutputWorkspace").value
+        output_ws = alg.getProperty("FittedWorkspace").value
 
-        self.assertEqual(64, output_ws.getNumberHistograms())
+        self.assertEqual(7, output_ws.getNumberHistograms())
         self.assertAlmostEqual(50.0, output_ws.readX(0)[0])
         self.assertAlmostEqual(562.0, output_ws.readX(0)[-1])
+
+        self.assertAlmostEqual(0.012819595690617192, output_ws.readY(0)[0])
+        self.assertAlmostEqual(0.020656898709105809, output_ws.readY(0)[-1])
+
 
     # -------------- Failure cases ------------------
 
@@ -46,7 +50,7 @@ class VesuvioReductionTest(unittest.TestCase):
         self.assertRaises(ValueError, alg.setProperty, "MassProfiles", [])
 
     def test_functions_list_not_matching_length_masses_throws_error(self):
-        alg = self._create_algorithm(Runs="15039-15045",
+        alg = self._create_algorithm(Runs="15039-15045", IPFilename="IP0004_10.par",
                                      Masses=[1.0079, 33],
                                      FixedWidths=[5,30],
                                      MassProfiles=["GramCharlier"])
@@ -54,7 +58,7 @@ class VesuvioReductionTest(unittest.TestCase):
         self.assertRaises(RuntimeError, alg.execute)
 
     def test_fixedwidth_list_not_matching_length_masses_throws_error(self):
-        alg = self._create_algorithm(Runs="15039-15045",
+        alg = self._create_algorithm(Runs="15039-15045", IPFilename="IP0004_10.par",
                                      Masses=[1.0079, 33],
                                      FixedWidths=[5],
                                      MassProfiles=["GramCharlier", "Gaussian"])
@@ -62,9 +66,9 @@ class VesuvioReductionTest(unittest.TestCase):
         self.assertRaises(RuntimeError, alg.execute)
 
     def test_widthconstraints_not_3_times_length_of_number_of_non_fixed_widths_throws_error(self):
-        alg = self._create_algorithm(Runs="15039-15045",
+        alg = self._create_algorithm(Runs="15039-15045", IPFilename="IP0004_10.par",
                                      Masses=[1.0079, 33],
-                                     FixedWidths=[0, 5],
+                                     FixedWidths=[-1, 5],
                                      WidthConstraints=[2, 5],
                                      MassProfiles=["GramCharlier", "Gaussian"])
 
@@ -76,7 +80,8 @@ class VesuvioReductionTest(unittest.TestCase):
         alg = AlgorithmManager.createUnmanaged("VesuvioReduction")
         alg.initialize()
         alg.setChild(True)
-        alg.setProperty("Outputworkspace", "__unused")
+        alg.setProperty("FittedWorkspace", "__unused")
+        alg.setProperty("FittedParameters", "__unused")
         for key, value in kwargs.iteritems():
             alg.setProperty(key, value)
         return alg

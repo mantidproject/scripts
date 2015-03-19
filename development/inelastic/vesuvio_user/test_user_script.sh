@@ -5,6 +5,8 @@ SCRIPT_DIR=`dirname $0`
 # Copy user properties
 cp $SCRIPT_DIR/Mantid.user.properties $HOME/.mantid
 
+export PYTHONPATH=$SCRIPT_DIR/ncs:$PYTHONPATH
+
 if [ -z "$MANTIDPATH" ]; then
   export MANTIDPATH=/opt/Mantid/bin
   export PYTHONPATH=/opt/Mantid/bin:$PYTHONPATH
