@@ -2,7 +2,7 @@
 """
 import unittest
 
-TEST_MODULES = ["ProfileTests"]
+TEST_MODULES = ["ProfileTest", "FittingOptionsTest"]
 
 test_loader = unittest.defaultTestLoader
 suite = unittest.TestSuite()

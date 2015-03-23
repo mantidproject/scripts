@@ -1,7 +1,7 @@
 import unittest
 
 from vesuvio.profiles import (create_profile_from_str, GramCharlierMassProfile,
-                          GaussianMassProfile)
+                              GaussianMassProfile)
 
 # --------------------------------------------------------------------------------
 # Gaussian
