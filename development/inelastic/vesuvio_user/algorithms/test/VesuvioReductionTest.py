@@ -49,30 +49,12 @@ class VesuvioReductionTest(unittest.TestCase):
 
         self.assertRaises(ValueError, alg.setProperty, "MassProfiles", "")
 
-    # def test_number_functions_in_list_not_matching_length_masses_throws_error(self):
-    #     alg = self._create_algorithm(Runs="15039-15045", IPFilename="IP0004_10.par",
-    #                                  Masses=[1.0079, 33],
-    #                                  FixedWidths=[5,30],
-    #                                  MassProfiles=["GramCharlier"])
-    #
-    #     self.assertRaises(RuntimeError, alg.execute)
-    #
-    # def test_fixedwidth_list_not_matching_length_masses_throws_error(self):
-    #     alg = self._create_algorithm(Runs="15039-15045", IPFilename="IP0004_10.par",
-    #                                  Masses=[1.0079, 33],
-    #                                  FixedWidths=[5],
-    #                                  MassProfiles=["GramCharlier", "Gaussian"])
-    #
-    #     self.assertRaises(RuntimeError, alg.execute)
-    #
-    # def test_widthconstraints_not_3_times_length_of_number_of_non_fixed_widths_throws_error(self):
-    #     alg = self._create_algorithm(Runs="15039-15045", IPFilename="IP0004_10.par",
-    #                                  Masses=[1.0079, 33],
-    #                                  FixedWidths=[-1, 5],
-    #                                  WidthConstraints=[2, 5],
-    #                                  MassProfiles=["GramCharlier", "Gaussian"])
-    #
-    #     self.assertRaises(RuntimeError, alg.execute)
+    def test_number_functions_in_list_not_matching_length_masses_throws_error(self):
+        alg = self._create_algorithm(Runs="15039-15045", IPFilename="IP0004_10.par",
+                                     Masses=[1.0079, 33],
+                                     MassProfiles="function=Gaussian,width=5;")
+
+        self.assertRaises(RuntimeError, alg.execute)
 
     # -------------- Helpers --------------------
 

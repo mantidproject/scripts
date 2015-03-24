@@ -48,25 +48,11 @@ mass3 = {'value': 27.0, 'function': 'Gaussian', 'width': 13}
 mass4 = {'value': 133.0, 'function': 'Gaussian', 'width': 30}
 masses = [mass1, mass2, mass3, mass4]
 
-#
-# #   'masses' defines the actual mass values
-# masses = [1.0079, 16, 27, 133]
-# #   'functions' defines the type of profile function in a fit for each mass and should match the length of masses
-# # 'GramCharlier' should generally be used for the first mass only. There are extra
-# #  keys required if it used:
-# functions = ["GramCharlier", "Gaussian", "Gaussian", "Gaussian"]
-# # 'fixed_widths' defines the values of those widths that are fixed and should match the length of masses
-# # A 0 should be used for a width that will not be fixed.
-# fixed_widths = [0, 10, 13, 30]
-# # 'width_ranges' is only required if there are some unfixed widths above. If there are none set this to an
-# # empty list, else there should be 3 values (min,default,max) per unfixed mass.
-# width_ranges = [2, 5, 7]
-
-# Intensity constraints. Can be None or a tuple of lists defining the required
+# Intensity constraints. Can be None or a list of lists defining the required
 # constraints to be imposed between the intensity values for each mass.
-# Example 1: ([0, 1, 0, -4]) defines a single constraint that the intensity of mass 2
+# Example 1: list([0, 1, 0, -4]) defines a single constraint that the intensity of mass 2
 #            should be 4 times the intensity of mass 4
-constraints = ([0, 1, 0, -4])
+constraints = list([0, 1, 0, -4])
 
 # --------------------------------------------------------------------------------
 # Advanced flags
@@ -93,10 +79,16 @@ for mass_prop in masses:
         else:
              function_props.append("{0}={1}".format(key,value))
     profiles.append(",".join(function_props))
-
 profiles = ";".join(profiles)
-print profiles
+
+# Put the constraint arguments into something the algorithm can understand
+if not isinstance(constraints[0], list):
+    constraints = list(constraints[0])
+constraints = [str(c) for c in constraints]
+intensity_constraints = ";".join(constraints)
+
 fitted, params = VesuvioReduction(Runs=runs, IPFilename=ip_file,
                  Masses=masses,
                  MassProfiles=profiles,
+                 IntensityConstraints=intensity_constraints,
                  DifferenceMode=diff_mode)

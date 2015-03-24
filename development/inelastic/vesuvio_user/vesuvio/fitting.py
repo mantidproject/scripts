@@ -1,6 +1,6 @@
 """Fitting support routines
 """
-import re
+import ast
 
 from profiles import create_profile_from_str
 
@@ -8,17 +8,27 @@ from profiles import create_profile_from_str
 # Functions
 # --------------------------------------------------------------------------------
 
-def parse_fit_options(mass_values, profiles):
+def parse_fit_options(mass_values, profiles, constraints_str=""):
     """Parse the function string into a more usable format"""
 
     # Individual functions are separated by semi-colon separators
-    mass_functions = profiles.split(";")
+    mass_functions = profiles.rstrip(";").split(";")
+    if len(mass_functions) != len(mass_values):
+        raise ValueError("Expected the number of 'function=' definitions to equal the number of masses. "
+                         "Found {0} masses but {1} function definition".format(len(mass_values), len(mass_functions)))
     profiles = []
     for mass_value, prop_str in zip(mass_values, mass_functions):
         profiles.append(create_profile_from_str(prop_str, mass_value))
 
-    print "WARNING: No constraints set"
-    fit_opts = FittingOptions(profiles, None)
+    if constraints_str != "":
+        constraint_strings = constraints_str.split(";")
+        constraints = []
+        for constr_str in constraint_strings:
+            constraints.append(ast.literal_eval(constr_str))
+    else:
+        constraints = None
+
+    fit_opts = FittingOptions(profiles, constraints)
     return fit_opts
 
 # --------------------------------------------------------------------------------
