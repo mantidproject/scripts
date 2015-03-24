@@ -123,52 +123,29 @@ class FittingOptions(object):
     def create_constraints_str(self):
         """Returns the string of constraints for this Fit
         """
-        constraints = ""
-        for index, mass_info in enumerate(self.masses):
+        constraints = []
+        for func_index, mass_info in enumerate(self.mass_profiles):
             # Constraints
-            func_index = index
-            par_name = "f%d.Width" % func_index
-            widths = mass_info['widths']
-            if hasattr(widths, "__len__"):
-                constraints += "%f < %s < %f," % (widths[0], par_name, widths[2])
+            prefix = "f{0}.".format(func_index)
+            constraint = mass_info.create_constraint_str(prefix)
+            if constraint != "":
+                constraints.append(constraint)
 
-        return constraints.rstrip(",")
+        return ",".join(constraints).rstrip(",")
 
     def create_ties_str(self):
         """Returns the string of ties for this Fit
         """
+        ties = []
+        for func_index, mass_info in enumerate(self.mass_profiles):
+            # Constraints
+            prefix = "f{0}.".format(func_index)
 
-        ties = ""
-        # Widths
-        for index, mass_info in enumerate(self.masses):
-            func_index = index
-            par_value_prefix = "f%d." % (func_index)
-            par_name = "%sWidth" % par_value_prefix
-            widths = mass_info['widths']
-            if not hasattr(widths, "__len__"):
-                # Fixed width
-                ties += "%s=%f," % (par_name,widths)
+            tie = mass_info.create_ties_str(prefix)
+            if tie != "":
+                ties.append(tie)
 
-            func_type = mass_info['function']
-            if func_type == "GramCharlier":
-                if 'k_free' not in mass_info:
-                    raise RuntimeError("GramCharlier requested for mass %d but no k_free argument was found" % (index+1))
-                k_free = mass_info['k_free']
-                ## FSE constraint
-                if k_free:
-                    continue
-
-                if 'sears_flag' not in mass_info:
-                    raise RuntimeError("Fixed k requested for mass %d but no sears_flag argument was found" % (index+1))
-                sears_flag = mass_info['sears_flag']
-                par_name = "%sFSECoeff" % par_value_prefix
-                if sears_flag == 1:
-                    value = "%sWidth*%s" % (par_value_prefix,"sqrt(2)/12")#math.sqrt(2.)/12.0)
-                else:
-                    value = "0"
-                ties += "%s=%s," % (par_name, value)
-
-        return ties.rstrip(",")
+        return ",".join(ties).rstrip(",")
 
     def create_global_function_str(self, n, param_values=None):
         """

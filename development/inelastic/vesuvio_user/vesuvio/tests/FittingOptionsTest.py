@@ -27,6 +27,29 @@ class FittingOptionsTest(unittest.TestCase):
             "name=GaussianComptonProfile,Mass=16,Width=11.0,Intensity=4.5"
         self.assertEqual(expected, fit_opts.create_function_str(param_vals))
 
+    def test_constraint_str_gives_expected_value_when_width_has_constraint(self):
+        fit_opts = self._create_test_fitting_opts()
+
+        expected = "2 < f0.Width < 7"
+        self.assertEqual(expected, fit_opts.create_constraints_str())
+
+        # Fix the width and the constraint should be empty
+        fit_opts.mass_profiles[0].width = 5.0
+        expected = ""
+        self.assertEqual(expected, fit_opts.create_constraints_str())
+
+    def test_ties_str_gives_expected_value(self):
+        fit_opts = self._create_test_fitting_opts()
+
+        expected = "f1.Width=10"
+        self.assertEqual(expected, fit_opts.create_ties_str())
+        # Fix the width and FSECoeff
+        fit_opts.mass_profiles[0].width = 5.0
+        fit_opts.mass_profiles[0].k_free = 0
+        expected = "f0.Width=5.0,f0.FSECoeff=f0.Width*sqrt(2)/12,f1.Width=10"
+        self.assertEqual(expected, fit_opts.create_ties_str())
+
+
     def _create_test_fitting_opts(self):
         gramc = GramCharlierMassProfile([2, 5, 7], 1.0079, [1, 0, 0], 1, 1)
         gauss = GaussianMassProfile(10, 16)
