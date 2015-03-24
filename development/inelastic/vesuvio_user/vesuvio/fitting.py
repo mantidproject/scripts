@@ -38,14 +38,13 @@ def parse_fit_options(mass_values, profiles, constraints_str=""):
 class FittingOptions(object):
     """Holds all of the parameters for the fitting that are not related to the domain"""
 
-    def __init__(self, profiles, constraints):
+    def __init__(self, profiles, constraints=None, background=None):
         self.smooth_points = None
         self.bad_data_error = None
 
         self.mass_profiles = profiles
-        self.background_function = None
-        self.background_order = None
         self.constraints = constraints
+        self.background = None
 
         self.global_fit = False
         self.output_prefix = None
@@ -81,26 +80,13 @@ class FittingOptions(object):
 
         for index, mass_profile in enumerate(self.mass_profiles):
             par_prefix = "f{0}.".format(index)
-            function_str += mass_profile.create_fitting_str(default_vals, par_prefix)
+            function_str += mass_profile.create_fit_function_str(default_vals, par_prefix)
 
         # Add on a background polynomial if requested
-        if self.has_been_set("background_order"):
-            if not isinstance(self.background_order, types.IntType):
-                raise RuntimeError("background_order parameter should be an integer, found '%s'" % type(self.background_order))
-            if self.has_been_set("background_function"):
-                if not isinstance(self.background_function, types.StringType):
-                    raise RuntimeError("background_function parameter should be a string, found '%s'" % type(self.background_function))
-                background_func = self.background_function
-            else:
-                background_func = self._defaults["background_function"]
-            background_str = "name=%s,n=%d" % (background_func,self.background_order)
-            if all_free:
-                func_index = len(self.masses)
-                for power in range (0,self.background_order+1):
-                    param_name = 'A%d' % (power)
-                    comp_par_name = 'f%d.%s' % (func_index,param_name)
-                    background_str += ",%s=%f" % (param_name,param_values[comp_par_name])
-            function_str += "%s" % background_str.rstrip(",")
+        if self.background is not None:
+            bkgd_index = len(self.mass_profiles)
+            function_str += self.background.create_fit_function_str(default_vals,
+                                                                    param_prefix="f{0}.".format(bkgd_index))
 
         return function_str.rstrip(";")
 
@@ -200,3 +186,4 @@ class FittingOptions(object):
         """Returns a string representation of the object
         """
         self.generate_function_str()
+

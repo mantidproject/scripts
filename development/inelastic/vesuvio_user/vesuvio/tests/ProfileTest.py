@@ -33,7 +33,7 @@ class GaussianMassProfileTest(unittest.TestCase):
         test_profiles = GaussianMassProfile(10, 16)
 
         expected = "name=GaussianComptonProfile,Mass=16,Width=10;"
-        self.assertEqual(expected, test_profiles.create_fitting_str())
+        self.assertEqual(expected, test_profiles.create_fit_function_str())
 
     def test_function_string_has_expected_form_with_defaults_given(self):
         test_profiles = GaussianMassProfile(10, 16)
@@ -41,7 +41,7 @@ class GaussianMassProfileTest(unittest.TestCase):
         param_vals = {"f1.Width": 11.0, "f1.Intensity": 4.5}
 
         expected = "name=GaussianComptonProfile,Mass=16,Width=11.0,Intensity=4.5;"
-        self.assertEqual(expected, test_profiles.create_fitting_str(param_vals, param_prefix))
+        self.assertEqual(expected, test_profiles.create_fit_function_str(param_vals, param_prefix))
 
     def test_constraint_str_is_empty_for_fixed_width(self):
         test_profile = GaussianMassProfile(10, 16)
@@ -113,7 +113,7 @@ class GramCharlierMassProfileTest(unittest.TestCase):
         test_profile = GramCharlierMassProfile(10, 16,[1,0,1],1,1)
 
         expected = "name=GramCharlierComptonProfile,Mass=16,HermiteCoeffs=1 0 1,Width=10;"
-        self.assertEqual(expected, test_profile.create_fitting_str())
+        self.assertEqual(expected, test_profile.create_fit_function_str())
 
     def test_function_string_has_expected_form_with_given_values(self):
         test_profile = GramCharlierMassProfile(10, 16,[1,0,1],1,1)
@@ -123,7 +123,7 @@ class GramCharlierMassProfileTest(unittest.TestCase):
 
         expected = "name=GramCharlierComptonProfile,Mass=16,HermiteCoeffs=1 0 1,"\
                    "Width=11.0,FSECoeff=0.100000,C_0=0.250000,C_4=0.750000;"
-        self.assertEqual(expected, test_profile.create_fitting_str(param_vals, param_prefix))
+        self.assertEqual(expected, test_profile.create_fit_function_str(param_vals, param_prefix))
 
     def test_constraint_str_for_fixed_width(self):
         test_profile = GramCharlierMassProfile(10, 16, [1,0,1], k_free=1, sears_flag=1)

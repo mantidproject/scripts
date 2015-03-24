@@ -16,7 +16,7 @@ class MassProfile(object):
         self.width = width
         self.mass = mass
 
-    def create_fitting_str(self, param_vals=None, param_prefix=""):
+    def create_fit_function_str(self, param_vals=None, param_prefix=""):
         raise NotImplementedError("MassProfile: Subclasses should overrode create_fitting_str")
 
     def create_constraint_str(self, param_prefix=""):
@@ -66,7 +66,7 @@ class GaussianMassProfile(MassProfile):
 
         return GaussianMassProfile(width, mass)
 
-    def create_fitting_str(self, param_vals=None, param_prefix=""):
+    def create_fit_function_str(self, param_vals=None, param_prefix=""):
         """Creates a string used by the Fit algorithm for this profile
 
         :param param_vals: A table of values for the parameters that override those set
@@ -130,7 +130,7 @@ class GramCharlierMassProfile(MassProfile):
         return GramCharlierMassProfile(parsed_values[0], mass, parsed_values[1],
                                        parsed_values[2], parsed_values[3])
 
-    def create_fitting_str(self, param_vals=None, param_prefix=""):
+    def create_fit_function_str(self, param_vals=None, param_prefix=""):
         """Creates a string used by the Fit algorithm for this profile
 
         :param param_vals: A table of values for the parameters that override those set
