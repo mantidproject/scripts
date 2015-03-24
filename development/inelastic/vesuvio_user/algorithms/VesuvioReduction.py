@@ -1,6 +1,4 @@
 # pylint: disable=no-init
-import types
-
 from mantid.kernel import *
 from mantid.api import *
 
@@ -138,11 +136,11 @@ class VesuvioReduction(DataProcessorAlgorithm):
 
             # Run second time using standard CompositeFunction & no constraints matrix to
             # calculate correct reduced chisq
-            param_values = results[1]
+            param_values = TableWorkspaceDictionaryFacade(results[1])
 
         function_str = fit_options.create_function_str(param_values)
         max_iter = 0 if simulation else 1
-        return self._do_fit(function_str, data_ws, fit_options.workspace_index, constraints,
+        return self._do_fit(function_str, data_ws, workspace_index, constraints,
                             ties, max_iter=max_iter)
 
     # ----------------------------------------------------------------------------------------
@@ -187,6 +185,25 @@ class VesuvioReduction(DataProcessorAlgorithm):
             return outputs[0]
         else:
             return tuple(outputs)
+
+# -----------------------------------------------------------------------------------------
+# Helper to translate from an table workspace to a dictionary. Should be on the workspace
+# really ...
+# -----------------------------------------------------------------------------------------
+class TableWorkspaceDictionaryFacade(object):
+    """
+    Allows an underlying table workspace to be treated like a read-only dictionary
+    """
+
+    def __init__(self, held_object):
+        self._table_ws = held_object
+
+    def __getitem__(self, item):
+        for row in self._table_ws:
+            if row['Name'] == item:
+                return row['Value']
+        #endfor
+        raise KeyError(str(item))
 
 # -----------------------------------------------------------------------------------------
 AlgorithmFactory.subscribe(VesuvioReduction)
