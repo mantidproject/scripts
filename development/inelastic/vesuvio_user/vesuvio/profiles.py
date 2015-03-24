@@ -1,10 +1,11 @@
 """Holds classes that define the mass profiles
 """
 import ast
+import collections
 import re
 
 # --------------------------------------------------------------------------------
-# Mass profile interface
+# Mass profile base class
 # --------------------------------------------------------------------------------
 
 class MassProfile(object):
@@ -14,6 +15,29 @@ class MassProfile(object):
     def __init__(self, width, mass):
         self.width = width
         self.mass = mass
+
+    def create_fitting_str(self, param_vals=None, param_prefix=""):
+        raise NotImplementedError("MassProfile: Subclasses should overrode create_fitting_str")
+
+    def create_constraint_str(self, param_prefix=""):
+        """Returns a constraints string for the Fit algorithm
+
+        :param param_prefix: An optional prefix for the parameter name
+        """
+        try:
+            return "{0} < {1} < {2}".format(self.width[0], param_prefix + "Width", self.width[2])
+        except TypeError:
+            return ""
+
+    def create_ties_str(self, param_prefix=""):
+        """Return a ties string for the Fit algorithm
+
+        :param param_prefix: An optional prefix for the parameter name
+        """
+        if not isinstance(self.width, collections.Iterable):
+            return "{0}={1}".format(param_prefix + "Width", self.width)
+        else:
+            return ""
 
 # --------------------------------------------------------------------------------
 # Gaussian profile
@@ -142,6 +166,25 @@ class GramCharlierMassProfile(MassProfile):
 
         return fitting_str + ";"
 
+    def create_ties_str(self, param_prefix=""):
+        """Return a ties string for the Fit algorithm
+
+        :param param_prefix: An optional prefix for the parameter name
+        """
+        ties = super(GramCharlierMassProfile, self).create_ties_str(param_prefix)
+        if not self.k_free:
+            # Sears flag controls value of FSECoeff
+            param_name = param_prefix + "FSECoeff"
+            if self.sears_flag == 1:
+                # tie to multiple of the width
+                tied_value = param_prefix + "Width*sqrt(2)/12"
+            else:
+                tied_value = "0"
+            if ties != "":
+                ties += ","
+            ties += "{0}={1}".format(param_name, tied_value)
+
+        return ties
 
     @classmethod
     def _parse_list(cls, func_str, prop_name):

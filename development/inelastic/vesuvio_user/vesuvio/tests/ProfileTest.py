@@ -43,6 +43,31 @@ class GaussianMassProfileTest(unittest.TestCase):
         expected = "name=GaussianComptonProfile,Mass=16,Width=11.0,Intensity=4.5;"
         self.assertEqual(expected, test_profiles.create_fitting_str(param_vals, param_prefix))
 
+    def test_constraint_str_is_empty_for_fixed_width(self):
+        test_profile = GaussianMassProfile(10, 16)
+
+        self.assertEqual("", test_profile.create_constraint_str())
+
+    def test_constraint_str_for_constrained_width(self):
+        test_profile = GaussianMassProfile([2,5,7], 16)
+
+        self.assertEqual("2 < Width < 7", test_profile.create_constraint_str())
+        # and with prefix
+        self.assertEqual("2 < f0.Width < 7", test_profile.create_constraint_str("f0."))
+
+    def test_ties_str_is_empty_for_fixed_width(self):
+        test_profile = GaussianMassProfile(10, 16)
+
+        self.assertEqual("Width=10", test_profile.create_ties_str())
+
+    def test_ties_str_for_constrained_width_is_empty(self):
+        test_profile = GaussianMassProfile([2,5,7], 16)
+
+        self.assertEqual("", test_profile.create_ties_str())
+        # and with prefix
+        self.assertEqual("", test_profile.create_ties_str("f0."))
+
+
     # ---------------- Failure cases ---------------------------
 
     def test_string_not_starting_with_function_equals_name_gives_error(self):
@@ -99,6 +124,64 @@ class GramCharlierMassProfileTest(unittest.TestCase):
         expected = "name=GramCharlierComptonProfile,Mass=16,HermiteCoeffs=1 0 1,"\
                    "Width=11.0,FSECoeff=0.100000,C_0=0.250000,C_4=0.750000;"
         self.assertEqual(expected, test_profile.create_fitting_str(param_vals, param_prefix))
+
+    def test_constraint_str_for_fixed_width(self):
+        test_profile = GramCharlierMassProfile(10, 16, [1,0,1], k_free=1, sears_flag=1)
+
+        expected = ""
+        self.assertEqual(expected, test_profile.create_constraint_str())
+
+    def test_constraint_str_for_constrained_width(self):
+        test_profile = GramCharlierMassProfile([2,5,7], 16, [1,0,1], k_free=1, sears_flag=1)
+
+        expected = "2 < Width < 7"
+        self.assertEqual(expected, test_profile.create_constraint_str())
+        prefix = "f0."
+        expected = "2 < f0.Width < 7"
+        self.assertEqual(expected, test_profile.create_constraint_str(prefix))
+
+    def test_ties_str_for_constrained_width_and_k_is_free_is_empty(self):
+        test_profile = GramCharlierMassProfile([2,5,7], 16, [1,0,1], k_free=1, sears_flag=1)
+
+        expected = ""
+        self.assertEqual(expected, test_profile.create_ties_str())
+
+    def test_ties_str_for_constrained_width(self):
+        # k is free
+        test_profile = GramCharlierMassProfile([2,5,7], 16, [1,0,1], k_free=1, sears_flag=1)
+
+        expected = ""
+        self.assertEqual(expected, test_profile.create_ties_str())
+
+        # k is tied, sears=0
+        test_profile = GramCharlierMassProfile([2,5,7], 16, [1,0,1], k_free=0, sears_flag=0)
+
+        expected = "f0.FSECoeff=0"
+        self.assertEqual(expected, test_profile.create_ties_str("f0."))
+
+        # k is tied, sears=1
+        test_profile = GramCharlierMassProfile([2,5,7], 16, [1,0,1], k_free=0, sears_flag=1)
+
+        expected = "f0.FSECoeff=f0.Width*sqrt(2)/12"
+        self.assertEqual(expected, test_profile.create_ties_str("f0."))
+
+    def test_ties_str_for_fixed_width(self):
+        test_profile = GramCharlierMassProfile(5, 16, [1,0,1], k_free=1, sears_flag=1)
+
+        expected = "Width=5"
+        self.assertEqual(expected, test_profile.create_ties_str())
+
+        # k is tied, sears=0
+        test_profile = GramCharlierMassProfile(5, 16, [1,0,1], k_free=0, sears_flag=0)
+
+        expected = "f0.Width=5,f0.FSECoeff=0"
+        self.assertEqual(expected, test_profile.create_ties_str("f0."))
+
+        # k is tied, sears=1
+        test_profile = GramCharlierMassProfile(5, 16, [1,0,1], k_free=0, sears_flag=1)
+
+        expected = "f0.Width=5,f0.FSECoeff=f0.Width*sqrt(2)/12"
+        self.assertEqual(expected, test_profile.create_ties_str("f0."))
 
     # ---------------- Failure cases ---------------------------
 
