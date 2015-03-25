@@ -11,11 +11,11 @@ fit_options = ncs.FitOptions()
 fit_options.workspace_index = 0
 fit_options.smooth_points = None
 fit_options.bad_data_error = 1e6
-fit_options.background_order = 3 # None to switch off
+fit_options.background_order = None # None to switch off
 
 # Mass options
 mass1 = {'value':1.0079, 'widths':[2,5,7], 'function':'GramCharlier',
-          'hermite_coeffs':[1,0,0],'k_free':True, 'sears_flag':1}
+          'hermite_coeffs':[1,0,0],'k_free':False, 'sears_flag':1}
 mass2 = {'value':16.0, 'widths':10, 'function':'Gaussian'}
 mass3 = {'value':27.0, 'widths':13, 'function':'Gaussian'}
 mass4 = {'value':133.0, 'widths':30, 'function':'Gaussian'}

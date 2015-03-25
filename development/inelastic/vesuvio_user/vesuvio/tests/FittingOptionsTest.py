@@ -65,7 +65,7 @@ class FittingOptionsTest(unittest.TestCase):
     def _create_test_fitting_opts(self):
         gramc = GramCharlierMassProfile([2, 5, 7], 1.0079, [1, 0, 0], 1, 1)
         gauss = GaussianMassProfile(10, 16)
-        constraints = ([1, -4],)
+        constraints = list([1, -4])
 
         return FittingOptions([gramc, gauss], constraints)
 

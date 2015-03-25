@@ -38,12 +38,20 @@ def parse_fit_options(mass_values, profiles, constraints_str=""):
 class FittingOptions(object):
     """Holds all of the parameters for the fitting that are not related to the domain"""
 
-    def __init__(self, profiles, constraints=None, background=None):
+    def __init__(self, profiles, intensity_constraints=None, background=None):
         self.smooth_points = None
         self.bad_data_error = None
 
         self.mass_profiles = profiles
-        self.constraints = constraints
+        if intensity_constraints is not None:
+            # Ensure that the constraints is a "2D" list
+            if hasattr(intensity_constraints[0], "__len__"):
+                self.intensity_constraints = intensity_constraints
+            else:
+                # trailing comma is important or the list gets undone
+                self.intensity_constraints = [intensity_constraints,]
+        else:
+            self.intensity_constraints = None
         self.background = None
 
         self.global_fit = False
@@ -72,7 +80,7 @@ class FittingOptions(object):
             function_str = "composite=CompositeFunction,NumDeriv=1;"
         else:
             function_str = "composite=ComptonScatteringCountRate,NumDeriv=1%s;"
-            matrix_str = self.create_matrix_string(self.constraints)
+            matrix_str = self.create_matrix_string(self.intensity_constraints)
             if matrix_str == "":
                 function_str = function_str % ""
             else:
@@ -94,22 +102,15 @@ class FittingOptions(object):
         """Returns a string for the value of the Matrix of intensity
         constraint values
         """
-        if self.constraints is None or len(self.constraints) == 0:
+        if self.intensity_constraints is None or len(self.intensity_constraints) == 0:
             return ""
 
-        if hasattr(self.constraints[0], "__len__"):
-            nrows = len(self.constraints)
-            ncols = len(self.constraints[0])
-        else:
-            nrows = 1
-            # without trailing comma a single-element tuple is automatically
-            # converted to just be the element
-            ncols = len(self.constraints)
-            # put back in sequence
+        nrows = len(self.intensity_constraints)
+        ncols = len(self.intensity_constraints[0])
 
         matrix_str = "\"Matrix(%d|%d)%s\""
         values = ""
-        for row in self.constraints:
+        for row in self.intensity_constraints:
             for val in row:
                 values += "%f|" % val
         values = values.rstrip("|")

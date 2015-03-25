@@ -114,7 +114,6 @@ class GramCharlierMassProfile(MassProfile):
         if not func_str.startswith(profile_prefix):
             raise TypeError("GramCharlier function string should start with 'function=GramCharlier,'")
 
-        func_str = func_str.lstrip(profile_prefix)
         key_names = [("width", cls._parse_list),
                      ("hermite_coeffs", cls._parse_list),
                      ("k_free", cls._parse_bool_flag),
