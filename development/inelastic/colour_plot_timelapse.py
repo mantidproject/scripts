@@ -18,8 +18,7 @@ encoder_utility = 'avconv'
 # Image filename pattern
 image_format = r'_%d.png'
 
-image_count = 0
-for ws in mtd[group_workspace]:
+for i, ws in enumerate(mtd[group_workspace]):
     # Create the plot
     plot = plot2D(ws)
 
@@ -39,14 +38,13 @@ for ws in mtd[group_workspace]:
         layer.newLegend(legend_text)
 
     # Get the image filename
-    image_filename = os.path.join(image_dir, image_format % image_count)
+    image_filename = os.path.join(image_dir, image_format % i)
 
     # Save image of colour fill plot
     plot.exportImage(image_filename)
 
     # Close
     plot.close()
-    image_count += 1
 
 image_filename_format = os.path.join(image_dir, image_format)
 video_filename = os.path.join(image_dir, group_workspace + '.mp4')
