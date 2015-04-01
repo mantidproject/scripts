@@ -61,6 +61,17 @@ class FittingOptionsTest(unittest.TestCase):
         expected = "f0.Width=5.0,f0.FSECoeff=f0.Width*sqrt(2)/12,f1.Width=10"
         self.assertEqual(expected, fit_opts.create_ties_str())
 
+    def test_fit_string_is_expected_when_background_is_included(self):
+        fit_opts = self._create_test_fitting_opts()
+
+        expected = "f1.Width=10"
+        self.assertEqual(expected, fit_opts.create_ties_str())
+        # Fix the width and FSECoeff
+        fit_opts.mass_profiles[0].width = 5.0
+        fit_opts.mass_profiles[0].k_free = 0
+        expected = "f0.Width=5.0,f0.FSECoeff=f0.Width*sqrt(2)/12,f1.Width=10"
+        self.assertEqual(expected, fit_opts.create_ties_str())
+
 
     def _create_test_fitting_opts(self):
         gramc = GramCharlierMassProfile([2, 5, 7], 1.0079, [1, 0, 0], 1, 1)
@@ -68,7 +79,6 @@ class FittingOptionsTest(unittest.TestCase):
         constraints = list([1, -4])
 
         return FittingOptions([gramc, gauss], constraints)
-
 
 if __name__ == '__main__':
     unittest.main()
