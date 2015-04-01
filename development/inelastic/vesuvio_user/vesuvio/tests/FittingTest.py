@@ -11,8 +11,8 @@ class FittingTest(unittest.TestCase):
 
         expected = \
             "composite=ComptonScatteringCountRate,NumDeriv=1,IntensityConstraints=\"Matrix(1|2)1.000000|-4.000000\";"\
-            "name=GramCharlierComptonProfile,Mass=1.0079,HermiteCoeffs=1 0 0,Width=5;"\
-            "name=GaussianComptonProfile,Mass=16,Width=10"
+            "name=GramCharlierComptonProfile,Mass=1.007900,HermiteCoeffs=1 0 0,Width=5.000000;"\
+            "name=GaussianComptonProfile,Mass=16.000000,Width=10.000000"
         self.assertEqual(expected, fit_opts.create_function_str())
 
         # add background
@@ -29,20 +29,20 @@ class FittingTest(unittest.TestCase):
 
         expected = \
             "composite=CompositeFunction,NumDeriv=1;"\
-            "name=GramCharlierComptonProfile,Mass=1.0079,HermiteCoeffs=1 0 0,Width=7.5,FSECoeff=0.100000,C_0=0.250000;"\
-            "name=GaussianComptonProfile,Mass=16,Width=11.0,Intensity=4.5"
+            "name=GramCharlierComptonProfile,Mass=1.007900,HermiteCoeffs=1 0 0,Width=7.500000,FSECoeff=0.100000,C_0=0.250000;"\
+            "name=GaussianComptonProfile,Mass=16.000000,Width=11.000000,Intensity=4.500000"
         self.assertEqual(expected, fit_opts.create_function_str(param_vals))
 
         fit_opts.background = PolynomialBackground(order=2)
         param_vals.update({"f2.A0": 2.0, "f2.A1": 3.0, "f2.A2": 4.0})
 
-        expected += ";name=Polynomial,n=2,A0=2.0,A1=3.0,A2=4.0"
+        expected += ";name=Polynomial,n=2,A0=2.000000,A1=3.000000,A2=4.000000"
         self.assertEqual(expected, fit_opts.create_function_str(param_vals))
 
     def test_constraint_str_gives_expected_value_when_width_has_constraint(self):
         fit_opts = self._create_test_fitting_opts()
 
-        expected = "2 < f0.Width < 7"
+        expected = "2.000000 < f0.Width < 7.000000"
         self.assertEqual(expected, fit_opts.create_constraints_str())
 
         # Fix the width and the constraint should be empty
@@ -53,18 +53,18 @@ class FittingTest(unittest.TestCase):
     def test_ties_str_gives_expected_value(self):
         fit_opts = self._create_test_fitting_opts()
 
-        expected = "f1.Width=10"
+        expected = "f1.Width=10.000000"
         self.assertEqual(expected, fit_opts.create_ties_str())
         # Fix the width and FSECoeff
         fit_opts.mass_profiles[0].width = 5.0
         fit_opts.mass_profiles[0].k_free = 0
-        expected = "f0.Width=5.0,f0.FSECoeff=f0.Width*sqrt(2)/12,f1.Width=10"
+        expected = "f0.Width=5.000000,f0.FSECoeff=f0.Width*sqrt(2)/12,f1.Width=10.000000"
         self.assertEqual(expected, fit_opts.create_ties_str())
 
     def test_parse_fit_options(self):
         mass_values = [1.0079, 16]
-        profile_strs = "function=Gaussian,width=[2,5,7];function=Gaussian,width=10"
-        background_str = "function=Polynomial,n=2"
+        profile_strs = "function=Gaussian,width=[2,5,7];function=Gaussian,width=10.000000"
+        background_str = "function=Polynomial,order=2"
         constraints_str = "[1,-4]"
 
         fit_opts = parse_fit_options(mass_values, profile_strs, background_str, constraints_str)

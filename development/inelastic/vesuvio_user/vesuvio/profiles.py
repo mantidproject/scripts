@@ -25,7 +25,7 @@ class MassProfile(object):
         :param param_prefix: An optional prefix for the parameter name
         """
         try:
-            return "{0} < {1} < {2}".format(self.width[0], param_prefix + "Width", self.width[2])
+            return "{0:f} < {1} < {2:f}".format(self.width[0], param_prefix + "Width", self.width[2])
         except TypeError:
             return ""
 
@@ -35,7 +35,7 @@ class MassProfile(object):
         :param param_prefix: An optional prefix for the parameter name
         """
         if not isinstance(self.width, collections.Iterable):
-            return "{0}={1}".format(param_prefix + "Width", self.width)
+            return "{0}={1:f}".format(param_prefix + "Width", self.width)
         else:
             return ""
 
@@ -82,10 +82,10 @@ class GaussianMassProfile(MassProfile):
             if isinstance(def_width, list):
                 def_width = def_width[1]
 
-        fitting_str = "name={0},Mass={1},Width={2}".format(self.cfunction, self.mass, def_width)
+        fitting_str = "name={0},Mass={1:f},Width={2:f}".format(self.cfunction, self.mass, def_width)
         if vals_provided:
             param_name = "Intensity"
-            intensity_str = "{0}={1}".format(param_name, param_vals[param_prefix + param_name])
+            intensity_str = "{0}={1:f}".format(param_name, param_vals[param_prefix + param_name])
             fitting_str += "," + intensity_str
 
         return fitting_str + ";"
@@ -152,16 +152,16 @@ class GramCharlierMassProfile(MassProfile):
             return _str.lstrip()
         hermite_str = to_space_sep_str(self.hermite_co)
 
-        fitting_str = "name={0},Mass={1},HermiteCoeffs={2},Width={3}".format(self.cfunction,
-                                                                             self.mass, hermite_str,
-                                                                             def_width)
+        fitting_str = "name={0},Mass={1:f},HermiteCoeffs={2},Width={3:f}".format(self.cfunction,
+                                                                                 self.mass, hermite_str,
+                                                                                 def_width)
         if vals_provided:
             par_names = ["FSECoeff"]
             for i,c in enumerate(self.hermite_co):
                 if c > 0:
-                    par_names.append("C_%d" % (2*i))
+                    par_names.append("C_{0}".format(2*i))
             for par_name in par_names:
-                fitting_str += ",%s=%f" % (par_name, param_vals[param_prefix + par_name])
+                fitting_str += ",{0}={1:f}".format(par_name, param_vals[param_prefix + par_name])
 
         return fitting_str + ";"
 

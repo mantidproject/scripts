@@ -31,13 +31,13 @@ class PolynomialBackground(object):
             raise TypeError("{0} function string should start with 'function={0},'".format(cls.cfunction))
 
         func_str = func_str[len(profile_prefix):]
-        # The only remaining property should be the width
-        n_prefix = "n="
-        if func_str.startswith(n_prefix):
+        # The only remaining property should be the order that we translate to n=
+        order_prefix = "order="
+        if func_str.startswith(order_prefix):
             # Trim off width= prefix
-            poly_order = ast.literal_eval(func_str[len(n_prefix):])
+            poly_order = ast.literal_eval(func_str[len(order_prefix):])
         else:
-            raise TypeError("Unexpected value in function string. Expected n= following function")
+            raise TypeError("Unexpected value in function string. Expected order= following function")
 
         return PolynomialBackground(order=poly_order)
 
@@ -54,7 +54,7 @@ class PolynomialBackground(object):
         if vals_provided:
             for power in range (0,self.order+1):
                 param_name = 'A{0}'.format(power)
-                func_str += ",{0}={1}".format(param_name, param_vals[param_prefix + param_name])
+                func_str += ",{0}={1:f}".format(param_name, param_vals[param_prefix + param_name])
 
         return func_str
 

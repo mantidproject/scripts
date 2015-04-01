@@ -32,7 +32,7 @@ class GaussianMassProfileTest(unittest.TestCase):
     def test_function_string_has_expected_form_with_no_defaults(self):
         test_profiles = GaussianMassProfile(10, 16)
 
-        expected = "name=GaussianComptonProfile,Mass=16,Width=10;"
+        expected = "name=GaussianComptonProfile,Mass=16.000000,Width=10.000000;"
         self.assertEqual(expected, test_profiles.create_fit_function_str())
 
     def test_function_string_has_expected_form_with_defaults_given(self):
@@ -40,7 +40,7 @@ class GaussianMassProfileTest(unittest.TestCase):
         param_prefix = "f1."
         param_vals = {"f1.Width": 11.0, "f1.Intensity": 4.5}
 
-        expected = "name=GaussianComptonProfile,Mass=16,Width=11.0,Intensity=4.5;"
+        expected = "name=GaussianComptonProfile,Mass=16.000000,Width=11.000000,Intensity=4.500000;"
         self.assertEqual(expected, test_profiles.create_fit_function_str(param_vals, param_prefix))
 
     def test_constraint_str_is_empty_for_fixed_width(self):
@@ -51,14 +51,14 @@ class GaussianMassProfileTest(unittest.TestCase):
     def test_constraint_str_for_constrained_width(self):
         test_profile = GaussianMassProfile([2,5,7], 16)
 
-        self.assertEqual("2 < Width < 7", test_profile.create_constraint_str())
+        self.assertEqual("2.000000 < Width < 7.000000", test_profile.create_constraint_str())
         # and with prefix
-        self.assertEqual("2 < f0.Width < 7", test_profile.create_constraint_str("f0."))
+        self.assertEqual("2.000000 < f0.Width < 7.000000", test_profile.create_constraint_str("f0."))
 
     def test_ties_str_is_empty_for_fixed_width(self):
         test_profile = GaussianMassProfile(10, 16)
 
-        self.assertEqual("Width=10", test_profile.create_ties_str())
+        self.assertEqual("Width=10.000000", test_profile.create_ties_str())
 
     def test_ties_str_for_constrained_width_is_empty(self):
         test_profile = GaussianMassProfile([2,5,7], 16)
@@ -112,7 +112,7 @@ class GramCharlierMassProfileTest(unittest.TestCase):
     def test_function_string_has_expected_form_with_no_defaults(self):
         test_profile = GramCharlierMassProfile(10, 16,[1,0,1],1,1)
 
-        expected = "name=GramCharlierComptonProfile,Mass=16,HermiteCoeffs=1 0 1,Width=10;"
+        expected = "name=GramCharlierComptonProfile,Mass=16.000000,HermiteCoeffs=1 0 1,Width=10.000000;"
         self.assertEqual(expected, test_profile.create_fit_function_str())
 
     def test_function_string_has_expected_form_with_given_values(self):
@@ -121,8 +121,8 @@ class GramCharlierMassProfileTest(unittest.TestCase):
         param_vals = {"f1.Width": 11.0, "f1.FSECoeff": 0.1, "f1.C_0": 0.25,
                       "f1.C_2": 0.5, "f1.C_4": 0.75}
 
-        expected = "name=GramCharlierComptonProfile,Mass=16,HermiteCoeffs=1 0 1,"\
-                   "Width=11.0,FSECoeff=0.100000,C_0=0.250000,C_4=0.750000;"
+        expected = "name=GramCharlierComptonProfile,Mass=16.000000,HermiteCoeffs=1 0 1,"\
+                   "Width=11.000000,FSECoeff=0.100000,C_0=0.250000,C_4=0.750000;"
         self.assertEqual(expected, test_profile.create_fit_function_str(param_vals, param_prefix))
 
     def test_constraint_str_for_fixed_width(self):
@@ -134,10 +134,10 @@ class GramCharlierMassProfileTest(unittest.TestCase):
     def test_constraint_str_for_constrained_width(self):
         test_profile = GramCharlierMassProfile([2,5,7], 16, [1,0,1], k_free=1, sears_flag=1)
 
-        expected = "2 < Width < 7"
+        expected = "2.000000 < Width < 7.000000"
         self.assertEqual(expected, test_profile.create_constraint_str())
         prefix = "f0."
-        expected = "2 < f0.Width < 7"
+        expected = "2.000000 < f0.Width < 7.000000"
         self.assertEqual(expected, test_profile.create_constraint_str(prefix))
 
     def test_ties_str_for_constrained_width_and_k_is_free_is_empty(self):
@@ -168,19 +168,19 @@ class GramCharlierMassProfileTest(unittest.TestCase):
     def test_ties_str_for_fixed_width(self):
         test_profile = GramCharlierMassProfile(5, 16, [1,0,1], k_free=1, sears_flag=1)
 
-        expected = "Width=5"
+        expected = "Width=5.000000"
         self.assertEqual(expected, test_profile.create_ties_str())
 
         # k is tied, sears=0
         test_profile = GramCharlierMassProfile(5, 16, [1,0,1], k_free=0, sears_flag=0)
 
-        expected = "f0.Width=5,f0.FSECoeff=0"
+        expected = "f0.Width=5.000000,f0.FSECoeff=0"
         self.assertEqual(expected, test_profile.create_ties_str("f0."))
 
         # k is tied, sears=1
         test_profile = GramCharlierMassProfile(5, 16, [1,0,1], k_free=0, sears_flag=1)
 
-        expected = "f0.Width=5,f0.FSECoeff=f0.Width*sqrt(2)/12"
+        expected = "f0.Width=5.000000,f0.FSECoeff=f0.Width*sqrt(2)/12"
         self.assertEqual(expected, test_profile.create_ties_str("f0."))
 
     # ---------------- Failure cases ---------------------------
