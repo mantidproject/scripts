@@ -100,9 +100,9 @@ class VesuvioTOFFit(DataProcessorAlgorithm):
         """
         Runs a fit against the loaded data
         """
-        fit_opts = parse_fit_options(self.getProperty("Masses").value,
-                                     self.getProperty("MassProfiles").value,
-                                     self.getProperty("IntensityConstraints").value)
+        fit_opts = parse_fit_options(mass_values=self.getProperty("Masses").value,
+                                     profile_strs=self.getProperty("MassProfiles").value,
+                                     constraints_str=self.getProperty("IntensityConstraints").value)
 
         #!!!! TEMPORARY!!!
         workspace_index = 0

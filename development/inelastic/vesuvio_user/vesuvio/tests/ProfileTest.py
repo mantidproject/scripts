@@ -1,7 +1,7 @@
 import unittest
 
-from vesuvio.profiles import (create_profile_from_str, GramCharlierMassProfile,
-                              GaussianMassProfile)
+from vesuvio.profiles import (create_from_str, GaussianMassProfile,
+                              GramCharlierMassProfile)
 
 # --------------------------------------------------------------------------------
 # Gaussian
@@ -15,7 +15,7 @@ class GaussianMassProfileTest(unittest.TestCase):
         function_str = "function=Gaussian,width=10"
         mass = 16.0
 
-        profile = create_profile_from_str(function_str, mass)
+        profile = create_from_str(function_str, mass)
         self.assertTrue(isinstance(profile, GaussianMassProfile))
         self.assertAlmostEqual(mass, profile.mass)
         self.assertAlmostEqual(10.0, profile.width)
@@ -24,7 +24,7 @@ class GaussianMassProfileTest(unittest.TestCase):
         function_str = "function=Gaussian,width=[2, 5, 7]"
         mass = 16.0
 
-        profile = create_profile_from_str(function_str, mass)
+        profile = create_from_str(function_str, mass)
         self.assertTrue(isinstance(profile, GaussianMassProfile))
         self.assertAlmostEqual(mass, profile.mass)
         self.assertEqual([2, 5, 7], profile.width)
@@ -101,7 +101,7 @@ class GramCharlierMassProfileTest(unittest.TestCase):
         function_str = "function=GramCharlier,width=[2, 5,7],k_free=1,hermite_coeffs=[1,0,1],sears_flag=0,"
         mass = 16.0
 
-        profile = create_profile_from_str(function_str, mass)
+        profile = create_from_str(function_str, mass)
         self.assertTrue(isinstance(profile, GramCharlierMassProfile))
         self.assertAlmostEqual(mass, profile.mass)
         self.assertEqual([2, 5, 7], profile.width)

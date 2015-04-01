@@ -56,7 +56,7 @@ class GaussianMassProfile(MassProfile):
         if not func_str.startswith(profile_prefix):
             raise TypeError("Gaussian function string should start with 'function=Gaussian,'")
 
-        func_str = func_str.lstrip(profile_prefix)
+        func_str = func_str[len(profile_prefix):]
         # The only remaining property should be the width
         if func_str.startswith("width="):
             # Trim off width= prefix
@@ -228,7 +228,7 @@ class GramCharlierMassProfile(MassProfile):
 # Factory function
 # --------------------------------------------------------------------------------
 
-def create_profile_from_str(func_str, mass):
+def create_from_str(func_str, mass):
     """Try and parse the function string to give the required profile function
 
         :param func_str: A string of the form 'function=Name,attr1=val1,attr2=val2'

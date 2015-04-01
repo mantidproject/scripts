@@ -1,10 +1,10 @@
 import unittest
 
 from vesuvio.backgrounds import PolynomialBackground
-from vesuvio.fitting import FittingOptions
+from vesuvio.fitting import FittingOptions, parse_fit_options
 from vesuvio.profiles import GaussianMassProfile, GramCharlierMassProfile
 
-class FittingOptionsTest(unittest.TestCase):
+class FittingTest(unittest.TestCase):
 
     def test_function_str_with_no_given_params_looks_as_expected(self):
         fit_opts = self._create_test_fitting_opts()
@@ -61,24 +61,24 @@ class FittingOptionsTest(unittest.TestCase):
         expected = "f0.Width=5.0,f0.FSECoeff=f0.Width*sqrt(2)/12,f1.Width=10"
         self.assertEqual(expected, fit_opts.create_ties_str())
 
-    def test_fit_string_is_expected_when_background_is_included(self):
-        fit_opts = self._create_test_fitting_opts()
+    def test_parse_fit_options(self):
+        mass_values = [1.0079, 16]
+        profile_strs = "function=Gaussian,width=[2,5,7];function=Gaussian,width=10"
+        background_str = "function=Polynomial,n=2"
+        constraints_str = "[1,-4]"
 
-        expected = "f1.Width=10"
-        self.assertEqual(expected, fit_opts.create_ties_str())
-        # Fix the width and FSECoeff
-        fit_opts.mass_profiles[0].width = 5.0
-        fit_opts.mass_profiles[0].k_free = 0
-        expected = "f0.Width=5.0,f0.FSECoeff=f0.Width*sqrt(2)/12,f1.Width=10"
-        self.assertEqual(expected, fit_opts.create_ties_str())
-
+        fit_opts = parse_fit_options(mass_values, profile_strs, background_str, constraints_str)
+        self.assertEquals(2, len(fit_opts.mass_profiles))
+        self.assertTrue(isinstance(fit_opts.background, PolynomialBackground))
+        self.assertEquals(1, len(fit_opts.intensity_constraints))
+        self.assertEquals(2, len(fit_opts.intensity_constraints[0]))
 
     def _create_test_fitting_opts(self):
         gramc = GramCharlierMassProfile([2, 5, 7], 1.0079, [1, 0, 0], 1, 1)
         gauss = GaussianMassProfile(10, 16)
         constraints = list([1, -4])
 
-        return FittingOptions([gramc, gauss], constraints)
+        return FittingOptions([gramc, gauss], intensity_constraints=constraints)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,12 +1,19 @@
 import unittest
 
-from vesuvio.backgrounds import PolynomialBackground
+from vesuvio.backgrounds import (create_from_str, PolynomialBackground)
 
 # --------------------------------------------------------------------------------
 # Polynomial
 # --------------------------------------------------------------------------------
 
 class PolynomialBackgroundTest(unittest.TestCase):
+
+    def test_create_object_from_str(self):
+        background_str = "function=Polynomial,n=2"
+
+        background = create_from_str(background_str)
+        self.assertTrue(isinstance(background, PolynomialBackground))
+        self.assertEqual(2, background.order)
 
     def test_create_function_str_for_nth_order_with_no_values(self):
         background = PolynomialBackground(order=2)
