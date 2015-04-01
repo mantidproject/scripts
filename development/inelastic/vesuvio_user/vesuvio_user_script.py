@@ -12,8 +12,8 @@ from vesuvio.processsing import process_data
 # Specify the run(s) to process. Can be either a single number or a list of
 # two numbers defining ranges
 # Example: "15039" will process the single run
-# Example 2: "15039-15045" will process the sum of range 14188-15045
-# Example 2: "15039,15045" will process the sum of 14188,15045
+# Example 2: "15039-15045" will process the sum of range 15039-15045
+# Example 2: "15039,15045" will process the sum of 15039,15045
 runs = "15039-15045"
 
 # Holds flags to alter how processing occurs
@@ -44,7 +44,7 @@ flags['spectra'] = 'forward'
 #    'sears_flag': If k is fixed then sears_flag=1 fixes k=sqrt(2)/12 whereas sears_flag=0
 #                 fixes k=0
 mass1 = {'value': 1.0079, 'function': 'GramCharlier', 'width': [2, 5, 7],
-          'hermite_coeffs': [1,0,0], 'k_free': 0, 'sears_flag': 1}
+         'hermite_coeffs': [1,0,0], 'k_free': 0, 'sears_flag': 1}
 mass2 = {'value': 16.0, 'function': 'Gaussian', 'width': 10}
 mass3 = {'value': 27.0, 'function': 'Gaussian', 'width': 13}
 mass4 = {'value': 133.0, 'function': 'Gaussian', 'width': 30}
@@ -57,8 +57,10 @@ flags['masses'] = [mass1, mass2, mass3, mass4]
 flags['intensity_constraints'] = list([0, 1, 0, -4])
 
 # Background. Defines a function an associated attributes
-# Currently only a Polynomial is supported
-flags['background'] = {'function': 'Polynomial', 'order': 3}
+# Currently only a Polynomial is supported. To switch off the
+# background set
+# flags['background'] = None
+flags['background'] = {'function': 'Polynomial', 'order': 2}
 
 # --------------------------------------------------------------------------------
 # Advanced flags
