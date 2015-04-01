@@ -17,7 +17,7 @@ _FORWARD_BANKS = ((135, 142), (143, 150), (151, 158), (159, 166),
 # Crop range (VMS defaults)
 _TOF_RANGE = [50, 562]
 
-class VesuvioReduction(DataProcessorAlgorithm):
+class VesuvioTOFFit(DataProcessorAlgorithm):
 
 
     def summary(self):
@@ -47,6 +47,7 @@ class VesuvioReduction(DataProcessorAlgorithm):
         self.declareProperty("IntensityConstraints", "",
                              doc="A semi-colon separated list of intensity constraints defined as lists e.g "
                                  "[0,1,0,-4];[1,0,-2,0]")
+
 
         self.declareProperty("Spectra", "forward", StringMandatoryValidator(),
                              doc="The spectrum numbers to load. "
@@ -211,4 +212,4 @@ class TableWorkspaceDictionaryFacade(object):
         raise KeyError(str(item))
 
 # -----------------------------------------------------------------------------------------
-AlgorithmFactory.subscribe(VesuvioReduction)
+AlgorithmFactory.subscribe(VesuvioTOFFit)

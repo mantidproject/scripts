@@ -8,7 +8,7 @@ import unittest
 
 from mantid.api import AlgorithmManager
 
-class VesuvioReductionTest(unittest.TestCase):
+class VesuvioTOFFitTest(unittest.TestCase):
 
     # -------------- Success cases ------------------
 
@@ -61,7 +61,7 @@ class VesuvioReductionTest(unittest.TestCase):
     # -------------- Helpers --------------------
 
     def _create_algorithm(self, **kwargs):
-        alg = AlgorithmManager.createUnmanaged("VesuvioReduction")
+        alg = AlgorithmManager.createUnmanaged("VesuvioTOFFit")
         alg.initialize()
         alg.setChild(True)
         alg.setProperty("FittedWorkspace", "__unused")

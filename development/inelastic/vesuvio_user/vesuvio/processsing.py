@@ -3,7 +3,7 @@ Defines functions and classes to start the processing of Vesuvio data. The main 
 about is process_data().
 """
 import mantid
-from mantid.simpleapi import VesuvioReduction
+from mantid.simpleapi import VesuvioTOFFit
 
 def process_data(runs, flags):
     """
@@ -34,7 +34,7 @@ def process_data(runs, flags):
     constraints = [str(c) for c in constraints]
     intensity_constraints = ";".join(constraints)
 
-    fitted, params = VesuvioReduction(Runs=runs, IPFilename=flags['ip_file'],
+    fitted, params = VesuvioTOFFit(Runs=runs, IPFilename=flags['ip_file'],
                                       Masses=mass_values,
                                       MassProfiles=profiles,
                                       IntensityConstraints=intensity_constraints,
