@@ -17,7 +17,7 @@ _FORWARD_BANKS = ((135, 142), (143, 150), (151, 158), (159, 166),
 # Crop range (VMS defaults)
 _TOF_RANGE = [50, 562]
 
-class VesuvioReduction(DataProcessorAlgorithm):
+class VesuvioTOFFit(DataProcessorAlgorithm):
 
 
     def summary(self):
@@ -41,9 +41,12 @@ class VesuvioReduction(DataProcessorAlgorithm):
 
         self.declareProperty("MassProfiles", "", StringMandatoryValidator(),
                              doc="Functions used to approximate mass profile. "
-                                 "The format is Function1,param1=val1,param2=val2;Function2,param3=val3,param4=val4")
+                                 "The format is function=Function1Name,param1=val1,param2=val2;function=Function2Name,param3=val3,param4=val4")
 
         # ----- Optional ------
+        self.declareProperty("Background", "",
+                             doc="Function used to fit the background. "
+                                 "The format is function=FunctionName,param1=val1,param2=val2")
         self.declareProperty("IntensityConstraints", "",
                              doc="A semi-colon separated list of intensity constraints defined as lists e.g "
                                  "[0,1,0,-4];[1,0,-2,0]")
@@ -99,9 +102,10 @@ class VesuvioReduction(DataProcessorAlgorithm):
         """
         Runs a fit against the loaded data
         """
-        fit_opts = parse_fit_options(self.getProperty("Masses").value,
-                                     self.getProperty("MassProfiles").value,
-                                     self.getProperty("IntensityConstraints").value)
+        fit_opts = parse_fit_options(mass_values=self.getProperty("Masses").value,
+                                     profile_strs=self.getProperty("MassProfiles").value,
+                                     background_str=self.getProperty("Background").value,
+                                     constraints_str=self.getProperty("IntensityConstraints").value)
 
         #!!!! TEMPORARY!!!
         workspace_index = 0
@@ -211,4 +215,4 @@ class TableWorkspaceDictionaryFacade(object):
         raise KeyError(str(item))
 
 # -----------------------------------------------------------------------------------------
-AlgorithmFactory.subscribe(VesuvioReduction)
+AlgorithmFactory.subscribe(VesuvioTOFFit)

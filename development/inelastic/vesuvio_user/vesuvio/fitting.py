@@ -2,23 +2,29 @@
 """
 import ast
 
-from profiles import create_profile_from_str
+import backgrounds
+import profiles
 
 # --------------------------------------------------------------------------------
 # Functions
 # --------------------------------------------------------------------------------
 
-def parse_fit_options(mass_values, profiles, constraints_str=""):
+def parse_fit_options(mass_values, profile_strs, background_str="", constraints_str=""):
     """Parse the function string into a more usable format"""
 
     # Individual functions are separated by semi-colon separators
-    mass_functions = profiles.rstrip(";").split(";")
+    mass_functions = profile_strs.rstrip(";").split(";")
     if len(mass_functions) != len(mass_values):
         raise ValueError("Expected the number of 'function=' definitions to equal the number of masses. "
                          "Found {0} masses but {1} function definition".format(len(mass_values), len(mass_functions)))
-    profiles = []
+    mass_profiles = []
     for mass_value, prop_str in zip(mass_values, mass_functions):
-        profiles.append(create_profile_from_str(prop_str, mass_value))
+        mass_profiles.append(profiles.create_from_str(prop_str, mass_value))
+
+    if background_str != "":
+        background = backgrounds.create_from_str(background_str)
+    else:
+        background = None
 
     if constraints_str != "":
         constraint_strings = constraints_str.split(";")
@@ -28,8 +34,7 @@ def parse_fit_options(mass_values, profiles, constraints_str=""):
     else:
         constraints = None
 
-    fit_opts = FittingOptions(profiles, constraints)
-    return fit_opts
+    return FittingOptions(mass_profiles, background, constraints)
 
 # --------------------------------------------------------------------------------
 # FittingOptions
@@ -38,7 +43,7 @@ def parse_fit_options(mass_values, profiles, constraints_str=""):
 class FittingOptions(object):
     """Holds all of the parameters for the fitting that are not related to the domain"""
 
-    def __init__(self, profiles, intensity_constraints=None, background=None):
+    def __init__(self, profiles, background=None, intensity_constraints=None):
         self.smooth_points = None
         self.bad_data_error = None
 
@@ -52,7 +57,7 @@ class FittingOptions(object):
                 self.intensity_constraints = [intensity_constraints,]
         else:
             self.intensity_constraints = None
-        self.background = None
+        self.background = background
 
         self.global_fit = False
         self.output_prefix = None

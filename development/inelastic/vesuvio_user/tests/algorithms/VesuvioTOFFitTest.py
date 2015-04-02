@@ -8,7 +8,7 @@ import unittest
 
 from mantid.api import AlgorithmManager
 
-class VesuvioReductionTest(unittest.TestCase):
+class VesuvioTOFFitTest(unittest.TestCase):
 
     # -------------- Success cases ------------------
 
@@ -19,7 +19,8 @@ class VesuvioReductionTest(unittest.TestCase):
         alg = self._create_algorithm(Runs="15039-15045", IPFilename="IP0004_10.par",
                                      Masses=[1.0079, 16, 27, 133],
                                      MassProfiles=profiles,
-                                     IntensityConstraints="[0,1,0,-4]")
+                                     IntensityConstraints="[0,1,0,-4]",
+                                     Spectra="135")
         alg.execute()
         output_ws = alg.getProperty("FittedWorkspace").value
 
@@ -29,8 +30,33 @@ class VesuvioReductionTest(unittest.TestCase):
 
         self.assertAlmostEqual(0.000928695463881635, output_ws.readY(0)[0])
         self.assertAlmostEqual(0.00722948549525415, output_ws.readY(0)[-1])
-        self.assertAlmostEqual(1.45746523460429e-05, output_ws.readY(1)[0])
-        self.assertAlmostEqual(7.33791943861049e-05, output_ws.readY(1)[-1])
+        self.assertAlmostEqual(1.45746507977816e-05, output_ws.readY(1)[0])
+        self.assertAlmostEqual(7.33791942084561e-05, output_ws.readY(1)[-1])
+
+
+    def test_single_run_produces_correct_output_workspace_index0_kfixed_including_background(self):
+        profiles = "function=GramCharlier,width=[2, 5, 7],hermite_coeffs=[1, 0, 0],k_free=0,sears_flag=1;"\
+                   "function=Gaussian,width=10;function=Gaussian,width=13;function=Gaussian,width=30;"
+        background = "function=Polynomial,order=3"
+
+        alg = self._create_algorithm(Runs="15039-15045", IPFilename="IP0004_10.par",
+                                     Masses=[1.0079, 16.0, 27.0, 133.0],
+                                     MassProfiles=profiles,
+                                     Background=background,
+                                     IntensityConstraints="[0,1,0,-4]",
+                                     Spectra="135")
+
+        alg.execute()
+        output_ws = alg.getProperty("FittedWorkspace").value
+
+        self.assertEqual(8, output_ws.getNumberHistograms())
+        self.assertAlmostEqual(50.0, output_ws.readX(0)[0])
+        self.assertAlmostEqual(562.0, output_ws.readX(0)[-1])
+
+        self.assertAlmostEqual(0.000928695463881635, output_ws.readY(0)[0])
+        self.assertAlmostEqual(0.00722948549525415, output_ws.readY(0)[-1])
+        self.assertAlmostEqual(-0.00756178413274695, output_ws.readY(1)[0])
+        self.assertAlmostEqual(0.00355843687365601, output_ws.readY(1)[-1])
 
     # -------------- Failure cases ------------------
 
@@ -61,7 +87,7 @@ class VesuvioReductionTest(unittest.TestCase):
     # -------------- Helpers --------------------
 
     def _create_algorithm(self, **kwargs):
-        alg = AlgorithmManager.createUnmanaged("VesuvioReduction")
+        alg = AlgorithmManager.createUnmanaged("VesuvioTOFFit")
         alg.initialize()
         alg.setChild(True)
         alg.setProperty("FittedWorkspace", "__unused")
