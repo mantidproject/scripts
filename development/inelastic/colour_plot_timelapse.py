@@ -5,13 +5,15 @@ import subprocess
 # Default to a directory named 'tl' in the default save directory
 image_dir = os.path.join(config['defaultsave.directory'], 'tl')
 # Name of workspace group to export (workspaces are exported in order displayed in Workspaces dock)
-group_workspace = 'elastic_scan_rebin'
+group_workspace = 'NewGroup'
 # Frame rate (FPS)
 frame_rate = 5
 # Scale of Y (colour) axis to be kept common to all plots
-colour_scale = [0, 5]
+colour_scale = [0, 16]
 # List of log names to add to the plot2D
-log_names = ['run_number', 'Temperature']
+log_names = ['run_title']
+# Either a name of a workpace to subtract as the background, an index in the workspace group, or None to disable
+subtract_background = 0
 
 # Encoder utility to use (avconv works, ffmpeg might)
 encoder_utility = 'avconv'
@@ -19,8 +21,23 @@ encoder_utility = 'avconv'
 image_format = r'_%d.png'
 
 for i, ws in enumerate(mtd[group_workspace]):
+    plot_ws = ws.name()
+
+    if subtract_background is not None:
+        background_workspace = None
+        if isinstance(subtract_background, str):
+            background_workspace = mtd[subtract_background]
+        elif isinstance(subtract_background, int):
+            background_workspace = mtd[group_workspace][subtract_background]
+
+        if background_workspace is not None:
+            plot_ws = '__plot'
+            Minus(LHSWorkspace=ws,
+                       RHSWOrkspace=background_workspace,
+                       OutputWorkspace=plot_ws)
+
     # Create the plot
-    plot = plot2D(ws)
+    plot = plot2D(plot_ws)
 
     # Set Y scale
     layer = plot.layer(1)
@@ -45,6 +62,9 @@ for i, ws in enumerate(mtd[group_workspace]):
 
     # Close
     plot.close()
+
+    if plot_ws != ws.name():
+        DeleteWorkspace(plot_ws)
 
 image_filename_format = os.path.join(image_dir, image_format)
 video_filename = os.path.join(image_dir, group_workspace + '.mp4')
