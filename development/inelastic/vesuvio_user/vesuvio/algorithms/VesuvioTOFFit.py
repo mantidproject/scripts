@@ -158,4 +158,5 @@ class VesuvioTOFFit(VesuvioBase):
         return reduced_chi_square, params, fitted_data
 
 # -----------------------------------------------------------------------------------------
-AlgorithmFactory.subscribe(VesuvioTOFFit)
+if not AlgorithmFactory.exists("VesuvioTOFFit"):
+    AlgorithmFactory.subscribe(VesuvioTOFFit)

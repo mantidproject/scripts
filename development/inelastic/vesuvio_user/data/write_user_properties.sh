@@ -14,5 +14,5 @@ fi
 # Write out test file
 echo "UpdateInstrumentDefinitions.OnStartup=0" > $PROPS_FILE
 echo "usagereports.enabled=0" >> $PROPS_FILE
-echo "user.python.plugins.directories = $algorithm_dir" >> $PROPS_FILE
+#echo "user.python.plugins.directories = $algorithm_dir" >> $PROPS_FILE
 echo "datasearch.directories = $data_dir" >> $PROPS_FILE

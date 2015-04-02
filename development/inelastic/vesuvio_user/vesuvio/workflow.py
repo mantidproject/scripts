@@ -2,8 +2,7 @@
 Defines functions and classes to start the processing of Vesuvio data. The main entry point that most users should care
 about is fit_tof().
 """
-import mantid
-from mantid.simpleapi import VesuvioTOFFit
+from mantid.simpleapi import _create_algorithm_function, AlgorithmManager
 
 # --------------------------------------------------------------------------------
 # Functions
@@ -22,6 +21,9 @@ def fit_tof(runs, flags):
     background_str = _create_background_str(flags.get('background', None))
     intensity_constraints = _create_intensity_constraint_str(flags['intensity_constraints'])
 
+    # The simpleapi function won't have been created so do it by hand
+    VesuvioTOFFit = _create_algorithm_function("VesuvioTOFFit", 1,
+                                               AlgorithmManager.createUnmanaged("VesuvioTOFFit"))
     fitted, params = VesuvioTOFFit(Runs=runs, IPFilename=flags['ip_file'],
                                    Masses=mass_values,
                                    MassProfiles=profiles_strs,

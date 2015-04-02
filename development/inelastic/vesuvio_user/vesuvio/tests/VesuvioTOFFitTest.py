@@ -7,6 +7,7 @@ are configured to find the Vesuvio data
 import unittest
 
 from mantid.api import AlgorithmManager
+import vesuvio
 
 class VesuvioTOFFitTest(unittest.TestCase):
 
