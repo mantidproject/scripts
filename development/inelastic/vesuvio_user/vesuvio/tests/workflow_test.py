@@ -3,15 +3,15 @@ and that mantid can be imported
 """
 import unittest
 
-from vesuvio.processsing import process_data
+from vesuvio.workflow import fit_tof
 
 class ProcessingTest(unittest.TestCase):
 
-    def test_process_data_with_standard_user_args_and_no_background(self):
+    def test_fit_tof_with_standard_user_args_and_no_background(self):
         flags = self._create_test_flags(background=False)
         runs = "15039-15045"
 
-        fitted_ws, fitted_params = process_data(runs, flags)
+        fitted_ws, fitted_params = fit_tof(runs, flags)
 
         self.assertEqual(7, fitted_ws.getNumberHistograms())
         self.assertAlmostEqual(50.0, fitted_ws.readX(0)[0])
@@ -24,11 +24,11 @@ class ProcessingTest(unittest.TestCase):
 
         self.assertEqual(10, fitted_params.rowCount())
 
-    def test_process_data_with_standard_user_args_and_no_background(self):
+    def test_fit_tof_with_standard_user_args_and_no_background(self):
         flags = self._create_test_flags(background=True)
         runs = "15039-15045"
 
-        fitted_ws, fitted_params = process_data(runs, flags)
+        fitted_ws, fitted_params = fit_tof(runs, flags)
 
         self.assertEqual(8, fitted_ws.getNumberHistograms())
         self.assertAlmostEqual(50.0, fitted_ws.readX(0)[0])

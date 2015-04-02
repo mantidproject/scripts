@@ -1,18 +1,21 @@
 """
-Defines functions and classes to start the processing of Vesuvio data. The main entry point that users should care
-about is process_data().
+Defines functions and classes to start the processing of Vesuvio data. The main entry point that most users should care
+about is fit_tof().
 """
 import mantid
 from mantid.simpleapi import VesuvioTOFFit
 
-def process_data(runs, flags):
+# --------------------------------------------------------------------------------
+# Functions
+# --------------------------------------------------------------------------------
+
+def fit_tof(runs, flags):
     """
-    The main entry point for user scripts. It simple takes the user input options
-    and massages them into inputs the the VesuvioReduction algorithm can understand.
+    The main entry point for user scripts fitting in TOF.
 
     :param runs: A string specifying the runs to process
     :param flags: A dictionary of flags to control the processing
-    :return: None
+    :return: Tuple of (fitted workspace, fitted_params)
     """
     # Transform inputs into something the algorithm can understand
     mass_values, profiles_strs = _create_profile_strs_and_mass_list(flags['masses'])
@@ -20,12 +23,16 @@ def process_data(runs, flags):
     intensity_constraints = _create_intensity_constraint_str(flags['intensity_constraints'])
 
     fitted, params = VesuvioTOFFit(Runs=runs, IPFilename=flags['ip_file'],
-                                      Masses=mass_values,
-                                      MassProfiles=profiles_strs,
-                                      Background=background_str,
-                                      IntensityConstraints=intensity_constraints,
-                                      DifferenceMode=flags['diff_mode'])
+                                   Masses=mass_values,
+                                   MassProfiles=profiles_strs,
+                                   Background=background_str,
+                                   IntensityConstraints=intensity_constraints,
+                                   DifferenceMode=flags['diff_mode'])
     return fitted, params
+
+# --------------------------------------------------------------------------------
+# Private Functions
+# --------------------------------------------------------------------------------
 
 def _create_profile_strs_and_mass_list(profile_flags):
     """

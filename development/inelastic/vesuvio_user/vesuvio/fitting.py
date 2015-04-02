@@ -37,7 +37,7 @@ def parse_fit_options(mass_values, profile_strs, background_str="", constraints_
     return FittingOptions(mass_profiles, background, constraints)
 
 # --------------------------------------------------------------------------------
-# FittingOptions
+# FittingOptions - Used internally
 # --------------------------------------------------------------------------------
 
 class FittingOptions(object):

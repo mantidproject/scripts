@@ -1,9 +1,9 @@
 """
-Main driver script for VESUVIO users
+Main driver script for VESUVIO users to do TOF fitting
 
 It requires the vesuvio script
 """
-from vesuvio.processsing import process_data
+from vesuvio.fitting import fit_tof
 
 # --------------------------------------------------------------------------------
 # Standard flags to modify processing
@@ -75,6 +75,6 @@ flags['ip_file'] = 'IP0004_10.par'
 flags['diff_mode'] = 'single'
 
 # --------------------------------------------------------------------------------
-# Processing
+# Run fit
 # --------------------------------------------------------------------------------
-process_data(runs, flags)
+fit_tof(runs, flags)

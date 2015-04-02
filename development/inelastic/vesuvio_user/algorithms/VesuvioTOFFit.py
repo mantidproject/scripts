@@ -2,23 +2,16 @@
 from mantid.kernel import *
 from mantid.api import *
 
+from vesuvio.algorithms.base import TableWorkspaceDictionaryFacade, VesuvioBase
 from vesuvio.fitting import parse_fit_options
+from vesuvio.instrument import VESUVIO
 
 # Loading difference modes
 _DIFF_MODES = ("double", "single")
 # Fitting modes
 _FIT_MODES = ("bank", "spectrum")
-# Spectra ranges
-_BACKWARD_SPECTRA = (3, 134)
-_BACKWARD_BANKS = ((3, 46), (47, 90), (91, 134))
-_FORWARD_SPECTRA = (135, 198)
-_FORWARD_BANKS = ((135, 142), (143, 150), (151, 158), (159, 166),
-                  (167, 174), (175, 182), (183, 190), (191, 198))
-# Crop range (VMS defaults)
-_TOF_RANGE = [50, 562]
 
-class VesuvioTOFFit(DataProcessorAlgorithm):
-
+class VesuvioTOFFit(VesuvioBase):
 
     def summary(self):
         return "Processes runs for Vesuvio at ISIS"
@@ -69,34 +62,18 @@ class VesuvioTOFFit(DataProcessorAlgorithm):
                              doc="The name of the fitted parameter workspaces.")
 
     def PyExec(self):
-        """Run the processing"""
-        loaded_data = self._load_and_crop_data()
+        """PyExec is defined by base. It sets the instrument and calls this method
+        """
+        self._INST = VESUVIO()
+        loaded_data = self._load_and_crop_data(self.getProperty("Runs").value,
+                                               self.getProperty("Spectra").value,
+                                               self.getProperty("IPFilename").value,
+                                               self.getProperty("DifferenceMode").value)
         results = self._fit_tof(loaded_data)
 
         self.setProperty("FittedWorkspace", results[2])
         self.setProperty("FittedParameters", results[1])
 
-    def _load_and_crop_data(self):
-        """
-           Load the data and return the workspace
-        """
-        spectra = self.getProperty("Spectra").value
-        if spectra == "forward":
-            spectra = "{0}-{1}".format(*_FORWARD_SPECTRA)
-        elif spectra == "backward":
-            spectra = "{0}-{1}".format(*_BACKWARD_SPECTRA)
-
-        if self.getProperty("DifferenceMode").value == "double":
-            diff_mode = "DoubleDifference"
-        else:
-            diff_mode = "SingleDifference"
-
-        kwargs = {"Filename": self.getProperty("Runs").value,
-                  "Mode": diff_mode, "InstrumentParFile": self.getProperty("IPFilename").value,
-                  "SpectrumList": spectra}
-        full_range = self._execute_child_alg("LoadVesuvio", **kwargs)
-        return self._execute_child_alg("CropWorkspace", InputWorkspace=full_range,
-                                       XMin=_TOF_RANGE[0], XMax=_TOF_RANGE[1])
 
     def _fit_tof(self, tof_data):
         """
@@ -179,40 +156,6 @@ class VesuvioTOFFit(DataProcessorAlgorithm):
                                           Operation='Multiply',Factor=1e06)
 
         return reduced_chi_square, params, fitted_data
-
-    # ----------------------------------------------------------------------------------------
-
-    def _execute_child_alg(self, name, **kwargs):
-        alg = self.createChildAlgorithm(name)
-        for name, value in kwargs.iteritems():
-            alg.setProperty(name, value)
-        alg.execute()
-        outputs = list()
-        for name in alg.outputProperties():
-            outputs.append(alg.getProperty(name).value)
-        if len(outputs) == 1:
-            return outputs[0]
-        else:
-            return tuple(outputs)
-
-# -----------------------------------------------------------------------------------------
-# Helper to translate from an table workspace to a dictionary. Should be on the workspace
-# really ...
-# -----------------------------------------------------------------------------------------
-class TableWorkspaceDictionaryFacade(object):
-    """
-    Allows an underlying table workspace to be treated like a read-only dictionary
-    """
-
-    def __init__(self, held_object):
-        self._table_ws = held_object
-
-    def __getitem__(self, item):
-        for row in self._table_ws:
-            if row['Name'] == item:
-                return row['Value']
-        #endfor
-        raise KeyError(str(item))
 
 # -----------------------------------------------------------------------------------------
 AlgorithmFactory.subscribe(VesuvioTOFFit)
