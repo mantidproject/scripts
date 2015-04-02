@@ -5,7 +5,7 @@
 PROPS_FILE=$HOME/.mantid/Mantid.user.properties
 
 data_dir=$(dirname $(readlink -f $0))
-algorithm_dir=$(dirname $data_dir)/algorithms
+algorithm_dir=$(dirname $data_dir)/vesuvio/algorithms
 # Backup current file
 if [ -f $PROPS_FILE ]; then
   mv -f $PROPS_FILE $PROPS_FILE.bak
