@@ -75,6 +75,32 @@ class FitTofTest(unittest.TestCase):
         self.assertAlmostEqual(0.000596850729120898, bank8_data.readY(1)[0])
         self.assertAlmostEqual(0.000529343513813141, bank8_data.readY(1)[-1])
 
+    def test_fit_spectra_by_spectra_for_forward_spectra_tof_and_no_background(self):
+        flags = self._create_test_flags(background=False)
+        flags['fit_mode'] = 'spectra'
+        flags['spectra'] = '143-150'
+        runs = "15039-15045"
+
+        fit_results = fit_tof(runs, flags)
+        self.assertTrue(isinstance(fit_results, list))
+        self.assertEquals(8, len(fit_results))
+
+        spec143 = fit_results[0]
+        spec143_data = spec143[0]
+        self.assertAlmostEqual(50.0, spec143_data.readX(0)[0])
+        self.assertAlmostEqual(562.0, spec143_data.readX(0)[-1])
+
+        self.assertAlmostEqual(2.37897941103748e-06, spec143_data.readY(1)[0])
+        self.assertAlmostEqual(3.58226563303213e-05, spec143_data.readY(1)[-1])
+
+        spec150 = fit_results[-1]
+        spec150_data = spec150[0]
+        self.assertAlmostEqual(50.0, spec150_data.readX(0)[0])
+        self.assertAlmostEqual(562.0, spec150_data.readX(0)[-1])
+
+        self.assertAlmostEqual(5.57952304659615e-06, spec150_data.readY(1)[0])
+        self.assertAlmostEqual(6.00056973529846e-05, spec150_data.readY(1)[-1])
+
     def _create_test_flags(self, background):
         runs = "15039-15045"
         flags = dict()

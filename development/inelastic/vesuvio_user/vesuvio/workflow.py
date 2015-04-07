@@ -108,12 +108,11 @@ def _create_tof_workspace_suffix(runs, spectra):
     return runs + "_" + spectra + "_tof"
 
 def _create_fit_workspace_suffix(index, tof_data, fit_mode, spectra):
-    common = "_" + spectra + "_"
     if fit_mode == "bank":
-        return common + "bank_" + str(index+1)
+        return "_" + spectra + "_bank_" + str(index+1)
     else:
         spectrum = tof_data.getSpectrum(index)
-        return common + "spectrum_" + str(spectrum.getSpectrumNo())
+        return "_spectrum_" + str(spectrum.getSpectrumNo())
 
 def _create_profile_strs_and_mass_list(profile_flags):
     """

@@ -3,6 +3,8 @@ Main driver script for VESUVIO users to do TOF fitting
 
 It requires the vesuvio script
 """
+import vesuvio.workflow
+reload(vesuvio.workflow)
 from vesuvio.workflow import fit_tof
 
 # --------------------------------------------------------------------------------
@@ -22,14 +24,14 @@ flags = dict()
 # Fitting mode. Options are:
 #    bank: spectra from each bank are summed and each bank is then fitted separately
 #    spectrum: spectra are fitted individually
-flags['fit_mode'] = 'bank'
+flags['fit_mode'] = 'spectra'
 
 # Spectra selection. Can be a single number, a list of two numbers defining a range
 # or one of the keyword strings "forward", "backward", "all"
 # Example: 135 will only process spectrum 135 (only applies if fit_mode="spectrum")
 # Example 2: 135-185 will process all spectra in the range (only applies if fit_mode="spectrum")
 # Example 3: "forward" will process all spectra in the forward scattering banks
-flags['spectra'] = 'forward'
+flags['spectra'] = '143-150'
 
 # Masses and properties for fit. Each mass is a dictionary of properties about that mass
 # All functions require the following keywords:
