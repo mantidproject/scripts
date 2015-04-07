@@ -6,25 +6,6 @@ class VesuvioBase(DataProcessorAlgorithm):
     # defining a __init__ method
     _INST = None
 
-    def _load_and_crop_data(self, runs, spectra,
-                            ip_file, diff_mode):
-        if spectra == "forward":
-            spectra = "{0}-{1}".format(*self._INST.forward_spectra)
-        elif spectra == "backward":
-            spectra = "{0}-{1}".format(*self._INST.backward_spectra)
-
-        if diff_mode == "double":
-            diff_mode = "DoubleDifference"
-        else:
-            diff_mode = "SingleDifference"
-
-        kwargs = {"Filename": runs,
-                  "Mode": diff_mode, "InstrumentParFile": ip_file,
-                  "SpectrumList": spectra}
-        full_range = self._execute_child_alg("LoadVesuvio", **kwargs)
-        return self._execute_child_alg("CropWorkspace", InputWorkspace=full_range,
-                                       XMin=self._INST.tof_range[0], XMax=self._INST.tof_range[1])
-
     # ----------------------------------------------------------------------------------------
 
     def _execute_child_alg(self, name, **kwargs):

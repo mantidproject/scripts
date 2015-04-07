@@ -3,7 +3,7 @@ Main driver script for VESUVIO users to do TOF fitting
 
 It requires the vesuvio script
 """
-from vesuvio.fitting import fit_tof
+from vesuvio.workflow import fit_tof
 
 # --------------------------------------------------------------------------------
 # Standard flags to modify processing
@@ -59,7 +59,7 @@ flags['intensity_constraints'] = list([0, 1, 0, -4])
 # Background. Defines a function an associated attributes
 # Currently only a Polynomial is supported. To switch off the
 # background set
-# flags['background'] = None
+#flags['background'] = None
 flags['background'] = {'function': 'Polynomial', 'order': 2}
 
 # --------------------------------------------------------------------------------
@@ -77,4 +77,4 @@ flags['diff_mode'] = 'single'
 # --------------------------------------------------------------------------------
 # Run fit
 # --------------------------------------------------------------------------------
-fitted, params = fit_tof(runs, flags)
+fit_tof(runs, flags)

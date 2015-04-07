@@ -3,16 +3,20 @@ and that mantid can be imported
 """
 import unittest
 
+import mantid
 from vesuvio.workflow import fit_tof
 
-class ProcessingTest(unittest.TestCase):
+class FitTofTest(unittest.TestCase):
 
-    def test_fit_tof_with_standard_user_args_and_no_background(self):
+    def test_fit_single_spectrum_tof_and_no_background(self):
         flags = self._create_test_flags(background=False)
         runs = "15039-15045"
 
-        fitted_ws, fitted_params = fit_tof(runs, flags)
+        fit_results = fit_tof(runs, flags)
+        self.assertTrue(isinstance(fit_results, mantid.api.WorkspaceGroup))
+        self.assertEqual(2, fit_results.size())
 
+        fitted_ws = fit_results[0]
         self.assertEqual(7, fitted_ws.getNumberHistograms())
         self.assertAlmostEqual(50.0, fitted_ws.readX(0)[0])
         self.assertAlmostEqual(562.0, fitted_ws.readX(0)[-1])
@@ -22,14 +26,17 @@ class ProcessingTest(unittest.TestCase):
         self.assertAlmostEqual(1.45746507977816e-05, fitted_ws.readY(1)[0])
         self.assertAlmostEqual(7.33791942084561e-05, fitted_ws.readY(1)[-1])
 
+        fitted_params = fit_results[1]
         self.assertEqual(10, fitted_params.rowCount())
 
-    def test_fit_tof_with_standard_user_args_and_no_background(self):
+    def test_fit_single_spectrum_tof_including_background(self):
         flags = self._create_test_flags(background=True)
         runs = "15039-15045"
 
-        fitted_ws, fitted_params = fit_tof(runs, flags)
+        fit_results = fit_tof(runs, flags)
+        self.assertTrue(isinstance(fit_results, mantid.api.WorkspaceGroup))
 
+        fitted_ws = fit_results[0]
         self.assertEqual(8, fitted_ws.getNumberHistograms())
         self.assertAlmostEqual(50.0, fitted_ws.readX(0)[0])
         self.assertAlmostEqual(562.0, fitted_ws.readX(0)[-1])
@@ -39,12 +46,40 @@ class ProcessingTest(unittest.TestCase):
         self.assertAlmostEqual(-0.00756178413274695, fitted_ws.readY(1)[0])
         self.assertAlmostEqual(0.00355843687365601, fitted_ws.readY(1)[-1])
 
+        fitted_params = fit_results[1]
         self.assertEqual(14, fitted_params.rowCount())
+
+    def test_fit_bank_by_bank_for_forward_spectra_tof_and_no_background(self):
+        flags = self._create_test_flags(background=False)
+        flags['fit_mode'] = 'bank'
+        flags['spectra'] = 'forward'
+        runs = "15039-15045"
+
+        fit_results = fit_tof(runs, flags)
+        self.assertTrue(isinstance(fit_results, list))
+        self.assertEquals(8, len(fit_results))
+
+        bank1 = fit_results[0]
+        bank1_data = bank1[0]
+        self.assertAlmostEqual(50.0, bank1_data.readX(0)[0])
+        self.assertAlmostEqual(562.0, bank1_data.readX(0)[-1])
+
+        self.assertAlmostEqual(0.000107272755986595, bank1_data.readY(1)[0])
+        self.assertAlmostEqual(0.000585633970072128, bank1_data.readY(1)[-1])
+
+        bank8 = fit_results[-1]
+        bank8_data = bank8[0]
+        self.assertAlmostEqual(50.0, bank8_data.readX(0)[0])
+        self.assertAlmostEqual(562.0, bank8_data.readX(0)[-1])
+
+        self.assertAlmostEqual(0.000596850729120898, bank8_data.readY(1)[0])
+        self.assertAlmostEqual(0.000529343513813141, bank8_data.readY(1)[-1])
 
     def _create_test_flags(self, background):
         runs = "15039-15045"
         flags = dict()
-        flags['fit_mode'] = 'bank'
+        flags['fit_mode'] = 'spectrum'
+        flags['spectra'] = '135'
 
         mass1 = {'value': 1.0079, 'function': 'GramCharlier', 'width': [2, 5, 7],
                   'hermite_coeffs': [1,0,0], 'k_free': 0, 'sears_flag': 1}

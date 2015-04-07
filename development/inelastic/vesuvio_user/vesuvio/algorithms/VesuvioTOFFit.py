@@ -18,14 +18,8 @@ class VesuvioTOFFit(VesuvioBase):
 
     def PyInit(self):
         # Inputs
-        self.declareProperty("Runs", "", StringMandatoryValidator(),
-                     doc="The range of run numbers that should be loaded.")
-
-        self.declareProperty(FileProperty("IPFilename","", action=FileAction.Load,
-                                          extensions=["dat"]),
-                             doc="An optional IP file. If provided the values are used to correct "
-                                 "the default instrument values and attach the t0 values to each "
-                                 "detector")
+        self.declareProperty(MatrixWorkspaceProperty("InputWorkspace", "", Direction.Input),
+                             doc="Input TOF workspace")
 
         float_length_validator = FloatArrayLengthValidator()
         float_length_validator.setLengthMin(1)
@@ -37,6 +31,8 @@ class VesuvioTOFFit(VesuvioBase):
                                  "The format is function=Function1Name,param1=val1,param2=val2;function=Function2Name,param3=val3,param4=val4")
 
         # ----- Optional ------
+        self.declareProperty("WorkspaceIndex", 0, IntBoundedValidator(lower=0),
+                             doc="Workspace index for fit. [Default=0]")
         self.declareProperty("Background", "",
                              doc="Function used to fit the background. "
                                  "The format is function=FunctionName,param1=val1,param2=val2")
@@ -44,36 +40,28 @@ class VesuvioTOFFit(VesuvioBase):
                              doc="A semi-colon separated list of intensity constraints defined as lists e.g "
                                  "[0,1,0,-4];[1,0,-2,0]")
 
-        self.declareProperty("Spectra", "forward", StringMandatoryValidator(),
-                             doc="The spectrum numbers to load. "
-                                 "A dash will load a range and a semicolon delimits spectra to sum. "
-                                 "The keyword forward and backward indicate either all of forward/backward")
-
         self.declareProperty("FitMode", "bank", StringListValidator(list(_FIT_MODES)),
                              doc="Fit either bank-by-bank or detector-by-detector")
 
-        self.declareProperty("DifferenceMode", "single", StringListValidator(list(_DIFF_MODES)),
-                             doc="The difference option. Valid values: %s" % str(_DIFF_MODES))
-
         # Outputs
-        self.declareProperty(WorkspaceProperty("FittedWorkspace", "", Direction.Output),
+        self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", "", Direction.Output),
                              doc="The name of the fitted workspaces.")
-        self.declareProperty(WorkspaceProperty("FittedParameters", "", Direction.Output),
+        self.declareProperty(ITableWorkspaceProperty("FitParameters", "", Direction.Output),
                              doc="The name of the fitted parameter workspaces.")
+        self.declareProperty("Chi2", 0.0, direction=Direction.Output,
+                             doc="The value of the Chi-Squared.")
 
     def PyExec(self):
         """PyExec is defined by base. It sets the instrument and calls this method
         """
         self._INST = VESUVIO()
-        loaded_data = self._load_and_crop_data(self.getProperty("Runs").value,
-                                               self.getProperty("Spectra").value,
-                                               self.getProperty("IPFilename").value,
-                                               self.getProperty("DifferenceMode").value)
-        results = self._fit_tof(loaded_data)
+        tof_data = self.getProperty("InputWorkspace").value
 
-        self.setProperty("FittedWorkspace", results[2])
-        self.setProperty("FittedParameters", results[1])
+        reduced_chi_square, fit_params, fit_data = self._fit_tof(tof_data)
 
+        self.setProperty("OutputWorkspace", fit_data)
+        self.setProperty("FitParameters", fit_params)
+        self.setProperty("Chi2", reduced_chi_square)
 
     def _fit_tof(self, tof_data):
         """
@@ -84,9 +72,7 @@ class VesuvioTOFFit(VesuvioBase):
                                      background_str=self.getProperty("Background").value,
                                      constraints_str=self.getProperty("IntensityConstraints").value)
 
-        #!!!! TEMPORARY!!!
-        workspace_index = 0
-        return self._run_fit(tof_data, workspace_index, fit_opts)
+        return self._run_fit(tof_data, self.getProperty("WorkspaceIndex").value, fit_opts)
 
     # -----------------------------------------------------------------------------------------
     def _run_fit(self, tof_ws, workspace_index, fit_options):
@@ -153,10 +139,9 @@ class VesuvioTOFFit(VesuvioBase):
         fitted_data = self._execute_child_alg("ScaleX", InputWorkspace=fitted_data, OutputWorkspace=fitted_data,
                                               Operation='Multiply', Factor=1e06)
         data_ws = self._execute_child_alg("ScaleX", InputWorkspace=data_ws, OutputWorkspace=data_ws,
-                                          Operation='Multiply',Factor=1e06)
+                                          Operation='Multiply', Factor=1e06)
 
         return reduced_chi_square, params, fitted_data
 
 # -----------------------------------------------------------------------------------------
-if not AlgorithmFactory.exists("VesuvioTOFFit"):
-    AlgorithmFactory.subscribe(VesuvioTOFFit)
+AlgorithmFactory.subscribe(VesuvioTOFFit)
