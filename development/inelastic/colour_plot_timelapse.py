@@ -1,6 +1,9 @@
 import os
 import subprocess
 
+#TODO: Handle normalisation to a given workspace
+#TODO: Handle difference plots
+
 def generate_video(group_workspace,
                    directory=config['defaultsave.directry'],
                    log_names=[],
@@ -71,6 +74,7 @@ def generate_video(group_workspace,
 # Directory to save images and final video in (best to create a new directory for this)
 output_directory = os.path.join(config['defaultsave.directory'], 'tl')
 
+# Replace 'osiris_scan' with the name of a workspace group containing workspaces to plot
 generate_video('osiris_scan',
                directory=output_directory,
                log_names=['run_title', 'Stick'],
