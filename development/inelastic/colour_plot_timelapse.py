@@ -1,77 +1,77 @@
 import os
 import subprocess
 
-# Directory to save images and final video in (best to create a new directory for this)
-# Default to a directory named 'tl' in the default save directory
-image_dir = os.path.join(config['defaultsave.directory'], 'tl')
-# Name of workspace group to export (workspaces are exported in order displayed in Workspaces dock)
-group_workspace = 'NewGroup'
-# Frame rate (FPS)
-frame_rate = 5
-# Scale of Y (colour) axis to be kept common to all plots
-colour_scale = [0, 16]
-# List of log names to add to the plot2D
-log_names = ['run_title']
-# Either a name of a workpace to subtract as the background, an index in the workspace group, or None to disable
-subtract_background = 0
+def generate_video(group_workspace,
+                   directory=config['defaultsave.directry'],
+                   log_names=[],
+                   colour_scale=None,
+                   frame_rate=10,
+                   image_filename_format=r'_%d.png',
+                   encoder='avconv'):
+    """
+    Generates a timelapse video fram w workspace group.
 
-# Encoder utility to use (avconv works, ffmpeg might)
-encoder_utility = 'avconv'
-# Image filename pattern
-image_format = r'_%d.png'
+    @param group_workspace Name of the workspace group
+    @param directory Directory in which to save frames and video
+    @param log_names Sample log names to add to plot as annotation
+    @param colour_scale Range for colour axis scale (None for auto)
+    @param frame_rate Frame rate of video
+    @param image_filename_format Format for image filenames
+    @param encoder Encoder utility (avconv or ffmpeg)
+    """
 
-for i, ws in enumerate(mtd[group_workspace]):
-    plot_ws = ws.name()
+    for i, ws in enumerate(mtd[group_workspace]):
+        # Create the plot
+        plot = plot2D(ws)
+        layer = plot.layer(1)
 
-    if subtract_background is not None:
-        background_workspace = None
-        if isinstance(subtract_background, str):
-            background_workspace = mtd[subtract_background]
-        elif isinstance(subtract_background, int):
-            background_workspace = mtd[group_workspace][subtract_background]
+        # Set Y scale
+        if colour_scale is not None:
+            layer.setAxisScale(1, *colour_scale)
 
-        if background_workspace is not None:
-            plot_ws = '__plot'
-            Minus(LHSWorkspace=ws,
-                       RHSWOrkspace=background_workspace,
-                       OutputWorkspace=plot_ws)
-
-    # Create the plot
-    plot = plot2D(plot_ws)
-
-    # Set Y scale
-    layer = plot.layer(1)
-    layer.setAxisScale(1, *colour_scale)
-
-    if len(log_names) > 0:
-        # Generate the legend text
-        legend_text = ''
-        for log in log_names:
+        if len(log_names) > 0:
+            # Generate the legend text
+            legend_text = ''
             run = ws.getRun()
-            if log in run:
-                legend_text += '%s: %s\n' % (log, str(run[log].value))
+            for log in log_names:
+                if log in run:
+                    entry  = run[log]
 
-        # Add the new legend
-        layer.newLegend(legend_text)
+                    # Use average value for time series logs
+                    if isinstance(entry, FloatTimeSeriesProperty):
+                        value = run[log].timeAverageValue()
+                    else:
+                        value = run[log].value
 
-    # Get the image filename
-    image_filename = os.path.join(image_dir, image_format % i)
+                    legend_text += '%s: %s\n' % (log, str(value))
 
-    # Save image of colour fill plot
-    plot.exportImage(image_filename)
+            # Add the new legend
+            layer.newLegend(legend_text)
 
-    # Close
-    plot.close()
+        # Get the image filename
+        image_filename = os.path.join(directory, image_filename_format % i)
 
-    if plot_ws != ws.name():
-        DeleteWorkspace(plot_ws)
+        # Save image of colour fill plot
+        plot.exportImage(image_filename)
 
-image_filename_format = os.path.join(image_dir, image_format)
-video_filename = os.path.join(image_dir, group_workspace + '.mp4')
+        # Close
+        plot.close()
 
-# Convert frames to timelapse video
-subprocess.call([encoder_utility,
-                           '-r', str(frame_rate),
-                           '-i', image_filename_format,
-                           '-b:v', '1000k',
-                           video_filename])
+    frame_filename = os.path.join(directory, image_filename_format)
+    video_filename = os.path.join(directory, group_workspace + '.mp4')
+
+    # Convert frames to timelapse video
+    subprocess.call([encoder,
+                     '-r', str(frame_rate),
+                     '-i', frame_filename,
+                     '-b:v', '1000k',
+                     video_filename])
+
+
+# Directory to save images and final video in (best to create a new directory for this)
+output_directory = os.path.join(config['defaultsave.directory'], 'tl')
+
+generate_video('osiris_scan',
+               directory=output_directory,
+               log_names=['run_title', 'Stick'],
+               frame_rate=5)
