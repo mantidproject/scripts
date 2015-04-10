@@ -1,14 +1,13 @@
 import os
 import subprocess
 
-#TODO: Handle difference plots
 
 def subtract_background(workspace_group,
                         workspace=None):
     """
     Subtracts a background from the scan.
 
-    Workspace parametr can wither be an integer denoting an index in the
+    Workspace parameter can wither be an integer denoting an index in the
     workspace group or a string denoting any workspace loaded in Mantid.
 
     @param workspace_group Name of the workspace group containing the scan
@@ -33,13 +32,45 @@ def subtract_background(workspace_group,
     return workspace_group
 
 
+def generate_difference(workspace_group):
+    """
+    Generates difference workspaces for each of the workspaces
+    in the original scan workspace group.
+
+    @param workspace_group Name of the workspace group containing the scan
+    @return Name of the difference workspace group
+    """
+    difference_ws = workspace_group + '_diff'
+
+    ws = mtd[workspace_group]
+    if ws.size() < 2:
+        return workspace_name
+
+    diff_workspaces = []
+    for idx in xrange(ws.size() - 1):
+        ws1 = ws[idx]
+        ws2 = ws[idx + 1]
+
+        ws_name = ws2.name() + '_minus'
+        diff_workspaces.append(ws_name)
+
+        Minus(LHSWorkspace=ws1,
+              RHSWorkspace=ws2,
+              OutputWorkspace=ws_name)
+
+    GroupWorkspaces(InputWorkspaces=diff_workspaces,
+                    OutputWorkspace=difference_ws)
+
+    return difference_ws
+
+
 def generate_video(workspace_group,
                    directory=config['defaultsave.directry'],
                    log_names=[],
                    colour_scale=None,
                    frame_rate=10,
-                   image_filename_format=r'_%d.png',
-                   encoder=None):
+                   image_filename_format=r'_%.4d.png',
+                   encoder='avconv'):
     """
     Generates a timelapse video fram w workspace group.
 
@@ -94,7 +125,7 @@ def generate_video(workspace_group,
 
     if encoder is not None:
         frame_filename = os.path.join(directory, image_filename_format)
-        video_filename = os.path.join(directory, workspace_group + '.mkv')
+        video_filename = os.path.join(directory, workspace_group + '.mp4')
 
         # Convert frames to timelapse video
         subprocess.call([encoder,
@@ -111,14 +142,23 @@ output_directory = os.path.join(config['defaultsave.directory'], 'tl')
 # Name of workspace group containing scan
 scan_ws = 'osiris_scan'
 
+# Replace any infinate or NaN values
+ReplaceSpecialValues(InputWorkspace=scan_ws,
+                     OutputWorkspace=scan_ws,
+                     NaNValue=0.0,
+                     InfinityValue=0.0)
+
 # First subtract a background run
 scan_ws = subtract_background(scan_ws,
                               workspace=0)
+
+# Generate difference workspace
+scan_ws = generate_difference(scan_ws)
 
 # Create the images and video
 generate_video(scan_ws,
                directory=output_directory,
                log_names=['run_title', 'Stick'],
-               colour_scale=[-8.0, 8.0],
+               colour_scale=[-6.0, 6.0],
                frame_rate=5,
-               encoder='avconv')
+               encoder=None)
