@@ -1,5 +1,5 @@
 """
-Unit test for Vesuvio preprocessing
+Unit test for Vesuvio pre-fitting steps
 
 Assumes that mantid can be imported and the data paths
 are configured to find the Vesuvio data
@@ -10,7 +10,7 @@ from mantid.api import AlgorithmManager
 from mantid.simpleapi import LoadVesuvio
 import vesuvio
 
-class VesuvioPreprocessTest(unittest.TestCase):
+class VesuvioPreFitTest(unittest.TestCase):
 
     _test_ws = None
 
@@ -71,7 +71,7 @@ class VesuvioPreprocessTest(unittest.TestCase):
     # -------------- Helpers --------------------
 
     def _create_algorithm(self, **kwargs):
-        alg = AlgorithmManager.createUnmanaged("VesuvioPreprocess")
+        alg = AlgorithmManager.createUnmanaged("VesuvioPreFit")
         alg.initialize()
         alg.setChild(True)
         alg.setProperty("OutputWorkspace", "__unused")

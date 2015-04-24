@@ -2,8 +2,6 @@
 Holds an instrument class for VESUVIO
 """
 
-from reduction.instrument import Instrument
-
 class VESUVIO(object):
     """
         Contains all the Vesuvio specific data

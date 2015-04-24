@@ -5,7 +5,7 @@ import numpy as np
 from vesuvio.algorithms.base import VesuvioBase
 
 
-class VesuvioPreprocess(VesuvioBase):
+class VesuvioPreFit(VesuvioBase):
 
     def summary(self):
         return "Apply preprocessing steps to loaded vesuvio data"
@@ -73,4 +73,4 @@ class VesuvioPreprocess(VesuvioBase):
         return data
 
 # -----------------------------------------------------------------------------------------
-AlgorithmFactory.subscribe(VesuvioPreprocess)
+AlgorithmFactory.subscribe(VesuvioPreFit)
