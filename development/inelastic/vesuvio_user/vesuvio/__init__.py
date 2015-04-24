@@ -5,7 +5,8 @@ the framework
 """
 from __future__ import absolute_import
 
-import mantid
+import vesuvio.workflow as workflow
 
+import mantid
 # Register algorithms
 import vesuvio.algorithms
