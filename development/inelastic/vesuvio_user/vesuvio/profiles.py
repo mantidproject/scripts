@@ -1,4 +1,7 @@
-"""Holds classes that define the mass profiles
+"""Holds classes that define the mass profiles.
+
+This is all essentially about parsing the user input and putting it into a form
+the Mantid fitting algorithm will understand
 """
 import ast
 import collections
@@ -90,6 +93,17 @@ class GaussianMassProfile(MassProfile):
 
         return fitting_str + ";"
 
+    def create_constraint_str(self, param_prefix=""):
+        """Returns a constraints string for the Fit algorithm
+
+        :param param_prefix: An optional prefix for the parameter name
+        """
+        constraints = super(GaussianMassProfile, self).create_constraint_str(param_prefix)
+        if constraints != "":
+            constraints += ","
+        constraints += "{0}Intensity > 0.0".format(param_prefix)
+        return constraints
+
 # --------------------------------------------------------------------------------
 # GramCharlier profile
 # --------------------------------------------------------------------------------
@@ -164,6 +178,20 @@ class GramCharlierMassProfile(MassProfile):
                 fitting_str += ",{0}={1:f}".format(par_name, param_vals[param_prefix + par_name])
 
         return fitting_str + ";"
+
+    def create_constraint_str(self, param_prefix=""):
+        """Returns a constraints string for the Fit algorithm
+
+        :param param_prefix: An optional prefix for the parameter name
+        """
+        constraints = super(GramCharlierMassProfile, self).create_constraint_str(param_prefix)
+        if constraints != "":
+            constraints += ","
+        # All coefficients should be greater than zero
+        for i, c in enumerate(self.hermite_co):
+            if c > 0:
+                constraints += "{0}C_{1} > 0.0,".format(param_prefix,2*i)
+        return constraints.rstrip(",")
 
     def create_ties_str(self, param_prefix=""):
         """Return a ties string for the Fit algorithm

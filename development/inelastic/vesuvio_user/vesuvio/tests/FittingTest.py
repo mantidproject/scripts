@@ -42,12 +42,12 @@ class FittingTest(unittest.TestCase):
     def test_constraint_str_gives_expected_value_when_width_has_constraint(self):
         fit_opts = self._create_test_fitting_opts()
 
-        expected = "2.000000 < f0.Width < 7.000000"
+        expected = "2.000000 < f0.Width < 7.000000,f0.C_0 > 0.0,f1.Intensity > 0.0"
         self.assertEqual(expected, fit_opts.create_constraints_str())
 
-        # Fix the width and the constraint should be empty
+        # Fix the width and the constraint should be just the intensity
         fit_opts.mass_profiles[0].width = 5.0
-        expected = ""
+        expected = "f0.C_0 > 0.0,f1.Intensity > 0.0"
         self.assertEqual(expected, fit_opts.create_constraints_str())
 
     def test_ties_str_gives_expected_value(self):

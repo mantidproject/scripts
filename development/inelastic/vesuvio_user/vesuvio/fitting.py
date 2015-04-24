@@ -1,4 +1,7 @@
 """Fitting support routines
+
+This is all essentially about parsing the user input and putting it into a form
+the Mantid fitting algorithm will understand
 """
 import ast
 

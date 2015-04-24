@@ -43,17 +43,17 @@ class GaussianMassProfileTest(unittest.TestCase):
         expected = "name=GaussianComptonProfile,Mass=16.000000,Width=11.000000,Intensity=4.500000;"
         self.assertEqual(expected, test_profiles.create_fit_function_str(param_vals, param_prefix))
 
-    def test_constraint_str_is_empty_for_fixed_width(self):
+    def test_constraint_str_is_only_intensity_for_fixed_width(self):
         test_profile = GaussianMassProfile(10, 16)
 
-        self.assertEqual("", test_profile.create_constraint_str())
+        self.assertEqual("Intensity > 0.0", test_profile.create_constraint_str())
 
     def test_constraint_str_for_constrained_width(self):
         test_profile = GaussianMassProfile([2,5,7], 16)
 
-        self.assertEqual("2.000000 < Width < 7.000000", test_profile.create_constraint_str())
+        self.assertEqual("2.000000 < Width < 7.000000,Intensity > 0.0", test_profile.create_constraint_str())
         # and with prefix
-        self.assertEqual("2.000000 < f0.Width < 7.000000", test_profile.create_constraint_str("f0."))
+        self.assertEqual("2.000000 < f0.Width < 7.000000,f0.Intensity > 0.0", test_profile.create_constraint_str("f0."))
 
     def test_ties_str_is_empty_for_fixed_width(self):
         test_profile = GaussianMassProfile(10, 16)
@@ -126,18 +126,18 @@ class GramCharlierMassProfileTest(unittest.TestCase):
         self.assertEqual(expected, test_profile.create_fit_function_str(param_vals, param_prefix))
 
     def test_constraint_str_for_fixed_width(self):
-        test_profile = GramCharlierMassProfile(10, 16, [1,0,1], k_free=1, sears_flag=1)
+        test_profile = GramCharlierMassProfile(10, 16, [1, 0, 1], k_free=1, sears_flag=1)
 
-        expected = ""
+        expected = "C_0 > 0.0,C_4 > 0.0"
         self.assertEqual(expected, test_profile.create_constraint_str())
 
     def test_constraint_str_for_constrained_width(self):
         test_profile = GramCharlierMassProfile([2,5,7], 16, [1,0,1], k_free=1, sears_flag=1)
 
-        expected = "2.000000 < Width < 7.000000"
+        expected = "2.000000 < Width < 7.000000,C_0 > 0.0,C_4 > 0.0"
         self.assertEqual(expected, test_profile.create_constraint_str())
         prefix = "f0."
-        expected = "2.000000 < f0.Width < 7.000000"
+        expected = "2.000000 < f0.Width < 7.000000,f0.C_0 > 0.0,f0.C_4 > 0.0"
         self.assertEqual(expected, test_profile.create_constraint_str(prefix))
 
     def test_ties_str_for_constrained_width_and_k_is_free_is_empty(self):
