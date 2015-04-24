@@ -27,7 +27,8 @@ class VesuvioPreprocessTest(unittest.TestCase):
 
     def test_smooth_uses_requested_number_of_points(self):
         alg = self._create_algorithm(InputWorkspace=self._test_ws,
-                                     Smoothing="Neighbour", SmoothingOptions="NPoints=3")
+                                     Smoothing="Neighbour", SmoothingOptions="NPoints=3",
+                                     BadDataError=-1)
         alg.execute()
         output_ws = alg.getProperty("OutputWorkspace").value
 
@@ -40,49 +41,25 @@ class VesuvioPreprocessTest(unittest.TestCase):
         self.assertAlmostEqual(0.002081985833021438, output_ws.readY(1)[0])
         self.assertAlmostEqual(-0.01209794157313937, output_ws.readY(1)[-1])
 
-    def xtest_single_run_produces_correct_output_workspace_index1_kfixed_no_background(self):
-        profiles = "function=GramCharlier,width=[2, 5, 7],hermite_coeffs=[1, 0, 0],k_free=0,sears_flag=1;"\
-                   "function=Gaussian,width=10;function=Gaussian,width=13;function=Gaussian,width=30;"
+    def test_mask_only_masks_over_threshold(self):
+        err_start = self._test_ws.readE(1)[-1]
+        self._test_ws.dataE(1)[-1] = 1.5e6
 
-        alg = self._create_algorithm(InputWorkspace=self._test_ws, WorkspaceIndex=1,
-                                     Masses=[1.0079, 16, 27, 133],
-                                     MassProfiles=profiles,
-                                     IntensityConstraints="[0,1,0,-4]")
+        alg = self._create_algorithm(InputWorkspace=self._test_ws,
+                                     Smoothing="None", BadDataError=1.0e6)
         alg.execute()
+        self._test_ws.dataE(1)[-1] = err_start
         output_ws = alg.getProperty("OutputWorkspace").value
 
-        self.assertEqual(7, output_ws.getNumberHistograms())
+        self.assertEqual(2, output_ws.getNumberHistograms())
         self.assertAlmostEqual(50.0, output_ws.readX(0)[0])
         self.assertAlmostEqual(562.0, output_ws.readX(0)[-1])
 
-        self.assertAlmostEqual(-0.005852648610523481, output_ws.readY(0)[0])
-        self.assertAlmostEqual(-0.013112461599666836, output_ws.readY(0)[-1])
-        self.assertAlmostEqual(1.5165126628163728e-05, output_ws.readY(1)[0])
-        self.assertAlmostEqual(7.6619346342727019e-05, output_ws.readY(1)[-1])
-
-
-    def xtest_single_run_produces_correct_output_workspace_index0_kfixed_including_background(self):
-        profiles = "function=GramCharlier,width=[2, 5, 7],hermite_coeffs=[1, 0, 0],k_free=0,sears_flag=1;"\
-                   "function=Gaussian,width=10;function=Gaussian,width=13;function=Gaussian,width=30;"
-        background = "function=Polynomial,order=3"
-
-        alg = self._create_algorithm(InputWorkspace=self._test_ws, WorkspaceIndex=0,
-                                     Masses=[1.0079, 16.0, 27.0, 133.0],
-                                     MassProfiles=profiles,
-                                     Background=background,
-                                     IntensityConstraints="[0,1,0,-4]")
-
-        alg.execute()
-        output_ws = alg.getProperty("OutputWorkspace").value
-
-        self.assertEqual(8, output_ws.getNumberHistograms())
-        self.assertAlmostEqual(50.0, output_ws.readX(0)[0])
-        self.assertAlmostEqual(562.0, output_ws.readX(0)[-1])
-
-        self.assertAlmostEqual(0.000928695463881635, output_ws.readY(0)[0])
-        self.assertAlmostEqual(0.00722948549525415, output_ws.readY(0)[-1])
-        self.assertAlmostEqual(-0.00756178413274695, output_ws.readY(1)[0])
-        self.assertAlmostEqual(0.00355843687365601, output_ws.readY(1)[-1])
+        self.assertAlmostEqual(0.00092869546388163471, output_ws.readY(0)[0])
+        self.assertAlmostEqual(0.007229485495254151, output_ws.readY(0)[-1])
+        self.assertAlmostEqual(-0.005852648610523481, output_ws.readY(1)[0])
+        # Masked
+        self.assertAlmostEqual(0.0, output_ws.readY(1)[-1])
 
     # -------------- Failure cases ------------------
 
@@ -90,7 +67,6 @@ class VesuvioPreprocessTest(unittest.TestCase):
         alg = self._create_algorithm(InputWorkspace=self._test_ws,
                                      Smoothing="Neighbour", SmoothingOptions="npts=3")
         self.assertRaises(RuntimeError, alg.execute)
-
 
     # -------------- Helpers --------------------
 
