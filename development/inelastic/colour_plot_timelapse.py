@@ -136,29 +136,50 @@ def generate_video(workspace_group,
                          video_filename])
 
 
-# Directory to save images and final video in (best to create a new directory for this)
-output_directory = os.path.join(config['defaultsave.directory'], 'tl')
+#################
+# SETUP OPTIONS #
+#################
+
+OPTIONS = dict()
 
 # Name of workspace group containing scan
-scan_ws = 'osiris_scan'
+SCAN_WS = 'osiris_scan'
+
+# Directory to save images and final video in (best to create a new directory for this)
+OPTIONS['directory'] = os.path.join(config['defaultsave.directory'], 'tl')
+
+# List of names of log values to add to each plot image
+# (time series logs will take the average value)
+OPTIONS['log_names'] = ['run_title', 'Stick']
+
+# Maximum and minimum values for the colour scale
+OPTIONS['colour_scale'] = [-6.0, 6.0]
+
+# Frame rate for the generated video
+OPTIONS['frame_rate'] = 5
+
+# Encoder utility to use to create the video
+# Options are: ffmpeg, avconv or None
+# None will create the series of images but no video
+OPTIONS['encoder'] = None
+
+
+######################
+# PROCESS WORKSPACES #
+######################
 
 # Replace any infinate or NaN values
-ReplaceSpecialValues(InputWorkspace=scan_ws,
-                     OutputWorkspace=scan_ws,
+ReplaceSpecialValues(InputWorkspace=SCAN_WS,
+                     OutputWorkspace=SCAN_WS,
                      NaNValue=0.0,
                      InfinityValue=0.0)
 
 # First subtract a background run
-scan_ws = subtract_background(scan_ws,
+SCAN_WS = subtract_background(SCAN_WS,
                               workspace=0)
 
 # Generate difference workspace
-scan_ws = generate_difference(scan_ws)
+SCAN_WS = generate_difference(SCAN_WS)
 
 # Create the images and video
-generate_video(scan_ws,
-               directory=output_directory,
-               log_names=['run_title', 'Stick'],
-               colour_scale=[-6.0, 6.0],
-               frame_rate=5,
-               encoder=None)
+generate_video(SCAN_WS, **OPTIONS)
