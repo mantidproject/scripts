@@ -39,8 +39,11 @@ def fit_tof(runs, flags):
 
     output_groups = []
     for index in range(tof_data.getNumberHistograms()):
+        suffix = _create_fit_workspace_suffix(index, tof_data, fit_mode, spectra)
+
         # Corrections
-        param_table = None
+        corrections_args = dict()
+
         if flags['gamma_correct']:
             # Need to do a fit first to obtain the parameter table
             param_table = '__vesuvio_corrections_params'
@@ -54,18 +57,24 @@ def fit_tof(runs, flags):
                                     OutputWorkspace=corrections_fit_name,
                                     FitParameters=param_table)
             DeleteWorkspace(corrections_fit_name)
+            corrections_args['FitParameters'] = param_table
 
+        if flags['ms_correct']:
+            corrections_args.update(flags['ms_flags'].to_algorithm_props())
+
+        corrected_data_name = runs + "_tof_corrected" + suffix
         corrected_data = VesuvioCorrections(InputWorkspace=tof_data,
+                                            OutputWorkspace=corrected_data_name,
                                             WorkspaceIndex=index,
                                             GammaBackground=flags['gamma_correct'],
-                                            FitParameters=param_table,
                                             Masses=mass_values,
                                             MassProfiles=profiles_strs,
                                             IntensityConstraints=intensity_constraints,
-                                            MultipleScattering=flags['ms_correct'])
+                                            MultipleScattering=flags['ms_correct'],
+                                            **corrections_args)
+        DeleteWorkspace(param_table)
 
         # Fit
-        suffix = _create_fit_workspace_suffix(index, tof_data, fit_mode, spectra)
         ws_name = runs + "_data" + suffix
         pars_name = runs + "_params" + suffix
         results = VesuvioTOFFit(InputWorkspace=corrected_data,
@@ -76,6 +85,8 @@ def fit_tof(runs, flags):
                                 IntensityConstraints=intensity_constraints,
                                 OutputWorkspace=ws_name,
                                 FitParameters=pars_name)
+        DeleteWorkspace(corrected_data)
+
         group_name = runs + suffix
         output_groups.append(GroupWorkspaces(InputWorkspaces=[ws_name, pars_name], OutputWorkspace=group_name))
 

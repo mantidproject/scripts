@@ -1,13 +1,66 @@
 # pylint: disable=no-init
 from mantid.kernel import *
 from mantid.api import *
-from mantid.simpleapi import ExtractSingleSpectrum, CalculateGammaBackground, DeleteWorkspace
-import numpy as np
 from vesuvio.algorithms.base import VesuvioBase, TableWorkspaceDictionaryFacade
 from vesuvio.fitting import parse_fit_options
 
 
+#----------------------------------------------------------------------------------------
+
+
+def create_cuboid_xml(height, width, depth):
+    """
+    Create the XML string to describe a cuboid of the given dimensions
+
+    @param height Height in metres (Y coordinate)
+    @param width Width in metres (X coordinate)
+    @param depth Depth in metres (Z coordinate)
+    """
+    half_height, half_width, half_thick = 0.5*height, 0.5*width, 0.5*depth
+    xml_str = \
+      " <cuboid id=\"sample-shape\"> " \
+      + "<left-front-bottom-point x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width,-half_height,half_thick) \
+      + "<left-front-top-point x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, half_height, half_thick) \
+      + "<left-back-bottom-point x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, -half_height, -half_thick) \
+      + "<right-front-bottom-point x=\"%f\" y=\"%f\" z=\"%f\" /> " % (-half_width, -half_height, half_thick) \
+      + "</cuboid>"
+    return xml_str
+
+
+#----------------------------------------------------------------------------------------
+
+
+class MSFlags(dict):
+
+    def __init__(self):
+        self['AtomProps'] = None
+
+
+    def to_algorithm_props(self):
+        """
+        Converts the options to a dictionary of algorithm
+        properties for VesuvioCorrections.
+        @return Algorithm property dictionary
+        """
+        alg_props = dict(self)
+
+        # Remove the AtomProps option (processed later)
+        if 'AtomProps' in alg_props:
+            alg_props.pop('AtomProps')
+
+        # Convert AtomProps to NumMasses and AtomProperties
+        alg_props['NumMasses'] = len(self['AtomProps'])
+        alg_props['AtomProperties'] = [prop for atom in self['AtomProps'] for prop in atom]
+
+        return alg_props
+
+
+#----------------------------------------------------------------------------------------
+
+
 class VesuvioCorrections(VesuvioBase):
+
+    _output_ws = None
 
     def summary(self):
         return "Apply post fitting steps to vesuvio data"
@@ -45,6 +98,45 @@ class VesuvioCorrections(VesuvioBase):
         self.declareProperty("MultipleScattering", True, direction=Direction.Input,
                              doc="If true, correct for the effects of multiple scattering")
 
+        self.declareProperty("BeamRadius", 2.5,
+                             doc="Radius of beam in cm")
+
+        self.declareProperty("SampleHeight", 0.0,
+                             doc="Height of sample in cm")
+
+        self.declareProperty("SampleWidth", 0.0,
+                             doc="Width of sample in cm")
+
+        self.declareProperty("SampleDepth", 0.0,
+                             doc="Depth of sample in cm")
+
+        self.declareProperty("NumMasses", 0,
+                             doc="")
+
+        self.declareProperty(FloatArrayProperty("AtomProperties", []),
+                             doc="")
+
+        self.declareProperty("SampleDensity", 0.0,
+                             doc="Sample density in g/cm^3")
+
+        self.declareProperty("Seed", 123456789,
+                             doc="")
+
+        self.declareProperty("NumScatters", 3,
+                             doc="")
+
+        self.declareProperty("NumRuns", 10,
+                             doc="")
+
+        self.declareProperty("NumEvents", 50000,
+                             doc="Number of neutron events")
+
+        self.declareProperty("SmoothNeighbours", 3,
+                             doc="")
+
+        self.declareProperty("ScatteringScaleFactor", 1.0,
+                             doc="")
+
         # Outputs
         self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", "", direction=Direction.Output),
                              doc="The name of the output workspace")
@@ -61,6 +153,8 @@ class VesuvioCorrections(VesuvioBase):
 
 
     def PyExec(self):
+        from mantid.simpleapi import ExtractSingleSpectrum
+
         input_ws = self.getPropertyValue("InputWorkspace")
         spec_idx = self.getProperty("WorkspaceIndex").value
         self._output_ws = self.getPropertyValue("OutputWorkspace")
@@ -79,6 +173,8 @@ class VesuvioCorrections(VesuvioBase):
 
 
     def _gamma_correction(self):
+        from mantid.simpleapi import (CalculateGammaBackground, DeleteWorkspace)
+
         fit_opts = parse_fit_options(mass_values=self.getProperty("Masses").value,
                                      profile_strs=self.getProperty("MassProfiles").value,
                                      constraints_str=self.getProperty("IntensityConstraints").value)
@@ -97,7 +193,60 @@ class VesuvioCorrections(VesuvioBase):
 
 
     def _ms_correction(self):
-        pass
+        """
+        Calculates the contributions from multiple scattering
+        on the input data from the set of given options
+        """
+        from mantid.simpleapi import (CalculateMSVesuvio, CreateSampleShape,
+                                      DeleteWorkspace, SmoothData, Minus)
+
+        # Create the sample shape
+        # Input dimensions are expected in CM
+        CreateSampleShape(InputWorkspace=self._output_ws,
+                          ShapeXML=create_cuboid_xml(self.getProperty("SampleHeight").value/100.,
+                                                     self.getProperty("SampleWidth").value/100.,
+                                                     self.getProperty("SampleDepth").value/100.))
+
+        # Massage options into how algorithm expects them
+        totalS, multS = str(self._output_ws) + "_totsc", str(self._output_ws) + "_mssc"
+
+        # Calculation
+        CalculateMSVesuvio(InputWorkspace=self._output_ws,
+                           NoOfMasses=self.getProperty("NumMasses").value,
+                           SampleDensity=self.getProperty("SampleDensity").value,
+                           AtomicProperties=self.getPropertyValue("AtomProperties"),
+                           BeamRadius=self.getProperty("BeamRadius").value,
+                           TotalScatteringWS=totalS,
+                           MultipleScatteringWS=multS)
+
+        # Smooth the output
+        smooth_neighbours  = self.getProperty("SmoothNeighbours").value
+        SmoothData(InputWorkspace=totalS,
+                   OutputWorkspace=totalS,
+                   NPoints=smooth_neighbours)
+        SmoothData(InputWorkspace=multS,
+                   OutputWorkspace=multS,
+                   NPoints=smooth_neighbours)
+
+        # Optional scale
+        scale_factor = self.getProperty("ScatteringScaleFactor").value
+        if scale_factor != 1.0:
+            Scale(InputWorkspace=totalS,
+                  OutputWorkspace=totalS,
+                  Factor=scale_factor,
+                  Operation=Multiply)
+            Scale(InputWorkspace=multS,
+                  OutputWorkspace=multS,
+                  Factor=scale_factor,
+                  Operation=Multiply)
+
+        Minus(LHSWorkspace=self._output_ws,
+              RHSWorkspace=totalS,
+              OutputWorkspace=self._output_ws)
+
+        # Cleanup
+        DeleteWorkspace(totalS)
+        DeleteWorkspace(multS)
 
 
 # -----------------------------------------------------------------------------------------
