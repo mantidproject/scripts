@@ -5,7 +5,7 @@ about is fit_tof().
 from vesuvio.instrument import VESUVIO
 
 from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager, CropWorkspace,
-                              GroupWorkspaces, LoadVesuvio)
+                              GroupWorkspaces, LoadVesuvio, DeleteWorkspace)
 
 
 # --------------------------------------------------------------------------------
@@ -31,16 +31,45 @@ def fit_tof(runs, flags):
     tof_data = load_and_crop_data(runs, spectra, flags['ip_file'],
                                   flags['diff_mode'], fit_mode)
 
-    # Fit
     # The simpleapi function won't have been created so do it by hand
     VesuvioTOFFit = _create_algorithm_function("VesuvioTOFFit", 1,
                                                AlgorithmManager.createUnmanaged("VesuvioTOFFit"))
+    VesuvioCorrections = _create_algorithm_function("VesuvioCorrections", 1,
+                                                    AlgorithmManager.createUnmanaged("VesuvioCorrections"))
+
     output_groups = []
     for index in range(tof_data.getNumberHistograms()):
+        # Corrections
+        param_table = None
+        if flags['gamma_correct']:
+            # Need to do a fit first to obtain the parameter table
+            param_table = '__vesuvio_corrections_params'
+            corrections_fit_name = '__vesuvio_corrections_fit'
+            results = VesuvioTOFFit(InputWorkspace=tof_data,
+                                    WorkspaceIndex=index,
+                                    Masses=mass_values,
+                                    MassProfiles=profiles_strs,
+                                    Background=background_str,
+                                    IntensityConstraints=intensity_constraints,
+                                    OutputWorkspace=corrections_fit_name,
+                                    FitParameters=param_table)
+            DeleteWorkspace(corrections_fit_name)
+
+        corrected_data = VesuvioCorrections(InputWorkspace=tof_data,
+                                            WorkspaceIndex=index,
+                                            GammaBackground=flags['gamma_correct'],
+                                            FitParameters=param_table,
+                                            Masses=mass_values,
+                                            MassProfiles=profiles_strs,
+                                            IntensityConstraints=intensity_constraints,
+                                            MultipleScattering=flags['ms_correct'])
+
+        # Fit
         suffix = _create_fit_workspace_suffix(index, tof_data, fit_mode, spectra)
         ws_name = runs + "_data" + suffix
         pars_name = runs + "_params" + suffix
-        results = VesuvioTOFFit(InputWorkspace=tof_data, WorkspaceIndex=index,
+        results = VesuvioTOFFit(InputWorkspace=corrected_data,
+                                WorkspaceIndex=0, # Corrected data always has a single histogram
                                 Masses=mass_values,
                                 MassProfiles=profiles_strs,
                                 Background=background_str,
