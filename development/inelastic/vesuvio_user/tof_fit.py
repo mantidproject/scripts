@@ -75,17 +75,31 @@ flags['gamma_correct'] = True
 # Enable multiple scattering corrections
 flags['ms_correct'] = True
 
+# Holds flags specific to multiple scattering
 flags['ms_flags'] = MSFlags()
+
+# Sample size in cm
 flags['ms_flags']['SampleWidth'] = 10.0
 flags['ms_flags']['SampleHeight'] = 10.0
 flags['ms_flags']['SampleDepth'] = 0.5
+
+# Sample density in g/cm^3
 flags['ms_flags']['SampleDensity'] = 241
+
 flags['ms_flags']['AtomProps'] = [
   # mass, cross section, s.d. J(y)
   [1.007900, 0.9272392, 5.003738],
   [16.00000, 3.2587662E-02, 13.92299],
   [27.50000, 4.0172841E-02, 15.07701]
 ]
+
+# Optional parameters (default values are given)
+# flags['ms_flags']['Seed'] = 123456789
+# flags['ms_flags']['NumScatters'] = 3
+# flags['ms_flags']['NumRuns'] = 10
+# flags['ms_flags']['NumEvents'] = 50000
+# flags['ms_flags']['SmoothNeighbours'] = 3
+# flags['ms_flags']['ScatteringScaleFactor'] = 1.0
 
 
 # --------------------------------------------------------------------------------
