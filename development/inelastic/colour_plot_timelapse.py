@@ -69,7 +69,7 @@ def generate_video(workspace_group,
                    log_names=[],
                    colour_scale=None,
                    frame_rate=10,
-                   image_filename_format=r'_%.4d.png',
+                   image_filename_format=r'_%.5d.png',
                    encoder='avconv'):
     """
     Generates a timelapse video fram w workspace group.
@@ -143,6 +143,7 @@ def generate_video(workspace_group,
 OPTIONS = dict()
 
 # Name of workspace group containing scan
+# Workspaces will appear in the output in the sam eorder as they appear in the WorkspaceGroup
 SCAN_WS = 'osiris_scan'
 
 # Directory to save images and final video in (best to create a new directory for this)
@@ -153,6 +154,8 @@ OPTIONS['directory'] = os.path.join(config['defaultsave.directory'], 'tl')
 OPTIONS['log_names'] = ['run_title', 'Stick']
 
 # Maximum and minimum values for the colour scale
+# Set to None to have this automatically adjust on a per image basis (not recommended as
+# the scale will be inconsistent across each of the images)
 OPTIONS['colour_scale'] = [-6.0, 6.0]
 
 # Frame rate for the generated video
