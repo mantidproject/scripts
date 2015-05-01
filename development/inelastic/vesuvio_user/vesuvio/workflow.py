@@ -44,22 +44,22 @@ def fit_tof(runs, flags):
         # Corrections
         corrections_args = dict()
 
-        if flags['gamma_correct']:
-            # Need to do a fit first to obtain the parameter table
-            param_table = '__vesuvio_corrections_params'
-            corrections_fit_name = '__vesuvio_corrections_fit'
-            results = VesuvioTOFFit(InputWorkspace=tof_data,
-                                    WorkspaceIndex=index,
-                                    Masses=mass_values,
-                                    MassProfiles=profiles_strs,
-                                    Background=background_str,
-                                    IntensityConstraints=intensity_constraints,
-                                    OutputWorkspace=corrections_fit_name,
-                                    FitParameters=param_table)
-            DeleteWorkspace(corrections_fit_name)
-            corrections_args['FitParameters'] = param_table
+        # Need to do a fit first to obtain the parameter table
+        pre_correction_pars_name = runs + "_params_pre_correction" + suffix
+        corrections_fit_name = '__vesuvio_corrections_fit'
+        results = VesuvioTOFFit(InputWorkspace=tof_data,
+                                WorkspaceIndex=index,
+                                Masses=mass_values,
+                                MassProfiles=profiles_strs,
+                                Background=background_str,
+                                IntensityConstraints=intensity_constraints,
+                                OutputWorkspace=corrections_fit_name,
+                                FitParameters=pre_correction_pars_name)
+        DeleteWorkspace(corrections_fit_name)
+        corrections_args['FitParameters'] = pre_correction_pars_name
 
         if flags['ms_correct']:
+            # Add the mutiple scattering arguments
             corrections_args.update(flags['ms_flags'].to_algorithm_props())
 
         corrected_data_name = runs + "_tof_corrected" + suffix
@@ -72,7 +72,6 @@ def fit_tof(runs, flags):
                                             IntensityConstraints=intensity_constraints,
                                             MultipleScattering=flags['ms_correct'],
                                             **corrections_args)
-        DeleteWorkspace(param_table)
 
         # Fit
         ws_name = runs + "_data" + suffix
@@ -88,7 +87,7 @@ def fit_tof(runs, flags):
         DeleteWorkspace(corrected_data)
 
         group_name = runs + suffix
-        output_groups.append(GroupWorkspaces(InputWorkspaces=[ws_name, pars_name], OutputWorkspace=group_name))
+        output_groups.append(GroupWorkspaces(InputWorkspaces=[ws_name, pars_name, pre_correction_pars_name], OutputWorkspace=group_name))
 
     if len(output_groups) > 1:
         return output_groups
