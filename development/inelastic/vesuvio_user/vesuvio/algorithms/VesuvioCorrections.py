@@ -60,7 +60,14 @@ class MSFlags(dict):
 
 class VesuvioCorrections(VesuvioBase):
 
+    _input_ws = None
     _output_ws = None
+
+    _save_correction = None
+    _save_corrected = None
+    _correction_workspaces = None
+    _corrected_workspaces = None
+
 
     def summary(self):
         return "Apply post fitting steps to vesuvio data"
@@ -138,6 +145,16 @@ class VesuvioCorrections(VesuvioBase):
                              doc="")
 
         # Outputs
+        self.declareProperty(WorkspaceGroupProperty("CorrectionWorkspaces", "",
+                                                    direction=Direction.Output,
+                                                    optional=PropertyMode.Optional),
+                             doc="Workspace group containing correction intensities for each correction")
+
+        self.declareProperty(WorkspaceGroupProperty("CorrectedWorkspaces", "",
+                                                    direction=Direction.Output,
+                                                    optional=PropertyMode.Optional),
+                             doc="Workspace group containing sample corrected with each correction")
+
         self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", "", direction=Direction.Output),
                              doc="The name of the output workspace")
 
@@ -153,15 +170,23 @@ class VesuvioCorrections(VesuvioBase):
 
 
     def PyExec(self):
-        from mantid.simpleapi import ExtractSingleSpectrum
+        from mantid.simpleapi import (ExtractSingleSpectrum, GroupWorkspaces)
 
-        input_ws = self.getPropertyValue("InputWorkspace")
+        self._input_ws = self.getPropertyValue("InputWorkspace")
         spec_idx = self.getProperty("WorkspaceIndex").value
         self._output_ws = self.getPropertyValue("OutputWorkspace")
 
-        ExtractSingleSpectrum(InputWorkspace=input_ws,
+        self._correction_wsg = self.getPropertyValue("CorrectionWorkspaces")
+        self._save_correction = self._correction_wsg != ""
+        self._corrected_wsg = self.getPropertyValue("CorrectedWorkspaces")
+        self._save_corrected = self._corrected_wsg != ""
+
+        ExtractSingleSpectrum(InputWorkspace=self._input_ws,
                               OutputWorkspace=self._output_ws,
                               WorkspaceIndex=spec_idx)
+
+        self._corrected_workspaces = list()
+        self._correction_workspaces = list()
 
         if self.getProperty("GammaBackground").value:
             self._gamma_correction()
@@ -171,9 +196,19 @@ class VesuvioCorrections(VesuvioBase):
 
         self.setProperty("OutputWorkspace", self._output_ws)
 
+        if self._save_correction:
+            GroupWorkspaces(InputWorkspaces=self._correction_workspaces,
+                            OutputWorkspace=self._correction_wsg)
+            self.setProperty("CorrectionWorkspaces", self._correction_wsg)
+
+        if self._save_corrected:
+            GroupWorkspaces(InputWorkspaces=self._corrected_workspaces,
+                            OutputWorkspace=self._corrected_wsg)
+            self.setProperty("CorrectedWorkspaces", self._corrected_wsg)
+
 
     def _gamma_correction(self):
-        from mantid.simpleapi import (CalculateGammaBackground, DeleteWorkspace)
+        from mantid.simpleapi import (CalculateGammaBackground, CloneWorkspace, DeleteWorkspace)
 
         fit_opts = parse_fit_options(mass_values=self.getProperty("Masses").value,
                                      profile_strs=self.getProperty("MassProfiles").value,
@@ -183,13 +218,24 @@ class VesuvioCorrections(VesuvioBase):
         params_dict = TableWorkspaceDictionaryFacade(mtd[params_ws_name])
         func_str = fit_opts.create_function_str(params_dict)
 
-        num_hist = mtd[self._output_ws].getNumberHistograms()
+        correction_background_ws = str(self._correction_wsg) + "_GammaBackground"
+        corrected_background_ws = str(self._corrected_wsg) + "_GammaBackground"
 
         CalculateGammaBackground(InputWorkspace=self._output_ws,
                                  ComptonFunction=func_str,
-                                 BackgroundWorkspace='__background',
+                                 BackgroundWorkspace=correction_background_ws,
                                  CorrectedWorkspace=self._output_ws)
-        DeleteWorkspace('__background')
+
+        if self. _save_correction:
+            self._correction_workspaces.append(correction_background_ws)
+        else:
+            DeleteWorkspace(correction_background_ws)
+
+        if self. _save_corrected:
+            CloneWorkspace(InputWorkspace=self._output_ws,
+                           OutputWorkspace=corrected_background_ws)
+
+            self._corrected_workspaces.append(corrected_background_ws)
 
 
     def _ms_correction(self):
@@ -208,7 +254,8 @@ class VesuvioCorrections(VesuvioBase):
                                                      self.getProperty("SampleDepth").value/100.))
 
         # Massage options into how algorithm expects them
-        totalS, multS = str(self._output_ws) + "_totsc", str(self._output_ws) + "_mssc"
+        total_scatter_correction = str(self._correction_wsg) + "_TotalScattering"
+        multi_scatter_correction = str(self._correction_wsg) + "_MultipleScattering"
 
         # Calculation
         CalculateMSVesuvio(InputWorkspace=self._output_ws,
@@ -216,37 +263,54 @@ class VesuvioCorrections(VesuvioBase):
                            SampleDensity=self.getProperty("SampleDensity").value,
                            AtomicProperties=self.getPropertyValue("AtomProperties"),
                            BeamRadius=self.getProperty("BeamRadius").value,
-                           TotalScatteringWS=totalS,
-                           MultipleScatteringWS=multS)
+                           TotalScatteringWS=total_scatter_correction,
+                           MultipleScatteringWS=multi_scatter_correction)
 
         # Smooth the output
         smooth_neighbours  = self.getProperty("SmoothNeighbours").value
-        SmoothData(InputWorkspace=totalS,
-                   OutputWorkspace=totalS,
+        SmoothData(InputWorkspace=total_scatter_correction,
+                   OutputWorkspace=total_scatter_correction,
                    NPoints=smooth_neighbours)
-        SmoothData(InputWorkspace=multS,
-                   OutputWorkspace=multS,
+        SmoothData(InputWorkspace=multi_scatter_correction,
+                   OutputWorkspace=multi_scatter_correction,
                    NPoints=smooth_neighbours)
 
         # Optional scale
         scale_factor = self.getProperty("ScatteringScaleFactor").value
         if scale_factor != 1.0:
-            Scale(InputWorkspace=totalS,
-                  OutputWorkspace=totalS,
+            Scale(InputWorkspace=total_scatter_correction,
+                  OutputWorkspace=total_scatter_correction,
                   Factor=scale_factor,
                   Operation=Multiply)
-            Scale(InputWorkspace=multS,
-                  OutputWorkspace=multS,
+            Scale(InputWorkspace=multi_scatter_correction,
+                  OutputWorkspace=multi_scatter_correction,
                   Factor=scale_factor,
                   Operation=Multiply)
 
-        Minus(LHSWorkspace=self._output_ws,
-              RHSWorkspace=totalS,
-              OutputWorkspace=self._output_ws)
+        if self._save_correction:
+            self._correction_workspaces.append(total_scatter_correction)
+            self._correction_workspaces.append(multi_scatter_correction)
+        else:
+            DeleteWorkspace(total_scatter_correction)
+            DeleteWorkspace(multi_scatter_correction)
 
-        # Cleanup
-        DeleteWorkspace(totalS)
-        DeleteWorkspace(multS)
+        if self._save_corrected:
+            Minus(LHSWorkspace=self._output_ws,
+                  RHSWorkspace=total_scatter_correction,
+                  OutputWorkspace=self._output_ws)
+
+            total_scatter_corrected = str(self._corrected_wsg) + "_TotalScattering"
+            multi_scatter_corrected = str(self._corrected_wsg) + "_MultipleScattering"
+
+            Minus(LHSWorkspace=self._input_ws,
+                  RHSWorkspace=total_scatter_correction,
+                  OutputWorkspace=total_scatter_corrected)
+            Minus(LHSWorkspace=self._input_ws,
+                  RHSWorkspace=multi_scatter_correction,
+                  OutputWorkspace=multi_scatter_corrected)
+
+            self._corrected_workspaces.append(total_scatter_corrected)
+            self._corrected_workspaces.append(multi_scatter_corrected)
 
 
 # -----------------------------------------------------------------------------------------

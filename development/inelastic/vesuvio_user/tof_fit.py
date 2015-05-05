@@ -69,6 +69,10 @@ flags['background'] = {'function': 'Polynomial', 'order': 2}
 # Corrections flags
 # --------------------------------------------------------------------------------
 
+# Outputs workspaces containing the correction factors for each correction and
+# workspaces containing the input data with the single correction applied.
+flags['output_verbose_corrections'] = False
+
 # Enable gamma correction for gamma emissions due to neutron absorption in sheilding
 flags['gamma_correct'] = True
 

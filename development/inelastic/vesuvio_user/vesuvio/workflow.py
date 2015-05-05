@@ -4,8 +4,9 @@ about is fit_tof().
 """
 from vesuvio.instrument import VESUVIO
 
+from mantid import mtd
 from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager, CropWorkspace,
-                              GroupWorkspaces, LoadVesuvio, DeleteWorkspace)
+                              GroupWorkspaces, UnGroupWorkspace, LoadVesuvio, DeleteWorkspace)
 
 
 # --------------------------------------------------------------------------------
@@ -47,14 +48,14 @@ def fit_tof(runs, flags):
         # Need to do a fit first to obtain the parameter table
         pre_correction_pars_name = runs + "_params_pre_correction" + suffix
         corrections_fit_name = '__vesuvio_corrections_fit'
-        results = VesuvioTOFFit(InputWorkspace=tof_data,
-                                WorkspaceIndex=index,
-                                Masses=mass_values,
-                                MassProfiles=profiles_strs,
-                                Background=background_str,
-                                IntensityConstraints=intensity_constraints,
-                                OutputWorkspace=corrections_fit_name,
-                                FitParameters=pre_correction_pars_name)
+        VesuvioTOFFit(InputWorkspace=tof_data,
+                      WorkspaceIndex=index,
+                      Masses=mass_values,
+                      MassProfiles=profiles_strs,
+                      Background=background_str,
+                      IntensityConstraints=intensity_constraints,
+                      OutputWorkspace=corrections_fit_name,
+                      FitParameters=pre_correction_pars_name)
         DeleteWorkspace(corrections_fit_name)
         corrections_args['FitParameters'] = pre_correction_pars_name
 
@@ -63,31 +64,44 @@ def fit_tof(runs, flags):
             corrections_args.update(flags['ms_flags'].to_algorithm_props())
 
         corrected_data_name = runs + "_tof_corrected" + suffix
-        corrected_data = VesuvioCorrections(InputWorkspace=tof_data,
-                                            OutputWorkspace=corrected_data_name,
-                                            WorkspaceIndex=index,
-                                            GammaBackground=flags['gamma_correct'],
-                                            Masses=mass_values,
-                                            MassProfiles=profiles_strs,
-                                            IntensityConstraints=intensity_constraints,
-                                            MultipleScattering=flags['ms_correct'],
-                                            **corrections_args)
+
+        if flags['output_verbose_corrections']:
+            corrections_args["CorrectionWorkspaces"] = runs + "_correction" + suffix
+            corrections_args["CorrectedWorkspaces"] = runs + "_corrected" + suffix
+
+        VesuvioCorrections(InputWorkspace=tof_data,
+                           OutputWorkspace=corrected_data_name,
+                           WorkspaceIndex=index,
+                           GammaBackground=flags['gamma_correct'],
+                           Masses=mass_values,
+                           MassProfiles=profiles_strs,
+                           IntensityConstraints=intensity_constraints,
+                           MultipleScattering=flags['ms_correct'],
+                           **corrections_args)
 
         # Fit
         ws_name = runs + "_data" + suffix
         pars_name = runs + "_params" + suffix
-        results = VesuvioTOFFit(InputWorkspace=corrected_data,
-                                WorkspaceIndex=0, # Corrected data always has a single histogram
-                                Masses=mass_values,
-                                MassProfiles=profiles_strs,
-                                Background=background_str,
-                                IntensityConstraints=intensity_constraints,
-                                OutputWorkspace=ws_name,
-                                FitParameters=pars_name)
-        DeleteWorkspace(corrected_data)
+        VesuvioTOFFit(InputWorkspace=corrected_data_name,
+                      WorkspaceIndex=0, # Corrected data always has a single histogram
+                      Masses=mass_values,
+                      MassProfiles=profiles_strs,
+                      Background=background_str,
+                      IntensityConstraints=intensity_constraints,
+                      OutputWorkspace=ws_name,
+                      FitParameters=pars_name)
+        DeleteWorkspace(corrected_data_name)
 
         group_name = runs + suffix
-        output_groups.append(GroupWorkspaces(InputWorkspaces=[ws_name, pars_name, pre_correction_pars_name], OutputWorkspace=group_name))
+        output_workspaces = [ws_name, pars_name, pre_correction_pars_name]
+
+        if flags['output_verbose_corrections']:
+            output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
+            output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
+            UnGroupWorkspace(corrections_args["CorrectionWorkspaces"])
+            UnGroupWorkspace(corrections_args["CorrectedWorkspaces"])
+
+        output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
 
     if len(output_groups) > 1:
         return output_groups
