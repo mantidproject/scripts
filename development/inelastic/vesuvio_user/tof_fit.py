@@ -6,7 +6,6 @@ It requires the vesuvio script
 import vesuvio.workflow
 reload(vesuvio.workflow)
 from vesuvio.workflow import fit_tof
-from vesuvio.algorithms.VesuvioCorrections import MSFlags
 
 # --------------------------------------------------------------------------------
 # Standard flags to modify processing
@@ -73,6 +72,9 @@ flags['background'] = {'function': 'Polynomial', 'order': 2}
 # workspaces containing the input data with the single correction applied.
 flags['output_verbose_corrections'] = False
 
+#
+flags['calculate_correction_proportion'] = False
+
 # Enable gamma correction for gamma emissions due to neutron absorption in sheilding
 flags['gamma_correct'] = True
 
@@ -80,7 +82,7 @@ flags['gamma_correct'] = True
 flags['ms_correct'] = True
 
 # Holds flags specific to multiple scattering
-flags['ms_flags'] = MSFlags()
+flags['ms_flags'] = dict()
 
 # Sample size in cm
 flags['ms_flags']['SampleWidth'] = 10.0
@@ -89,13 +91,6 @@ flags['ms_flags']['SampleDepth'] = 0.5
 
 # Sample density in g/cm^3
 flags['ms_flags']['SampleDensity'] = 241
-
-flags['ms_flags']['AtomProps'] = [
-  # mass, cross section, s.d. J(y)
-  [1.007900, 0.9272392, 5.003738],
-  [16.00000, 3.2587662E-02, 13.92299],
-  [27.50000, 4.0172841E-02, 15.07701]
-]
 
 # Optional parameters (default values are given)
 # flags['ms_flags']['Seed'] = 123456789

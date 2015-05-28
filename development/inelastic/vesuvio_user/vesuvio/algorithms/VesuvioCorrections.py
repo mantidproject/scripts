@@ -30,34 +30,6 @@ def create_cuboid_xml(height, width, depth):
 #----------------------------------------------------------------------------------------
 
 
-class MSFlags(dict):
-
-    def __init__(self):
-        self['AtomProps'] = None
-
-
-    def to_algorithm_props(self):
-        """
-        Converts the options to a dictionary of algorithm
-        properties for VesuvioCorrections.
-        @return Algorithm property dictionary
-        """
-        alg_props = dict(self)
-
-        # Remove the AtomProps option (processed later)
-        if 'AtomProps' in alg_props:
-            alg_props.pop('AtomProps')
-
-        # Convert AtomProps to NumMasses and AtomProperties
-        alg_props['NumMasses'] = len(self['AtomProps'])
-        alg_props['AtomProperties'] = [prop for atom in self['AtomProps'] for prop in atom]
-
-        return alg_props
-
-
-#----------------------------------------------------------------------------------------
-
-
 class VesuvioCorrections(VesuvioBase):
 
     _input_ws = None
@@ -120,9 +92,6 @@ class VesuvioCorrections(VesuvioBase):
         self.declareProperty("NumMasses", 0,
                              doc="")
 
-        self.declareProperty(FloatArrayProperty("AtomProperties", []),
-                             doc="")
-
         self.declareProperty("SampleDensity", 0.0,
                              doc="Sample density in g/cm^3")
 
@@ -162,9 +131,8 @@ class VesuvioCorrections(VesuvioBase):
     def validateInputs(self):
         errors = dict()
 
-        # The gamma correction requires the table of fitted parameters
-        if self.getProperty("GammaBackground").value and self.getProperty("FitParameters").value is None:
-            errors["FitParameters"] = "Gamma background correction requires a set of parameters from a fit of the data"
+        if self.getProperty("FitParameters").value is None:
+            errors["FitParameters"] = "Corrections require a set of parameters from a fit of the data"
 
         return errors
 
@@ -213,7 +181,6 @@ class VesuvioCorrections(VesuvioBase):
         fit_opts = parse_fit_options(mass_values=self.getProperty("Masses").value,
                                      profile_strs=self.getProperty("MassProfiles").value,
                                      constraints_str=self.getProperty("IntensityConstraints").value)
-
         params_ws_name = self.getPropertyValue("FitParameters")
         params_dict = TableWorkspaceDictionaryFacade(mtd[params_ws_name])
         func_str = fit_opts.create_function_str(params_dict)
@@ -246,6 +213,29 @@ class VesuvioCorrections(VesuvioBase):
         from mantid.simpleapi import (CalculateMSVesuvio, CreateSampleShape,
                                       DeleteWorkspace, SmoothData, Minus)
 
+        masses = self.getProperty("Masses").value
+        params_ws_name = self.getPropertyValue("FitParameters")
+        params_dict = TableWorkspaceDictionaryFacade(mtd[params_ws_name])
+
+        atom_props = list()
+        for i, mass in enumerate(masses):
+            cross_section = 1.0
+            std_dev = 1.0
+
+            try:
+                cross_section = params_dict['f%d.Intensity' % i]
+            except:
+                cross_section = params_dict['f%d.FSECoeff' % i]
+
+            try:
+                std_dev = params_dict['f%d.Width' % i]
+            except:
+                pass
+
+            atom_props.append(mass)
+            atom_props.append(cross_section)
+            atom_props.append(std_dev)
+
         # Create the sample shape
         # Input dimensions are expected in CM
         CreateSampleShape(InputWorkspace=self._output_ws,
@@ -261,7 +251,7 @@ class VesuvioCorrections(VesuvioBase):
         CalculateMSVesuvio(InputWorkspace=self._output_ws,
                            NoOfMasses=self.getProperty("NumMasses").value,
                            SampleDensity=self.getProperty("SampleDensity").value,
-                           AtomicProperties=self.getPropertyValue("AtomProperties"),
+                           AtomicProperties=atom_props,
                            BeamRadius=self.getProperty("BeamRadius").value,
                            TotalScatteringWS=total_scatter_correction,
                            MultipleScatteringWS=multi_scatter_correction)
