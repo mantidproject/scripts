@@ -1,12 +1,11 @@
 # pylint: disable=no-init
+from string import Template
 from mantid.kernel import *
 from mantid.api import *
 from vesuvio.algorithms.base import VesuvioBase, TableWorkspaceDictionaryFacade
 from vesuvio.fitting import parse_fit_options
 
-
 #----------------------------------------------------------------------------------------
-
 
 def create_cuboid_xml(height, width, depth):
     """
@@ -26,9 +25,7 @@ def create_cuboid_xml(height, width, depth):
       + "</cuboid>"
     return xml_str
 
-
 #----------------------------------------------------------------------------------------
-
 
 class VesuvioCorrections(VesuvioBase):
 
@@ -121,6 +118,12 @@ class VesuvioCorrections(VesuvioBase):
                                                     optional=PropertyMode.Optional),
                              doc="Workspace group containing sample corrected with each correction")
 
+        self.declareProperty(ITableWorkspaceProperty("LinearFitResult", "",
+                                                     direction=Direction.Output,
+                                                     optional=PropertyMode.Optional),
+                             doc="Table workspace containing the fit parameters used to"
+                                 "linearly fit the corrections to the data")
+
         self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", "", direction=Direction.Output),
                              doc="The name of the output workspace")
 
@@ -135,7 +138,8 @@ class VesuvioCorrections(VesuvioBase):
 
 
     def PyExec(self):
-        from mantid.simpleapi import (ExtractSingleSpectrum, GroupWorkspaces)
+        from mantid.simpleapi import (ExtractSingleSpectrum, GroupWorkspaces,
+                                      DeleteWorkspace)
 
         self._input_ws = self.getPropertyValue("InputWorkspace")
         spec_idx = self.getProperty("WorkspaceIndex").value
@@ -145,6 +149,10 @@ class VesuvioCorrections(VesuvioBase):
         self._save_correction = self._correction_wsg != ""
         self._corrected_wsg = self.getPropertyValue("CorrectedWorkspaces")
         self._save_corrected = self._corrected_wsg != ""
+
+        linear_fit_table = self.getPropertyValue("LinearFitResult")
+        if linear_fit_table != "":
+            self._save_correction = True
 
         ExtractSingleSpectrum(InputWorkspace=self._input_ws,
                               OutputWorkspace=self._output_ws,
@@ -161,15 +169,37 @@ class VesuvioCorrections(VesuvioBase):
 
         self.setProperty("OutputWorkspace", self._output_ws)
 
-        if self._save_correction:
+        if self._correction_wsg != "":
             GroupWorkspaces(InputWorkspaces=self._correction_workspaces,
                             OutputWorkspace=self._correction_wsg)
             self.setProperty("CorrectionWorkspaces", self._correction_wsg)
 
-        if self._save_corrected:
+        if self._corrected_wsg != "":
             GroupWorkspaces(InputWorkspaces=self._corrected_workspaces,
                             OutputWorkspace=self._corrected_wsg)
             self.setProperty("CorrectedWorkspaces", self._corrected_wsg)
+
+        if linear_fit_table != "":
+            table = self._fit_corrections(self._correction_workspaces, linear_fit_table)
+            self.setProperty("LinearFitResult", table)
+            if self._correction_wsg == "":
+                for wksp in self._correction_workspaces:
+                    DeleteWorkspace(wksp)
+
+
+    def _fit_corrections(self, fit_workspaces, param_table_name):
+        func_template = Template("name=TabulatedFunction,Workspace=$ws_name,ties=(Shift=0)")
+        functions = [func_template.substitute(ws_name=wsn) for wsn in fit_workspaces]
+
+        fit = AlgorithmManager.create("Fit")
+        fit.initialize()
+        fit.setChild(True)
+        fit.setProperty("Function", ";".join(functions))
+        fit.setProperty("InputWorkspace", self._input_ws)
+        fit.setProperty("Output", param_table_name)
+        fit.execute()
+
+        return fit.getProperty('OutputParameters').value
 
 
     def _gamma_correction(self):

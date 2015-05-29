@@ -47,7 +47,7 @@ def fit_tof(runs, flags):
 
         # Need to do a fit first to obtain the parameter table
         pre_correction_pars_name = runs + "_params_pre_correction" + suffix
-        corrections_fit_name = '__vesuvio_corrections_fit'
+        corrections_fit_name = "__vesuvio_corrections_fit"
         VesuvioTOFFit(InputWorkspace=tof_data,
                       WorkspaceIndex=index,
                       Masses=mass_values,
@@ -68,6 +68,9 @@ def fit_tof(runs, flags):
         if flags['output_verbose_corrections']:
             corrections_args["CorrectionWorkspaces"] = runs + "_correction" + suffix
             corrections_args["CorrectedWorkspaces"] = runs + "_corrected" + suffix
+
+        if flags['calculate_correction_proportion']:
+            corrections_args["LinearFitResult"] = runs + "_correction_fit" + suffix
 
         VesuvioCorrections(InputWorkspace=tof_data,
                            OutputWorkspace=corrected_data_name,
@@ -100,6 +103,9 @@ def fit_tof(runs, flags):
             output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
             UnGroupWorkspace(corrections_args["CorrectionWorkspaces"])
             UnGroupWorkspace(corrections_args["CorrectedWorkspaces"])
+
+        if flags['calculate_correction_proportion']:
+            output_workspaces.append(runs + "_correction_fit" + suffix)
 
         output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
 
