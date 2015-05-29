@@ -28,8 +28,8 @@ flags['fit_mode'] = 'spectra'
 
 # Spectra selection. Can be a single number, a list of two numbers defining a range
 # or one of the keyword strings "forward", "backward", "all"
-# Example: 135 will only process spectrum 135 (only applies if fit_mode="spectrum")
-# Example 2: 135-185 will process all spectra in the range (only applies if fit_mode="spectrum")
+# Example: 135 will only process spectrum 135 (only applies if fit_mode="spectra")
+# Example 2: 135-185 will process all spectra in the range (only applies if fit_mode="spectra")
 # Example 3: "forward" will process all spectra in the forward scattering banks
 flags['spectra'] = '143-150'
 

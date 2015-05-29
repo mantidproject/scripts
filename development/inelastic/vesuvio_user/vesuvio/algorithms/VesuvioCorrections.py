@@ -89,9 +89,6 @@ class VesuvioCorrections(VesuvioBase):
         self.declareProperty("SampleDepth", 0.0,
                              doc="Depth of sample in cm")
 
-        self.declareProperty("NumMasses", 0,
-                             doc="")
-
         self.declareProperty("SampleDensity", 0.0,
                              doc="Sample density in g/cm^3")
 
@@ -219,18 +216,12 @@ class VesuvioCorrections(VesuvioBase):
 
         atom_props = list()
         for i, mass in enumerate(masses):
-            cross_section = 1.0
-            std_dev = 1.0
-
             try:
                 cross_section = params_dict['f%d.Intensity' % i]
             except:
-                cross_section = params_dict['f%d.FSECoeff' % i]
+                continue
 
-            try:
-                std_dev = params_dict['f%d.Width' % i]
-            except:
-                pass
+            std_dev = params_dict['f%d.Width' % i]
 
             atom_props.append(mass)
             atom_props.append(cross_section)
@@ -249,7 +240,7 @@ class VesuvioCorrections(VesuvioBase):
 
         # Calculation
         CalculateMSVesuvio(InputWorkspace=self._output_ws,
-                           NoOfMasses=self.getProperty("NumMasses").value,
+                           NoOfMasses=len(atom_props)/3,
                            SampleDensity=self.getProperty("SampleDensity").value,
                            AtomicProperties=atom_props,
                            BeamRadius=self.getProperty("BeamRadius").value,

@@ -74,7 +74,6 @@ def fit_tof(runs, flags):
                            WorkspaceIndex=index,
                            GammaBackground=flags['gamma_correct'],
                            Masses=mass_values,
-                           NumMasses=len(mass_values),
                            MassProfiles=profiles_strs,
                            IntensityConstraints=intensity_constraints,
                            MultipleScattering=flags['ms_correct'],
