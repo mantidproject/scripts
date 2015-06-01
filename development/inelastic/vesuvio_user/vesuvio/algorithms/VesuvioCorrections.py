@@ -300,7 +300,7 @@ class VesuvioCorrections(VesuvioBase):
                   Operation=Multiply)
 
         Minus(LHSWorkspace=self._output_ws,
-              RHSWorkspace=total_scatter_correction,
+              RHSWorkspace=multi_scatter_correction,
               OutputWorkspace=self._output_ws)
 
         if self._save_correction:
