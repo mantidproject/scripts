@@ -203,7 +203,8 @@ class VesuvioCorrections(VesuvioBase):
 
 
     def _gamma_correction(self):
-        from mantid.simpleapi import (CalculateGammaBackground, CloneWorkspace, DeleteWorkspace)
+        from mantid.simpleapi import (CalculateGammaBackground, CloneWorkspace,
+                                      DeleteWorkspace)
 
         fit_opts = parse_fit_options(mass_values=self.getProperty("Masses").value,
                                      profile_strs=self.getProperty("MassProfiles").value,
@@ -298,6 +299,10 @@ class VesuvioCorrections(VesuvioBase):
                   Factor=scale_factor,
                   Operation=Multiply)
 
+        Minus(LHSWorkspace=self._output_ws,
+              RHSWorkspace=total_scatter_correction,
+              OutputWorkspace=self._output_ws)
+
         if self._save_correction:
             self._correction_workspaces.append(total_scatter_correction)
             self._correction_workspaces.append(multi_scatter_correction)
@@ -306,10 +311,6 @@ class VesuvioCorrections(VesuvioBase):
             DeleteWorkspace(multi_scatter_correction)
 
         if self._save_corrected:
-            Minus(LHSWorkspace=self._output_ws,
-                  RHSWorkspace=total_scatter_correction,
-                  OutputWorkspace=self._output_ws)
-
             total_scatter_corrected = str(self._corrected_wsg) + "_TotalScattering"
             multi_scatter_corrected = str(self._corrected_wsg) + "_MultipleScattering"
 
