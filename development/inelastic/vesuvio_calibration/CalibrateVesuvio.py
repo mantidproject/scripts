@@ -894,11 +894,11 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
       @param args - positional arguments to the algorithm
       @param kwargs - key word arguments to the algorithm
     """
-    from mantid.simpleapi import _set_properties
+    from mantid.simpleapi import set_properties
     alg = AlgorithmManager.create('EVSCalibrationFit')
     alg.initialize()
     alg.setRethrows(True)
-    _set_properties(alg, *args, **kwargs)
+    set_properties(alg, *args, **kwargs)
     alg.execute()
 
 #----------------------------------------------------------------------------------------
