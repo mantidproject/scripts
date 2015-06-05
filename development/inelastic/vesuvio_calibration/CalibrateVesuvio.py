@@ -457,7 +457,7 @@ class EVSCalibrationFit(PythonAlgorithm):
     find_peak_params['BackgroundType'] = 'Linear'
 
     if self._fitting_bragg_peaks:
-        find_peak_params['PeakPositionTolerance'] = 0
+        # find_peak_params['PeakPositionTolerance'] = 0
 
         if spec_number >= FRONTSCATTERING_RANGE[0]:
             find_peak_params['MinGuessedPeakWidth'] = 60
