@@ -221,12 +221,12 @@ class VesuvioCorrections(VesuvioBase):
                                  BackgroundWorkspace=correction_background_ws,
                                  CorrectedWorkspace=self._output_ws)
 
-        if self. _save_correction:
+        if self._save_correction:
             self._correction_workspaces.append(correction_background_ws)
         else:
             DeleteWorkspace(correction_background_ws)
 
-        if self. _save_corrected:
+        if self._save_corrected:
             CloneWorkspace(InputWorkspace=self._output_ws,
                            OutputWorkspace=corrected_background_ws)
 
