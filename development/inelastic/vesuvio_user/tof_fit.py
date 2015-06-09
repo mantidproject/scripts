@@ -70,7 +70,7 @@ flags['background'] = {'function': 'Polynomial', 'order': 2}
 
 # Outputs workspaces containing the correction factors for each correction and
 # workspaces containing the input data with the single correction applied.
-flags['output_verbose_corrections'] = False
+flags['output_verbose_corrections'] = True
 
 #
 flags['calculate_correction_proportion'] = False

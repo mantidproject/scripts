@@ -247,16 +247,21 @@ class VesuvioCorrections(VesuvioBase):
 
         atom_props = list()
         for i, mass in enumerate(masses):
-            try:
-                cross_section = params_dict['f%d.Intensity' % i]
-            except:
+            intentisty_prop = 'f%d.Intensity' % i
+            c0_prop = 'f%d.C_0' % i
+
+            if intentisty_prop in params_dict:
+                intentisy = params_dict[intentisty_prop]
+            elif c0_prop in params_dict:
+                intentisy = params_dict[c0_prop]
+            else:
                 continue
 
-            std_dev = params_dict['f%d.Width' % i]
+            width = params_dict['f%d.Width' % i]
 
             atom_props.append(mass)
-            atom_props.append(cross_section)
-            atom_props.append(std_dev)
+            atom_props.append(intentisy)
+            atom_props.append(width)
 
         # Create the sample shape
         # Input dimensions are expected in CM
