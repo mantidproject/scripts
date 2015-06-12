@@ -72,10 +72,12 @@ flags['background'] = {'function': 'Polynomial', 'order': 2}
 # workspaces containing the input data with the single correction applied.
 flags['output_verbose_corrections'] = True
 
-#
-flags['calculate_correction_proportion'] = False
+# Scales correction workspaces by factors derived from a linear fit of all
+# corrections to the raw spectrum.
+flags['calculate_correction_proportion'] = True
 
-# Enable gamma correction for gamma emissions due to neutron absorption in sheilding
+# Enable gamma correction for gamma emissions due to neutron absorption in
+# sheilding
 flags['gamma_correct'] = True
 
 # Enable multiple scattering corrections

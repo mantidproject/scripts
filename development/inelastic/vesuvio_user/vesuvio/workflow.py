@@ -67,7 +67,6 @@ def fit_tof(runs, flags):
 
         if flags['output_verbose_corrections']:
             corrections_args["CorrectionWorkspaces"] = runs + "_correction" + suffix
-            corrections_args["CorrectedWorkspaces"] = runs + "_corrected" + suffix
 
         if flags['calculate_correction_proportion']:
             corrections_args["LinearFitResult"] = runs + "_correction_fit" + suffix
@@ -100,9 +99,7 @@ def fit_tof(runs, flags):
 
         if flags['output_verbose_corrections']:
             output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
-            output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
             UnGroupWorkspace(corrections_args["CorrectionWorkspaces"])
-            UnGroupWorkspace(corrections_args["CorrectedWorkspaces"])
 
         if flags['calculate_correction_proportion']:
             output_workspaces.append(runs + "_correction_fit" + suffix)
