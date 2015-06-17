@@ -110,6 +110,11 @@ class VesuvioCorrections(VesuvioBase):
                                                     optional=PropertyMode.Optional),
                              doc="Workspace group containing correction intensities for each correction")
 
+        self.declareProperty(WorkspaceGroupProperty("CorrectedWorkspaces", "",
+                                                    direction=Direction.Output,
+                                                    optional=PropertyMode.Optional),
+                             doc="Workspace group containing individual corrections applied to raw data")
+
         self.declareProperty(ITableWorkspaceProperty("LinearFitResult", "",
                                                      direction=Direction.Output,
                                                      optional=PropertyMode.Optional),
@@ -140,6 +145,7 @@ class VesuvioCorrections(VesuvioBase):
         self._output_ws = self.getPropertyValue("OutputWorkspace")
 
         self._correction_wsg = self.getPropertyValue("CorrectionWorkspaces")
+        self._corrected_wsg = self.getPropertyValue("CorrectedWorkspaces")
         self._linear_fit_table = self.getPropertyValue("LinearFitResult")
 
         ExtractSingleSpectrum(InputWorkspace=self._input_ws,
@@ -187,6 +193,17 @@ class VesuvioCorrections(VesuvioBase):
                 Scale(InputWorkspace=multi_scatter_correct_ws,
                       OutputWorkspace=multi_scatter_correct_ws,
                       Factor=total_scatter_factor)
+
+        # Calculate and output corrected workspaces as a WorkspaceGroup
+        if self._corrected_wsg != "":
+            corrected_workspaces = [ws_name.replace(self._correction_wsg, self._corrected_wsg) for ws_name in self._correction_workspaces]
+            for corrected, correction in zip(corrected_workspaces, self._correction_workspaces):
+                Minus(LHSWorkspace=self._output_ws,
+                      RHSWorkspace=correction,
+                      OutputWorkspace=corrected)
+            GroupWorkspaces(InputWorkspaces=corrected_workspaces,
+                            OutputWorkspace=self._corrected_wsg)
+            self.setProperty("CorrectedWorkspaces", self._corrected_wsg)
 
         # Apply corrections
         for correction in self. _correction_workspaces:
