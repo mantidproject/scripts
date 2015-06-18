@@ -40,4 +40,11 @@ class TableWorkspaceDictionaryFacade(object):
         #endfor
         raise KeyError(str(item))
 
+    def __contains__(self, item):
+        for row in self._table_ws:
+            if row['Name'] == item:
+                return True
+
+        return False
+
 # -----------------------------------------------------------------------------------------

@@ -28,8 +28,8 @@ flags['fit_mode'] = 'spectra'
 
 # Spectra selection. Can be a single number, a list of two numbers defining a range
 # or one of the keyword strings "forward", "backward", "all"
-# Example: 135 will only process spectrum 135 (only applies if fit_mode="spectrum")
-# Example 2: 135-185 will process all spectra in the range (only applies if fit_mode="spectrum")
+# Example: 135 will only process spectrum 135 (only applies if fit_mode="spectra")
+# Example 2: 135-185 will process all spectra in the range (only applies if fit_mode="spectra")
 # Example 3: "forward" will process all spectra in the forward scattering banks
 flags['spectra'] = '143-150'
 
@@ -63,6 +63,45 @@ flags['intensity_constraints'] = list([0, 1, 0, -4])
 # background set
 #flags['background'] = None
 flags['background'] = {'function': 'Polynomial', 'order': 2}
+
+# --------------------------------------------------------------------------------
+# Corrections flags
+# --------------------------------------------------------------------------------
+
+# Outputs workspaces containing the correction factors for each correction and
+# workspaces containing the input data with the single correction applied.
+flags['output_verbose_corrections'] = True
+
+# Scales correction workspaces by factors derived from a linear fit of all
+# corrections to the raw spectrum.
+flags['calculate_correction_proportion'] = True
+
+# Enable gamma correction for gamma emissions due to neutron absorption in
+# sheilding
+flags['gamma_correct'] = True
+
+# Enable multiple scattering corrections
+flags['ms_correct'] = True
+
+# Holds flags specific to multiple scattering
+flags['ms_flags'] = dict()
+
+# Sample size in cm
+flags['ms_flags']['SampleWidth'] = 10.0
+flags['ms_flags']['SampleHeight'] = 10.0
+flags['ms_flags']['SampleDepth'] = 0.5
+
+# Sample density in g/cm^3
+flags['ms_flags']['SampleDensity'] = 241
+
+# Optional parameters (default values are given)
+# flags['ms_flags']['Seed'] = 123456789
+# flags['ms_flags']['NumScatters'] = 3
+# flags['ms_flags']['NumRuns'] = 10
+# flags['ms_flags']['NumEvents'] = 50000
+# flags['ms_flags']['SmoothNeighbours'] = 3
+# flags['ms_flags']['ScatteringScaleFactor'] = 1.0
+
 
 # --------------------------------------------------------------------------------
 # Advanced flags
