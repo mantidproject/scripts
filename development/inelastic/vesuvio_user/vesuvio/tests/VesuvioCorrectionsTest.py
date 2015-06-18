@@ -10,6 +10,10 @@ from mantid.api import AlgorithmManager
 from mantid.simpleapi import LoadVesuvio
 import vesuvio
 
+#TODO: There is a lot of missing tests here that are to be added once the
+#      correction scripts are accepted by the scientists to be doing the correct
+#      thing
+
 class VesuvioCorrections(unittest.TestCase):
 
     _test_ws = None
@@ -66,6 +70,11 @@ class VesuvioCorrections(unittest.TestCase):
     def test_gamma_correction_without_params_raises_error(self):
         alg = self._create_algorithm(InputWorkspace=self._test_ws,
                                      GammaBackground=True)
+        self.assertRaises(RuntimeError, alg.execute)
+
+    def test_ms_correction_without_params_raises_error(self):
+        alg = self._create_algorithm(InputWorkspace=self._test_ws,
+                                     MultipleScattering=True)
         self.assertRaises(RuntimeError, alg.execute)
 
     # -------------- Helpers --------------------

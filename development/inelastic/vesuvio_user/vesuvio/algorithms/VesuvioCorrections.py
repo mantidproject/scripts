@@ -189,9 +189,13 @@ class VesuvioCorrections(VesuvioBase):
             if self.getProperty("MultipleScattering").value:
                 # Use factor of total scattering as this includes single and multiple scattering
                 multi_scatter_correct_ws = self._get_correction_workspace('MultipleScattering')[1]
+                total_scatter_correct_ws = self._get_correction_workspace('TotalScattering')[1]
                 total_scatter_factor = self._get_correction_scale_factor('TotalScattering', fit_corrections, params_ws)
                 Scale(InputWorkspace=multi_scatter_correct_ws,
                       OutputWorkspace=multi_scatter_correct_ws,
+                      Factor=total_scatter_factor)
+                Scale(InputWorkspace=total_scatter_correct_ws,
+                      OutputWorkspace=total_scatter_correct_ws,
                       Factor=total_scatter_factor)
 
         # Calculate and output corrected workspaces as a WorkspaceGroup
