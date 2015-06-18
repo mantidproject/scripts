@@ -43,6 +43,11 @@ class VesuvioTOFFit(VesuvioBase):
         self.declareProperty("FitMode", "bank", StringListValidator(list(_FIT_MODES)),
                              doc="Fit either bank-by-bank or detector-by-detector")
 
+        self.declareProperty("MaxIterations", 5000, IntBoundedValidator(lower=0),
+                             doc="Maximum number of fitting iterations")
+        self.declareProperty("Minimizer", "Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08",
+                             doc="String defining the minimizer")
+
         # Outputs
         self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", "", Direction.Output),
                              doc="The name of the fitted workspaces.")
@@ -104,7 +109,7 @@ class VesuvioTOFFit(VesuvioBase):
             constraints = fit_options.create_constraints_str()
             ties = fit_options.create_ties_str()
             results = self._do_fit(function_str, data_ws, workspace_index, constraints, ties,
-                                   max_iter=5000)
+                                   max_iter=self.getProperty("MaxIterations").value)
 
             # Run second time using standard CompositeFunction & no constraints matrix to
             # calculate correct reduced chisq
@@ -129,11 +134,16 @@ class VesuvioTOFFit(VesuvioBase):
         data_ws = self._execute_child_alg("ScaleX", InputWorkspace=data_ws, OutputWorkspace=data_ws,
                                           Operation='Multiply',Factor=1e-06)
 
-        outputs = self._execute_child_alg("Fit", Function=function_str, InputWorkspace=data_ws,
-                                          WorkspaceIndex=index, Ties=ties,
+        outputs = self._execute_child_alg("Fit",
+                                          Function=function_str,
+                                          InputWorkspace=data_ws,
+                                          WorkspaceIndex=index,
+                                          Ties=ties,
                                           Constraints=constraints,
-                                          CreateOutput=True, OutputCompositeMembers=True, MaxIterations=max_iter,
-                                          Minimizer="Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08")
+                                          CreateOutput=True,
+                                          OutputCompositeMembers=True,
+                                          MaxIterations=max_iter,
+                                          Minimizer=self.getPropertyValue("Minimizer"))
 
         reduced_chi_square, params, fitted_data = outputs[1], outputs[3], outputs[4]
         fitted_data = self._execute_child_alg("ScaleX", InputWorkspace=fitted_data, OutputWorkspace=fitted_data,

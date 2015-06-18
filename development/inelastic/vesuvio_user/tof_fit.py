@@ -115,6 +115,12 @@ flags['ip_file'] = 'IP0004_10.par'
 #    double
 flags['diff_mode'] = 'single'
 
+# Maximum number of iterations to use in fitting
+flags['MaxIterations'] = 5000
+
+# Configuration of the minimizer to use in fitting
+flags['Minimizer'] = 'Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08'
+
 # --------------------------------------------------------------------------------
 # Run fit
 # --------------------------------------------------------------------------------
