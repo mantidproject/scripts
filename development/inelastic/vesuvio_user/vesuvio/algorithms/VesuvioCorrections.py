@@ -98,7 +98,7 @@ class VesuvioCorrections(VesuvioBase):
         self.declareProperty("NumRuns", 10,
                              doc="")
 
-        self.declareProperty("NumEvents", 1000000,
+        self.declareProperty("NumEvents", 50000,
                              doc="Number of neutron events")
 
         self.declareProperty("SmoothNeighbours", 3,

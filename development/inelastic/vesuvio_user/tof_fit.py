@@ -100,7 +100,7 @@ flags['ms_flags']['SampleDensity'] = 241
 # flags['ms_flags']['NumRuns'] = 10
 # flags['ms_flags']['NumEvents'] = 50000
 # flags['ms_flags']['SmoothNeighbours'] = 3
-# flags['ms_flags']['ScatteringScaleFactor'] = 1.0
+# flags['ms_flags']['BeamRadius'] = 2.5
 
 
 # --------------------------------------------------------------------------------
