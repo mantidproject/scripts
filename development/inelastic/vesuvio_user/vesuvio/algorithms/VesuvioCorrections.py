@@ -334,6 +334,7 @@ class VesuvioCorrections(VesuvioBase):
                            SampleDensity=self.getProperty("SampleDensity").value,
                            AtomicProperties=atom_props,
                            BeamRadius=self.getProperty("BeamRadius").value,
+                           NumEventsPerRun=self.getProperty("NumEvents").value,
                            TotalScatteringWS=total_scatter_correction,
                            MultipleScatteringWS=multi_scatter_correction)
 
