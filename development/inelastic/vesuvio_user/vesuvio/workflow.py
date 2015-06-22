@@ -81,6 +81,7 @@ def fit_tof(runs, flags):
                            MassProfiles=profiles_strs,
                            IntensityConstraints=intensity_constraints,
                            MultipleScattering=True,
+                           GammaBackgroundScale=flags.get('gamma_scale_factor', 0.0),
                            **corrections_args)
 
         # Fit

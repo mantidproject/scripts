@@ -49,10 +49,6 @@ class VesuvioCorrections(VesuvioBase):
         self.declareProperty("WorkspaceIndex", 0,
                              doc="Index of spectrum to calculate corrections for")
 
-        # Gamma background
-        self.declareProperty("GammaBackground", True, direction=Direction.Input,
-                             doc="If true, correct for the gamma background")
-
         self.declareProperty(ITableWorkspaceProperty("FitParameters", "", direction=Direction.Input,
                                                      optional=PropertyMode.Optional),
                              doc="Table containing the calculated fit parameters for the data in the workspace")
@@ -69,6 +65,13 @@ class VesuvioCorrections(VesuvioBase):
         self.declareProperty("IntensityConstraints", "",
                              doc="A semi-colon separated list of intensity constraints defined as lists e.g "
                                  "[0,1,0,-4];[1,0,-2,0]")
+
+        # Gamma background
+        self.declareProperty("GammaBackground", True, direction=Direction.Input,
+                             doc="If true, correct for the gamma background")
+
+        self.declareProperty("GammaBackgroundScale", 0.0,
+                             doc="Scale factor to apply to gamma background, set to 0 for automatic scale based on linear fit")
 
         # Multiple scattering
         self.declareProperty("MultipleScattering", True, direction=Direction.Input,
@@ -179,8 +182,10 @@ class VesuvioCorrections(VesuvioBase):
 
             # Scale gamma background
             if self.getProperty("GammaBackground").value:
+                gamma_factor = self.getProperty("GammaBackgroundScale").value
                 gamma_correct_ws = self._get_correction_workspace('GammaBackground')[1]
-                gamma_factor = self._get_correction_scale_factor('GammaBackground', fit_corrections, params_ws)
+                if gamma_factor == 0.0:
+                    gamma_factor = self._get_correction_scale_factor('GammaBackground', fit_corrections, params_ws)
                 Scale(InputWorkspace=gamma_correct_ws,
                       OutputWorkspace=gamma_correct_ws,
                       Factor=gamma_factor)

@@ -80,6 +80,11 @@ flags['calculate_correction_proportion'] = True
 # sheilding
 flags['gamma_correct'] = True
 
+# Scale factor for gamma correction
+# If set to None or not set the scale factor is caulcuated from a linear fit of
+# gamma and total scattering to the input data
+flags['gamma_scale_factor'] = None
+
 # Holds flags specific to multiple scattering
 flags['ms_flags'] = dict()
 
