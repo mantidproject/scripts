@@ -80,9 +80,6 @@ flags['calculate_correction_proportion'] = True
 # sheilding
 flags['gamma_correct'] = True
 
-# Enable multiple scattering corrections
-flags['ms_correct'] = True
-
 # Holds flags specific to multiple scattering
 flags['ms_flags'] = dict()
 

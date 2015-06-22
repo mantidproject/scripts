@@ -61,9 +61,8 @@ def fit_tof(runs, flags):
         DeleteWorkspace(corrections_fit_name)
         corrections_args['FitParameters'] = pre_correction_pars_name
 
-        if flags['ms_correct']:
-            # Add the mutiple scattering arguments
-            corrections_args.update(flags['ms_flags'])
+        # Add the mutiple scattering arguments
+        corrections_args.update(flags['ms_flags'])
 
         corrected_data_name = runs + "_tof_corrected" + suffix
 
@@ -81,7 +80,7 @@ def fit_tof(runs, flags):
                            Masses=mass_values,
                            MassProfiles=profiles_strs,
                            IntensityConstraints=intensity_constraints,
-                           MultipleScattering=flags['ms_correct'],
+                           MultipleScattering=True,
                            **corrections_args)
 
         # Fit
