@@ -226,7 +226,7 @@ class VesuvioCorrections(VesuvioBase):
 #------------------------------------------------------------------------------
 
     def _fit_corrections(self, fit_workspaces, param_table_name):
-        func_template = Template("name=TabulatedFunction,Workspace=$ws_name,ties=(Shift=0,XScaling=1)")
+        func_template = Template("name=TabulatedFunction,Workspace=$ws_name,ties=(Shift=0,XScaling=1),constraints=(Scaling>=0.0)")
         functions = [func_template.substitute(ws_name=wsn) for wsn in fit_workspaces]
 
         fit = AlgorithmManager.create("Fit")
