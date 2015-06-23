@@ -65,16 +65,15 @@ def fit_tof(runs, flags):
         corrections_args.update(flags['ms_flags'])
 
         corrected_data_name = runs + "_tof_corrected" + suffix
+        linear_correction_fit_params_name = runs + "_correction_fit" + suffix
 
         if flags['output_verbose_corrections']:
             corrections_args["CorrectionWorkspaces"] = runs + "_correction" + suffix
             corrections_args["CorrectedWorkspaces"] = runs + "_corrected" + suffix
 
-        if flags['calculate_correction_proportion']:
-            corrections_args["LinearFitResult"] = runs + "_correction_fit" + suffix
-
         VesuvioCorrections(InputWorkspace=tof_data,
                            OutputWorkspace=corrected_data_name,
+                           LinearFitResult=linear_correction_fit_params_name,
                            WorkspaceIndex=index,
                            GammaBackground=flags['gamma_correct'],
                            Masses=mass_values,
@@ -100,16 +99,13 @@ def fit_tof(runs, flags):
         DeleteWorkspace(corrected_data_name)
 
         group_name = runs + suffix
-        output_workspaces = [ws_name, pars_name, pre_correction_pars_name]
+        output_workspaces = [ws_name, pars_name, pre_correction_pars_name, linear_correction_fit_params_name]
 
         if flags['output_verbose_corrections']:
             output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
             output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
             UnGroupWorkspace(corrections_args["CorrectionWorkspaces"])
             UnGroupWorkspace(corrections_args["CorrectedWorkspaces"])
-
-        if flags['calculate_correction_proportion']:
-            output_workspaces.append(runs + "_correction_fit" + suffix)
 
         output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
 

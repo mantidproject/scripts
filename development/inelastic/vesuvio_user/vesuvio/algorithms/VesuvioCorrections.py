@@ -172,36 +172,36 @@ class VesuvioCorrections(VesuvioBase):
             self.setProperty("CorrectionWorkspaces", self._correction_wsg)
 
         # Perform fitting to obtain scale factors for corrections
-        if self._linear_fit_table != "":
-            # The workspaces to fit for correction scale factors
-            fit_corrections = [wks for wks in self._correction_workspaces if 'MultipleScattering' not in wks]
 
-            # Perform fitting of corrections
-            params_ws = self._fit_corrections(fit_corrections, self._linear_fit_table)
-            self.setProperty("LinearFitResult", params_ws)
+        # The workspaces to fit for correction scale factors
+        fit_corrections = [wks for wks in self._correction_workspaces if 'MultipleScattering' not in wks]
 
-            # Scale gamma background
-            if self.getProperty("GammaBackground").value:
-                gamma_factor = self.getProperty("GammaBackgroundScale").value
-                gamma_correct_ws = self._get_correction_workspace('GammaBackground')[1]
-                if gamma_factor == 0.0:
-                    gamma_factor = self._get_correction_scale_factor('GammaBackground', fit_corrections, params_ws)
-                Scale(InputWorkspace=gamma_correct_ws,
-                      OutputWorkspace=gamma_correct_ws,
-                      Factor=gamma_factor)
+        # Perform fitting of corrections
+        params_ws = self._fit_corrections(fit_corrections, self._linear_fit_table)
+        self.setProperty("LinearFitResult", params_ws)
 
-            # Scale multiple scattering
-            if self.getProperty("MultipleScattering").value:
-                # Use factor of total scattering as this includes single and multiple scattering
-                multi_scatter_correct_ws = self._get_correction_workspace('MultipleScattering')[1]
-                total_scatter_correct_ws = self._get_correction_workspace('TotalScattering')[1]
-                total_scatter_factor = self._get_correction_scale_factor('TotalScattering', fit_corrections, params_ws)
-                Scale(InputWorkspace=multi_scatter_correct_ws,
-                      OutputWorkspace=multi_scatter_correct_ws,
-                      Factor=total_scatter_factor)
-                Scale(InputWorkspace=total_scatter_correct_ws,
-                      OutputWorkspace=total_scatter_correct_ws,
-                      Factor=total_scatter_factor)
+        # Scale gamma background
+        if self.getProperty("GammaBackground").value:
+            gamma_factor = self.getProperty("GammaBackgroundScale").value
+            gamma_correct_ws = self._get_correction_workspace('GammaBackground')[1]
+            if gamma_factor == 0.0:
+                gamma_factor = self._get_correction_scale_factor('GammaBackground', fit_corrections, params_ws)
+            Scale(InputWorkspace=gamma_correct_ws,
+                  OutputWorkspace=gamma_correct_ws,
+                  Factor=gamma_factor)
+
+        # Scale multiple scattering
+        if self.getProperty("MultipleScattering").value:
+            # Use factor of total scattering as this includes single and multiple scattering
+            multi_scatter_correct_ws = self._get_correction_workspace('MultipleScattering')[1]
+            total_scatter_correct_ws = self._get_correction_workspace('TotalScattering')[1]
+            total_scatter_factor = self._get_correction_scale_factor('TotalScattering', fit_corrections, params_ws)
+            Scale(InputWorkspace=multi_scatter_correct_ws,
+                  OutputWorkspace=multi_scatter_correct_ws,
+                  Factor=total_scatter_factor)
+            Scale(InputWorkspace=total_scatter_correct_ws,
+                  OutputWorkspace=total_scatter_correct_ws,
+                  Factor=total_scatter_factor)
 
         # Calculate and output corrected workspaces as a WorkspaceGroup
         if self._corrected_wsg != "":
