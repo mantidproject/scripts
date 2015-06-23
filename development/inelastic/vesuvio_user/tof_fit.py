@@ -15,7 +15,7 @@ from vesuvio.workflow import fit_tof
 # two numbers defining ranges
 # Example: "15039" will process the single run
 # Example 2: "15039-15045" will process the sum of range 15039-15045
-# Example 2: "15039,15045" will process the sum of 15039,15045
+# Example 3: "15039,15045" will process the sum of 15039,15045
 runs = "15039-15045"
 
 # Holds flags to alter how processing occurs
@@ -118,10 +118,10 @@ flags['ip_file'] = 'IP0004_10.par'
 flags['diff_mode'] = 'single'
 
 # Maximum number of iterations to use in fitting
-flags['MaxIterations'] = 5000
+flags['max_fit_iterations'] = 5000
 
 # Configuration of the minimizer to use in fitting
-flags['Minimizer'] = 'Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08'
+flags['fit_minimizer'] = 'Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08'
 
 # --------------------------------------------------------------------------------
 # Run fit

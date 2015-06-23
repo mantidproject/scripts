@@ -63,8 +63,8 @@ def fit_tof(runs, flags):
                       IntensityConstraints=intensity_constraints,
                       OutputWorkspace=corrections_fit_name,
                       FitParameters=pre_correction_pars_name,
-                      MaxIterations=flags['MaxIterations'],
-                      Minimizer=flags['Minimizer'])
+                      MaxIterations=flags['max_fit_iterations'],
+                      Minimizer=flags['fit_minimizer'])
         DeleteWorkspace(corrections_fit_name)
         corrections_args['FitParameters'] = pre_correction_pars_name
 
@@ -111,8 +111,8 @@ def fit_tof(runs, flags):
                       IntensityConstraints=intensity_constraints,
                       OutputWorkspace=ws_name,
                       FitParameters=pars_name,
-                      MaxIterations=flags['MaxIterations'],
-                      Minimizer=flags['Minimizer'])
+                      MaxIterations=flags['max_fit_iterations'],
+                      Minimizer=flags['fit_minimizer'])
         DeleteWorkspace(corrected_data_name)
 
         group_name = runs + suffix
