@@ -6,7 +6,8 @@ from vesuvio.instrument import VESUVIO
 
 from mantid import mtd
 from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager, CropWorkspace,
-                              GroupWorkspaces, UnGroupWorkspace, LoadVesuvio, DeleteWorkspace)
+                              GroupWorkspaces, UnGroupWorkspace, LoadVesuvio, DeleteWorkspace,
+                              ExtractSingleSpectrum, Minus)
 
 
 # --------------------------------------------------------------------------------
@@ -37,6 +38,12 @@ def fit_tof(runs, flags):
                                                AlgorithmManager.createUnmanaged("VesuvioTOFFit"))
     VesuvioCorrections = _create_algorithm_function("VesuvioCorrections", 1,
                                                     AlgorithmManager.createUnmanaged("VesuvioCorrections"))
+
+    # Load container runs if provided
+    container_data = None
+    if flags['container_runs'] is not None:
+        container_data = load_and_crop_data(flags['container_runs'], spectra, flags['ip_file'],
+                                            flags['diff_mode'], fit_mode)
 
     output_groups = []
     for index in range(tof_data.getNumberHistograms()):
@@ -82,6 +89,16 @@ def fit_tof(runs, flags):
                            MultipleScattering=True,
                            GammaBackgroundScale=flags.get('gamma_scale_factor', 0.0),
                            **corrections_args)
+
+        # Container subtraction
+        if container_data is not None:
+            can_spec = ExtractSingleSpectrum(InputWorkspace=container_data,
+                                             OutputWorkspace='__container_spec_%d' % index,
+                                             WorkspaceIndex=index)
+            Minus(LHSWorkspace=corrected_data_name,
+                  RHSWorkspace=can_spec,
+                  OutputWorkspace=corrected_data_name)
+            DeleteWorkspace(can_spec)
 
         # Fit
         ws_name = runs + "_data" + suffix

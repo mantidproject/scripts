@@ -68,6 +68,10 @@ flags['background'] = {'function': 'Polynomial', 'order': 2}
 # Corrections flags
 # --------------------------------------------------------------------------------
 
+# Run(s) for an empty container subtracted before final fitting is performed
+# Set to None for no subtraction or a set of run numbers in the same format as runs variable
+flags['container_runs'] = None
+
 # Outputs workspaces containing the correction factors for each correction and
 # workspaces containing the input data with the single correction applied.
 flags['output_verbose_corrections'] = True
