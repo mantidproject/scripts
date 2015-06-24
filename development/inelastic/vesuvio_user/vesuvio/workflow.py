@@ -72,6 +72,7 @@ def fit_tof(runs, flags):
         corrections_args.update(flags['ms_flags'])
 
         corrected_data_name = runs + "_tof_corrected" + suffix
+        corrected_minus_can_data_name = runs + "_tof_corrected_minus_can" + suffix
         linear_correction_fit_params_name = runs + "_correction_fit" + suffix
 
         if flags['output_verbose_corrections']:
@@ -90,39 +91,56 @@ def fit_tof(runs, flags):
                            GammaBackgroundScale=flags.get('gamma_scale_factor', 0.0),
                            **corrections_args)
 
-        # Container subtraction
         if container_data is not None:
+            # Pre container subtraction fit
+            fit_ws_pre_can_sub_name = runs + "_data_pre_can_subtract" + suffix
+            pars_pre_can_sub_name = runs + "_params_pre_can_subtract" + suffix
+            VesuvioTOFFit(InputWorkspace=corrected_data_name,
+                          WorkspaceIndex=0, # Corrected data always has a single histogram
+                          Masses=mass_values,
+                          MassProfiles=profiles_strs,
+                          Background=background_str,
+                          IntensityConstraints=intensity_constraints,
+                          OutputWorkspace=fit_ws_pre_can_sub_name,
+                          FitParameters=pars_pre_can_sub_name,
+                          MaxIterations=flags['max_fit_iterations'],
+                          Minimizer=flags['fit_minimizer'])
+
+            # Container subtraction
             can_spec = ExtractSingleSpectrum(InputWorkspace=container_data,
                                              OutputWorkspace='__container_spec_%d' % index,
                                              WorkspaceIndex=index)
             Minus(LHSWorkspace=corrected_data_name,
                   RHSWorkspace=can_spec,
-                  OutputWorkspace=corrected_data_name)
+                  OutputWorkspace=corrected_minus_can_data_name)
             DeleteWorkspace(can_spec)
 
-        # Fit
-        ws_name = runs + "_data" + suffix
+        # Final fit
+        fit_ws_name = runs + "_data" + suffix
         pars_name = runs + "_params" + suffix
-        VesuvioTOFFit(InputWorkspace=corrected_data_name,
+        VesuvioTOFFit(InputWorkspace=[corrected_data_name if container_data is None else corrected_minus_can_data_name][0],
                       WorkspaceIndex=0, # Corrected data always has a single histogram
                       Masses=mass_values,
                       MassProfiles=profiles_strs,
                       Background=background_str,
                       IntensityConstraints=intensity_constraints,
-                      OutputWorkspace=ws_name,
+                      OutputWorkspace=fit_ws_name,
                       FitParameters=pars_name,
                       MaxIterations=flags['max_fit_iterations'],
                       Minimizer=flags['fit_minimizer'])
         DeleteWorkspace(corrected_data_name)
 
         group_name = runs + suffix
-        output_workspaces = [ws_name, pars_name, pre_correction_pars_name, linear_correction_fit_params_name]
+        output_workspaces = [fit_ws_name, pars_name, pre_correction_pars_name, linear_correction_fit_params_name]
 
         if flags['output_verbose_corrections']:
             output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
             output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
             UnGroupWorkspace(corrections_args["CorrectionWorkspaces"])
             UnGroupWorkspace(corrections_args["CorrectedWorkspaces"])
+
+        if container_data is not None:
+            output_workspaces.extend([corrected_minus_can_data_name, fit_ws_pre_can_sub_name, pars_pre_can_sub_name])
 
         output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
 
