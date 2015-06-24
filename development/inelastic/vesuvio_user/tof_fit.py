@@ -33,6 +33,11 @@ flags['fit_mode'] = 'spectra'
 # Example 3: "forward" will process all spectra in the forward scattering banks
 flags['spectra'] = '143-150'
 
+# Binning options passed to the Rebin algorithm run on raw data after loading
+# If set to None no rebinning is performed
+flags['bin_parameters'] = None
+# flags['bin_parameters'] = '50,2,562'
+
 # Masses and properties for fit. Each mass is a dictionary of properties about that mass
 # All functions require the following keywords:
 #   'value': The mass value itself
@@ -81,9 +86,9 @@ flags['output_verbose_corrections'] = True
 flags['gamma_correct'] = True
 
 # Scale factor for gamma correction
-# If set to None or not set the scale factor is caulcuated from a linear fit of
+# If set to None the scale factor is calculated from a linear fit of
 # gamma and total scattering to the input data
-flags['gamma_scale_factor'] = None
+flags['fixed_gamma_scaleing'] = None
 
 # Holds flags specific to multiple scattering
 flags['ms_flags'] = dict()

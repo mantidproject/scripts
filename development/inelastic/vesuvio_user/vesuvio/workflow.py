@@ -7,7 +7,7 @@ from vesuvio.instrument import VESUVIO
 from mantid import mtd
 from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager, CropWorkspace,
                               GroupWorkspaces, UnGroupWorkspace, LoadVesuvio, DeleteWorkspace,
-                              ExtractSingleSpectrum, Minus)
+                              ExtractSingleSpectrum, Minus, Rebin)
 
 
 # --------------------------------------------------------------------------------
@@ -31,7 +31,8 @@ def fit_tof(runs, flags):
     spectra = flags['spectra']
     fit_mode = flags['fit_mode']
     tof_data = load_and_crop_data(runs, spectra, flags['ip_file'],
-                                  flags['diff_mode'], fit_mode)
+                                  flags['diff_mode'], fit_mode,
+                                  flags.get('bin_parameters', None))
 
     # The simpleapi function won't have been created so do it by hand
     VesuvioTOFFit = _create_algorithm_function("VesuvioTOFFit", 1,
@@ -42,8 +43,10 @@ def fit_tof(runs, flags):
     # Load container runs if provided
     container_data = None
     if flags['container_runs'] is not None:
-        container_data = load_and_crop_data(flags['container_runs'], spectra, flags['ip_file'],
-                                            flags['diff_mode'], fit_mode)
+        container_data = load_and_crop_data(flags['container_runs'], spectra,
+                                            flags['ip_file'],
+                                            flags['diff_mode'], fit_mode,
+                                            flags.get('bin_parameters', None))
 
     output_groups = []
     for index in range(tof_data.getNumberHistograms()):
@@ -88,7 +91,7 @@ def fit_tof(runs, flags):
                            MassProfiles=profiles_strs,
                            IntensityConstraints=intensity_constraints,
                            MultipleScattering=True,
-                           GammaBackgroundScale=flags.get('gamma_scale_factor', 0.0),
+                           GammaBackgroundScale=flags.get('fixed_gamma_scaleing', 0.0),
                            **corrections_args)
 
         if container_data is not None:
@@ -155,13 +158,14 @@ def fit_tof(runs, flags):
 
 
 def load_and_crop_data(runs, spectra, ip_file, diff_mode='single',
-                       fit_mode='spectra'):
+                       fit_mode='spectra', rebin_params=None):
     """
     @param runs The string giving the runs to load
     @param spectra A list of spectra to load
     @param ip_file A string denoting the IP file
     @param diff_mode Either 'double' or 'single'
     @param fit_mode If bank then the loading is changed to summing each bank to a separate spectrum
+    @param rebin_params Rebin parameter string to rebin data by (no rebin if None)
     """
     instrument = VESUVIO()
     load_banks = (fit_mode == 'bank')
@@ -195,8 +199,15 @@ def load_and_crop_data(runs, spectra, ip_file, diff_mode='single',
               "SpectrumList": spectra, "SumSpectra": sum_spectra,
               "OutputWorkspace": output_name}
     full_range = LoadVesuvio(**kwargs)
-    return CropWorkspace(InputWorkspace=full_range, XMin=instrument.tof_range[0],
+    tof_data = CropWorkspace(InputWorkspace=full_range, XMin=instrument.tof_range[0],
                          XMax=instrument.tof_range[1], OutputWorkspace=output_name)
+
+    if rebin_params is not None:
+        tof_data = Rebin(InputWorkspace=tof_data,
+                         OutputWorkspace=output_name,
+                         Params=rebin_params)
+
+    return tof_data
 
 # --------------------------------------------------------------------------------
 # Private Functions
