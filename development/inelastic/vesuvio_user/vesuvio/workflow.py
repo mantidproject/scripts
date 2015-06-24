@@ -73,7 +73,7 @@ def fit_tof(runs, flags):
 
         corrected_data_name = runs + "_tof_corrected" + suffix
         corrected_minus_can_data_name = runs + "_tof_corrected_minus_can" + suffix
-        linear_correction_fit_params_name = runs + "_correction_fit" + suffix
+        linear_correction_fit_params_name = runs + "_correction_fit_scale" + suffix
 
         if flags['output_verbose_corrections']:
             corrections_args["CorrectionWorkspaces"] = runs + "_correction" + suffix
@@ -128,19 +128,23 @@ def fit_tof(runs, flags):
                       FitParameters=pars_name,
                       MaxIterations=flags['max_fit_iterations'],
                       Minimizer=flags['fit_minimizer'])
+
         DeleteWorkspace(corrected_data_name)
+        if container_data is not None:
+            DeleteWorkspace(corrected_minus_can_data_name)
 
+        # Process spectrum group
+        # Note the ordering of operations here gives the order in the WorkspaceGroup
         group_name = runs + suffix
-        output_workspaces = [fit_ws_name, pars_name, pre_correction_pars_name, linear_correction_fit_params_name]
-
+        output_workspaces = [fit_ws_name, pars_name]
+        if container_data is not None:
+            output_workspaces.extend([fit_ws_pre_can_sub_name, pars_pre_can_sub_name])
+        output_workspaces.extend([pre_correction_pars_name, linear_correction_fit_params_name])
         if flags['output_verbose_corrections']:
             output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
             output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
             UnGroupWorkspace(corrections_args["CorrectionWorkspaces"])
             UnGroupWorkspace(corrections_args["CorrectedWorkspaces"])
-
-        if container_data is not None:
-            output_workspaces.extend([corrected_minus_can_data_name, fit_ws_pre_can_sub_name, pars_pre_can_sub_name])
 
         output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
 
