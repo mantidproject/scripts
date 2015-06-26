@@ -47,6 +47,9 @@ def fit_tof(runs, flags):
                                             flags['ip_file'],
                                             flags['diff_mode'], fit_mode,
                                             flags.get('bin_parameters', None))
+        # Apply optional container scaling
+        if flags['container_scale_factor'] != 1.0:
+            container_data *= flags['container_scale_factor']
 
     output_groups = []
     for index in range(tof_data.getNumberHistograms()):

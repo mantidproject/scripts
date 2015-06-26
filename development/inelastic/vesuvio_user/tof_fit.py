@@ -77,6 +77,10 @@ flags['background'] = {'function': 'Polynomial', 'order': 2}
 # Set to None for no subtraction or a set of run numbers in the same format as runs variable
 flags['container_runs'] = None
 
+# Scale factor by which to multiple the container data
+# If set to 1 no scale operation is performed
+flags['container_scale_factor'] = 2.0
+
 # Outputs workspaces containing the correction factors for each correction and
 # workspaces containing the input data with the single correction applied.
 flags['output_verbose_corrections'] = True
