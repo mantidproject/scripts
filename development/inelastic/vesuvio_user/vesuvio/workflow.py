@@ -7,7 +7,7 @@ from vesuvio.instrument import VESUVIO
 from mantid import mtd
 from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager, CropWorkspace,
                               GroupWorkspaces, UnGroupWorkspace, LoadVesuvio, DeleteWorkspace,
-                              ExtractSingleSpectrum, Minus, Rebin)
+                              Rebin)
 
 
 # --------------------------------------------------------------------------------
@@ -47,9 +47,6 @@ def fit_tof(runs, flags):
                                             flags['ip_file'],
                                             flags['diff_mode'], fit_mode,
                                             flags.get('bin_parameters', None))
-        # Apply optional container scaling
-        if flags['container_scale_factor'] != 1.0:
-            container_data *= flags['container_scale_factor']
 
     output_groups = []
     for index in range(tof_data.getNumberHistograms()):
@@ -78,12 +75,14 @@ def fit_tof(runs, flags):
         corrections_args.update(flags['ms_flags'])
 
         corrected_data_name = runs + "_tof_corrected" + suffix
-        corrected_minus_can_data_name = runs + "_tof_corrected_minus_can" + suffix
         linear_correction_fit_params_name = runs + "_correction_fit_scale" + suffix
 
         if flags['output_verbose_corrections']:
             corrections_args["CorrectionWorkspaces"] = runs + "_correction" + suffix
             corrections_args["CorrectedWorkspaces"] = runs + "_corrected" + suffix
+
+        if container_data is not None:
+            corrections_args["ContainerWorkspace"] = container_data
 
         VesuvioCorrections(InputWorkspace=tof_data,
                            OutputWorkspace=corrected_data_name,
@@ -94,37 +93,14 @@ def fit_tof(runs, flags):
                            MassProfiles=profiles_strs,
                            IntensityConstraints=intensity_constraints,
                            MultipleScattering=True,
-                           GammaBackgroundScale=flags.get('fixed_gamma_scaleing', 0.0),
+                           GammaBackgroundScale=flags.get('fixed_gamma_scaling', 0.0),
+                           ContainerScale=flags.get('fixed_container_scaling', 0.0),
                            **corrections_args)
-
-        if container_data is not None:
-            # Pre container subtraction fit
-            fit_ws_pre_can_sub_name = runs + "_data_pre_can_subtract" + suffix
-            pars_pre_can_sub_name = runs + "_params_pre_can_subtract" + suffix
-            VesuvioTOFFit(InputWorkspace=corrected_data_name,
-                          WorkspaceIndex=0, # Corrected data always has a single histogram
-                          Masses=mass_values,
-                          MassProfiles=profiles_strs,
-                          Background=background_str,
-                          IntensityConstraints=intensity_constraints,
-                          OutputWorkspace=fit_ws_pre_can_sub_name,
-                          FitParameters=pars_pre_can_sub_name,
-                          MaxIterations=flags['max_fit_iterations'],
-                          Minimizer=flags['fit_minimizer'])
-
-            # Container subtraction
-            can_spec = ExtractSingleSpectrum(InputWorkspace=container_data,
-                                             OutputWorkspace='__container_spec_%d' % index,
-                                             WorkspaceIndex=index)
-            Minus(LHSWorkspace=corrected_data_name,
-                  RHSWorkspace=can_spec,
-                  OutputWorkspace=corrected_minus_can_data_name)
-            DeleteWorkspace(can_spec)
 
         # Final fit
         fit_ws_name = runs + "_data" + suffix
         pars_name = runs + "_params" + suffix
-        VesuvioTOFFit(InputWorkspace=[corrected_data_name if container_data is None else corrected_minus_can_data_name][0],
+        VesuvioTOFFit(InputWorkspace=corrected_data_name,
                       WorkspaceIndex=0, # Corrected data always has a single histogram
                       Masses=mass_values,
                       MassProfiles=profiles_strs,
@@ -134,18 +110,12 @@ def fit_tof(runs, flags):
                       FitParameters=pars_name,
                       MaxIterations=flags['max_fit_iterations'],
                       Minimizer=flags['fit_minimizer'])
-
         DeleteWorkspace(corrected_data_name)
-        if container_data is not None:
-            DeleteWorkspace(corrected_minus_can_data_name)
 
         # Process spectrum group
         # Note the ordering of operations here gives the order in the WorkspaceGroup
         group_name = runs + suffix
-        output_workspaces = [fit_ws_name, pars_name]
-        if container_data is not None:
-            output_workspaces.extend([fit_ws_pre_can_sub_name, pars_pre_can_sub_name])
-        output_workspaces.extend([pre_correction_pars_name, linear_correction_fit_params_name])
+        output_workspaces = [fit_ws_name, pars_name, pre_correction_pars_name, linear_correction_fit_params_name]
         if flags['output_verbose_corrections']:
             output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
             output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()

@@ -66,6 +66,14 @@ class VesuvioCorrections(VesuvioBase):
                              doc="A semi-colon separated list of intensity constraints defined as lists e.g "
                                  "[0,1,0,-4];[1,0,-2,0]")
 
+        # Container
+        self.declareProperty(MatrixWorkspaceProperty("ContainerWorkspace", "", direction=Direction.Input,
+                                                     optional=PropertyMode.Optional),
+                             doc="Container workspace in TOF")
+
+        self.declareProperty("ContainerScale", 0.0,
+                             doc="Scale factor to apply to container, set to 0 for automatic scale based on linear fit")
+
         # Gamma background
         self.declareProperty("GammaBackground", True, direction=Direction.Input,
                              doc="If true, correct for the gamma background")
@@ -144,6 +152,7 @@ class VesuvioCorrections(VesuvioBase):
                                       Scale, Minus, DeleteWorkspace)
 
         self._input_ws = self.getPropertyValue("InputWorkspace")
+        container_ws = self.getPropertyValue("ContainerWorkspace")
         spec_idx = self.getProperty("WorkspaceIndex").value
         self._output_ws = self.getPropertyValue("OutputWorkspace")
 
@@ -156,6 +165,14 @@ class VesuvioCorrections(VesuvioBase):
                               WorkspaceIndex=spec_idx)
 
         self._correction_workspaces = list()
+
+        self._container_ws = None
+        if container_ws != "":
+            container_name = str(self._correction_wsg) + "_Container"
+            self._container_ws = ExtractSingleSpectrum(InputWorkspace=container_ws,
+                                                       OutputWorkspace=container_name,
+                                                       WorkspaceIndex=spec_idx)
+            self._correction_workspaces.append(self._container_ws.name())
 
         # Do gamma correction
         if self.getProperty("GammaBackground").value:
@@ -177,15 +194,23 @@ class VesuvioCorrections(VesuvioBase):
         fit_corrections = [wks for wks in self._correction_workspaces if 'MultipleScattering' not in wks]
 
         # Perform fitting of corrections
-        params_ws = self._fit_corrections(fit_corrections, self._linear_fit_table)
+        fixed_params = {}
+
+        fixed_gamma_factor = self.getProperty("GammaBackgroundScale").value
+        if fixed_gamma_factor != 0.0:
+            fixed_params['GammaBackground'] = fixed_gamma_factor
+
+        fixed_container_scale = self.getProperty("ContainerScale").value
+        if fixed_container_scale != 0.0:
+            fixed_params['Container'] = fixed_container_scale
+
+        params_ws = self._fit_corrections(fit_corrections, self._linear_fit_table, **fixed_params)
         self.setProperty("LinearFitResult", params_ws)
 
         # Scale gamma background
         if self.getProperty("GammaBackground").value:
-            gamma_factor = self.getProperty("GammaBackgroundScale").value
             gamma_correct_ws = self._get_correction_workspace('GammaBackground')[1]
-            if gamma_factor == 0.0:
-                gamma_factor = self._get_correction_scale_factor('GammaBackground', fit_corrections, params_ws)
+            gamma_factor = self._get_correction_scale_factor('GammaBackground', fit_corrections, params_ws)
             Scale(InputWorkspace=gamma_correct_ws,
                   OutputWorkspace=gamma_correct_ws,
                   Factor=gamma_factor)
@@ -202,6 +227,14 @@ class VesuvioCorrections(VesuvioBase):
             Scale(InputWorkspace=total_scatter_correct_ws,
                   OutputWorkspace=total_scatter_correct_ws,
                   Factor=total_scatter_factor)
+
+        # Scale by container
+        if container_ws != "":
+            container_correct_ws = self._get_correction_workspace('Container')[1]
+            container_factor = self._get_correction_scale_factor('Container', fit_corrections, params_ws)
+            Scale(InputWorkspace=container_correct_ws,
+                  OutputWorkspace=container_correct_ws,
+                  Factor=container_factor)
 
         # Calculate and output corrected workspaces as a WorkspaceGroup
         if self._corrected_wsg != "":
@@ -230,13 +263,22 @@ class VesuvioCorrections(VesuvioBase):
 
 #------------------------------------------------------------------------------
 
-    def _fit_corrections(self, fit_workspaces, param_table_name):
-        func_template = Template("name=TabulatedFunction,Workspace=$ws_name,ties=(Shift=0,XScaling=1),constraints=(Scaling>=0.0)")
-        functions = [func_template.substitute(ws_name=wsn) for wsn in fit_workspaces]
+    def _fit_corrections(self, fit_workspaces, param_table_name, **fixed_parameters):
+        func_template = Template("name=TabulatedFunction,Workspace=$ws_name,ties=(${scale_tie}Shift=0,XScaling=1),constraints=(Scaling>=0.0)")
+        functions = []
+
+        for wsn in fit_workspaces:
+            tie = ''
+            for param, value in fixed_parameters.iteritems():
+                if param in wsn:
+                    tie = 'Scaling=%f,' % value
+
+            functions.append(func_template.substitute(ws_name=wsn, scale_tie=tie))
 
         fit = AlgorithmManager.create("Fit")
         fit.initialize()
         fit.setChild(True)
+        fit.setLogging(True)
         fit.setProperty("Function", ";".join(functions))
         fit.setProperty("InputWorkspace", self._input_ws)
         fit.setProperty("Output", param_table_name)

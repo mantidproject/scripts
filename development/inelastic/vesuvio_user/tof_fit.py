@@ -77,9 +77,9 @@ flags['background'] = {'function': 'Polynomial', 'order': 2}
 # Set to None for no subtraction or a set of run numbers in the same format as runs variable
 flags['container_runs'] = None
 
-# Scale factor by which to multiple the container data
-# If set to 1 no scale operation is performed
-flags['container_scale_factor'] = 2.0
+# Fixes the scale factor for the container, if not specified then the factor is
+# calculated form the result of a linear fit
+flags['fixed_container_scaling'] = None
 
 # Outputs workspaces containing the correction factors for each correction and
 # workspaces containing the input data with the single correction applied.
@@ -92,7 +92,7 @@ flags['gamma_correct'] = True
 # Scale factor for gamma correction
 # If set to None the scale factor is calculated from a linear fit of
 # gamma and total scattering to the input data
-flags['fixed_gamma_scaleing'] = None
+flags['fixed_gamma_scaling'] = None
 
 # Holds flags specific to multiple scattering
 flags['ms_flags'] = dict()
