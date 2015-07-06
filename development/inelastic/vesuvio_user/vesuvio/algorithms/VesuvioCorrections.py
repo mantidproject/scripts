@@ -267,13 +267,15 @@ class VesuvioCorrections(VesuvioBase):
         func_template = Template("name=TabulatedFunction,Workspace=$ws_name,ties=(${scale_tie}Shift=0,XScaling=1),constraints=(Scaling>=0.0)")
         functions = []
 
-        for wsn in fit_workspaces:
+        for idx, wsn in enumerate(fit_workspaces):
             tie = ''
             for param, value in fixed_parameters.iteritems():
                 if param in wsn:
                     tie = 'Scaling=%f,' % value
 
             functions.append(func_template.substitute(ws_name=wsn, scale_tie=tie))
+
+            logger.notice('Corrections scale fit index %d is %s' % (idx, wsn))
 
         fit = AlgorithmManager.create("Fit")
         fit.initialize()
