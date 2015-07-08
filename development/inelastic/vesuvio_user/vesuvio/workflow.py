@@ -5,6 +5,7 @@ about is fit_tof().
 from vesuvio.instrument import VESUVIO
 
 from mantid import mtd
+from mantid.api import (AnalysisDataService, WorkspaceFactory, TextAxis)
 from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager, CropWorkspace,
                               GroupWorkspaces, UnGroupWorkspace, LoadVesuvio, DeleteWorkspace,
                               Rebin)
@@ -48,8 +49,12 @@ def fit_tof(runs, flags):
                                             flags['diff_mode'], fit_mode,
                                             flags.get('bin_parameters', None))
 
+    num_spec = tof_data.getNumberHistograms()
+    pre_correct_pars_workspace = None
+    pars_workspace = None
+
     output_groups = []
-    for index in range(tof_data.getNumberHistograms()):
+    for index in range(num_spec):
         suffix = _create_fit_workspace_suffix(index, tof_data, fit_mode, spectra)
 
         # Corrections
@@ -112,10 +117,23 @@ def fit_tof(runs, flags):
                       Minimizer=flags['fit_minimizer'])
         DeleteWorkspace(corrected_data_name)
 
+        # Process parameter tables
+        if pre_correct_pars_workspace is None:
+            pre_correct_pars_workspace = _create_param_workspace(num_spec, mtd[pre_correction_pars_name])
+
+        if pars_workspace is None:
+            pars_workspace = _create_param_workspace(num_spec, mtd[pars_name])
+
+        _update_fit_params(pre_correct_pars_workspace, index, mtd[pre_correction_pars_name], suffix[1:])
+        _update_fit_params(pars_workspace, index, mtd[pars_name], suffix[1:])
+
+        DeleteWorkspace(pre_correction_pars_name)
+        DeleteWorkspace(pars_name)
+
         # Process spectrum group
         # Note the ordering of operations here gives the order in the WorkspaceGroup
         group_name = runs + suffix
-        output_workspaces = [fit_ws_name, pars_name, pre_correction_pars_name, linear_correction_fit_params_name]
+        output_workspaces = [fit_ws_name, linear_correction_fit_params_name]
         if flags['output_verbose_corrections']:
             output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
             output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
@@ -123,6 +141,10 @@ def fit_tof(runs, flags):
             UnGroupWorkspace(corrections_args["CorrectedWorkspaces"])
 
         output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
+
+    # Output the parameter workspaces
+    AnalysisDataService.Instance().add(runs + "_params_pre_correction", pre_correct_pars_workspace)
+    AnalysisDataService.Instance().add(runs + "_params", pars_workspace)
 
     if len(output_groups) > 1:
         return output_groups
@@ -185,6 +207,27 @@ def load_and_crop_data(runs, spectra, ip_file, diff_mode='single',
 # --------------------------------------------------------------------------------
 # Private Functions
 # --------------------------------------------------------------------------------
+
+def _create_param_workspace(num_spec, param_table):
+    num_params = param_table.rowCount()
+    param_workspace = WorkspaceFactory.Instance().create("Workspace2D", num_params, num_spec, num_spec)
+
+    x_axis = TextAxis.create(num_spec)
+    param_workspace.replaceAxis(0, x_axis)
+
+    vert_axis = TextAxis.create(num_params)
+    for idx, param_name in enumerate(param_table.column('Name')):
+        vert_axis.setLabel(idx, param_name)
+    param_workspace.replaceAxis(1, vert_axis)
+
+    return param_workspace
+
+def _update_fit_params(params_ws, spec_idx, params_table, name):
+    params_ws.getAxis(0).setLabel(spec_idx, name)
+    for idx in range(params_table.rowCount()):
+        params_ws.dataX(idx)[spec_idx] = spec_idx
+        params_ws.dataY(idx)[spec_idx] = params_table.column('Value')[idx]
+        params_ws.dataE(idx)[spec_idx] = error = params_table.column('Error')[idx]
 
 def _create_tof_workspace_suffix(runs, spectra):
     return runs + "_" + spectra + "_tof"
