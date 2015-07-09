@@ -98,11 +98,11 @@ class EVSDiffractionReduction(DataProcessorAlgorithm):
         load_opts['InstrumentParFile'] = self._par_filename
 
         self._workspace_names, self._chopped_data = load_files(self._data_files,
-                                                               self._ipf_filename,
-                                                               self._spectra_range[0],
-                                                               self._spectra_range[1],
-                                                               self._sum_files,
-                                                               load_opts)
+                                                               ipf_filename=self._ipf_filename,
+                                                               spec_min=self._spectra_range[0],
+                                                               spec_max=self._spectra_range[1],
+                                                               sum_files=self._sum_files,
+                                                               load_opts=load_opts)
 
         for c_ws_name in self._workspace_names:
             is_multi_frame = isinstance(mtd[c_ws_name], WorkspaceGroup)
