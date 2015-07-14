@@ -821,15 +821,27 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
       #calibrate L0 and t0 on the front scattering detectors
       #L0 is the same for all detectors
       L0_fit = self._current_workspace + '_L0'
-      self._run_calibration_fit(Samples=U_FRONTSCATTERING_SAMPLE, Background=U_FRONTSCATTERING_BACKGROUND, SpectrumRange=FRONTSCATTERING_RANGE,
-                                InstrumentParameterWorkspace=self._param_table, Mass=U_MASS, Energy=U_PEAK_ENERGIES, OutputWorkspace=L0_fit, CreateOutput=self._create_output)
+      self._run_calibration_fit(Samples=U_FRONTSCATTERING_SAMPLE,
+                                Background=U_FRONTSCATTERING_BACKGROUND,
+                                SpectrumRange=FRONTSCATTERING_RANGE,
+                                InstrumentParameterWorkspace=self._param_table,
+                                Mass=U_MASS,
+                                Energy=U_PEAK_ENERGIES,
+                                OutputWorkspace=L0_fit,
+                                CreateOutput=self._create_output)
       self._L0_peak_fits = L0_fit + '_Peak_Parameters'
       self._calculate_incident_flight_path(self._L0_peak_fits, FRONTSCATTERING_RANGE)
 
       #calculate t0 on a U backscattering run
       t0_fit = self._current_workspace + '_t0'
-      self._run_calibration_fit(Samples=U_BACKSCATTERING_SAMPLE, Background=U_BACKSCATTERING_BACKGROUND, SpectrumRange=BACKSCATTERING_RANGE,
-                                InstrumentParameterWorkspace=self._param_table, Mass=U_MASS, Energy=U_PEAK_ENERGIES, OutputWorkspace=t0_fit, CreateOutput=self._create_output)
+      self._run_calibration_fit(Samples=U_BACKSCATTERING_SAMPLE,
+                                Background=U_BACKSCATTERING_BACKGROUND,
+                                SpectrumRange=BACKSCATTERING_RANGE,
+                                InstrumentParameterWorkspace=self._param_table,
+                                Mass=U_MASS,
+                                Energy=U_PEAK_ENERGIES,
+                                OutputWorkspace=t0_fit,
+                                CreateOutput=self._create_output)
       self._t0_peak_fits = t0_fit + '_Peak_Parameters'
       self._calculate_backscattering_time_delay(self._t0_peak_fits, BACKSCATTERING_RANGE)
     else:
@@ -844,16 +856,29 @@ class EVSCalibrationAnalysis(PythonAlgorithm):
     for i in xrange(self._iterations):
       #calibrate L1 and E1
       E1_fit = self._current_workspace + '_E1'
-      self._run_calibration_fit(Samples=self._samples, Function='Voigt', Mode='SingleDifference', SpectrumRange=self._detector_range,
-                                InstrumentParameterWorkspace=self._param_table, Mass=self._sample_mass, OutputWorkspace=E1_fit, CreateOutput=self._create_output)
+      self._run_calibration_fit(Samples=self._samples,
+                                Function='Voigt',
+                                Mode='SingleDifference',
+                                SpectrumRange=self._detector_range,
+                                InstrumentParameterWorkspace=self._param_table,
+                                Mass=self._sample_mass,
+                                OutputWorkspace=E1_fit,
+                                CreateOutput=self._create_output)
       self._E1_peak_fits = mtd[E1_fit + '_Peak_Parameters'].getNames()[0]
       self._calculate_final_energy(self._E1_peak_fits, self._detector_range)
       self._calculate_final_flight_path(self._detector_range)
 
       #calibrate theta
       theta_fit = self._current_workspace + '_theta'
-      self._run_calibration_fit(Samples=self._samples, Background=self._background, Function='Voigt', Mode='FoilOut', SpectrumRange=self._detector_range,
-                                InstrumentParameterWorkspace=self._param_table, DSpacings=self._d_spacings, OutputWorkspace=theta_fit, CreateOutput=self._create_output)
+      self._run_calibration_fit(Samples=self._samples,
+                                Background=self._background,
+                                Function='Voigt',
+                                Mode='FoilOut',
+                                SpectrumRange=self._detector_range,
+                                InstrumentParameterWorkspace=self._param_table,
+                                DSpacings=self._d_spacings,
+                                OutputWorkspace=theta_fit,
+                                CreateOutput=self._create_output)
       self._theta_peak_fits = theta_fit + '_Peak_Parameters'
       self._calculate_scattering_angle(self._theta_peak_fits, self._detector_range)
 
