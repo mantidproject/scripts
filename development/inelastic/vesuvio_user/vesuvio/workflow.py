@@ -1,4 +1,4 @@
-#pylint: disable=too-many-arguments,invalid-name,too-many-locals
+#pylint: disable=too-many-arguments,invalid-name,too-many-locals,too-many-branches
 """
 Defines functions and classes to start the processing of Vesuvio data.
 The main entry point that most users should care about is fit_tof().
@@ -12,6 +12,7 @@ from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager,
                               LoadVesuvio, DeleteWorkspace, Rebin)
 
 import copy
+import re
 import numpy as np
 
 
@@ -58,15 +59,19 @@ def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
         iteration_flags = copy.deepcopy(flags)
         iteration_flags['iteration'] = iteration
 
+        if last_results is not None:
+            iteration_flags['masses'] = _update_masses_from_params(copy.deepcopy(flags['masses']), last_results[2])
+
         results = fit_tof_iteration(sample_data, container_data, runs, iteration_flags)
         exit_iteration += 1
 
         if last_results is not None and convergence_threshold is not None:
             last_chi2 = np.array(last_results[3])
             chi2 = np.array(results[3])
-            chi2_delta = last_chi2 = chi2
+            chi2_delta = last_chi2 - chi2
             max_chi2_delta = np.max(chi2_delta)
             if max_chi2_delta <= convergence_threshold:
+                print "Stopped at iteration %s due to minimal change in cost function: %f" % (exit_iteration, max_chi2_delta)
                 last_results = results
                 break
 
@@ -88,7 +93,13 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
              final fit parameters, chi^2 values)
     """
     # Transform inputs into something the algorithm can understand
-    mass_values, profiles_strs = _create_profile_strs_and_mass_list(flags['masses'])
+    if isinstance(flags['masses'][0], list):
+        mass_values = _create_profile_strs_and_mass_list(copy.deepcopy(flags['masses'][0]))[0]
+        profiles_strs = []
+        for mass_spec in flags['masses']:
+            profiles_strs.append(_create_profile_strs_and_mass_list(mass_spec)[1])
+    else:
+        mass_values, profiles_strs = _create_profile_strs_and_mass_list(flags['masses'])
     background_str = _create_background_str(flags.get('background', None))
     intensity_constraints = _create_intensity_constraint_str(flags['intensity_constraints'])
 
@@ -105,6 +116,11 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
     output_groups = []
     chi2_values = []
     for index in range(num_spec):
+        if isinstance(profiles_strs, list):
+            profiles = profiles_strs[index]
+        else:
+            profiles = profiles_strs
+
         suffix = _create_fit_workspace_suffix(index,
                                               sample_data,
                                               flags['fit_mode'],
@@ -120,7 +136,7 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
         VesuvioTOFFit(InputWorkspace=sample_data,
                       WorkspaceIndex=index,
                       Masses=mass_values,
-                      MassProfiles=profiles_strs,
+                      MassProfiles=profiles,
                       Background=background_str,
                       IntensityConstraints=intensity_constraints,
                       OutputWorkspace=corrections_fit_name,
@@ -149,7 +165,7 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
                            WorkspaceIndex=index,
                            GammaBackground=flags['gamma_correct'],
                            Masses=mass_values,
-                           MassProfiles=profiles_strs,
+                           MassProfiles=profiles,
                            IntensityConstraints=intensity_constraints,
                            MultipleScattering=True,
                            GammaBackgroundScale=flags.get('fixed_gamma_scaling', 0.0),
@@ -162,7 +178,7 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
         fit_result = VesuvioTOFFit(InputWorkspace=corrected_data_name,
                                    WorkspaceIndex=0, # Corrected data always has a single histogram
                                    Masses=mass_values,
-                                   MassProfiles=profiles_strs,
+                                   MassProfiles=profiles,
                                    Background=background_str,
                                    IntensityConstraints=intensity_constraints,
                                    OutputWorkspace=fit_ws_name,
@@ -266,6 +282,42 @@ def load_and_crop_data(runs, spectra, ip_file, diff_mode='single',
 # --------------------------------------------------------------------------------
 # Private Functions
 # --------------------------------------------------------------------------------
+
+def _update_masses_from_params(old_masses, param_ws):
+    """
+    Update the massses flag based on the results of a fit.
+
+    @param old_masses The existing masses dictionary
+    @param param_ws The workspace to update from
+    @return The modified mass dictionary
+    """
+    for mass in old_masses:
+        for param in mass.keys():
+            if param.lower() not in ['value', 'function', 'hermite_coeffs', 'k_free', 'sears_flag']:
+                del mass[param]
+
+    masses = []
+    num_masses = len(old_masses)
+    for _ in range(param_ws.blocksize()):
+        masses.append(copy.deepcopy(old_masses))
+
+    function_regex = re.compile("f([0-9]+).([A-z0-9_]+)")
+
+    for spec_idx in range(param_ws.blocksize()):
+        for idx, param in enumerate(param_ws.getAxis(1).extractValues()):
+            # Ignore the cost function
+            if param == "Cost function value":
+                continue
+
+            param_re = function_regex.match(param)
+            mass_idx = int(param_re.group(1))
+            if mass_idx >= num_masses:
+                continue
+
+            param_name = param_re.group(2).lower()
+            masses[spec_idx][mass_idx][param_name] = param_ws.dataY(idx)[spec_idx]
+
+    return masses
 
 def _create_param_workspace(num_spec, param_table):
     num_params = param_table.rowCount()
