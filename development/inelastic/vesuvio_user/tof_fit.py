@@ -16,7 +16,8 @@ from vesuvio.workflow import fit_tof
 # Example: "15039" will process the single run
 # Example 2: "15039-15045" will process the sum of range 15039-15045
 # Example 3: "15039,15045" will process the sum of 15039,15045
-runs = "15039-15045"
+# runs = "15039-15045"
+runs = "15039"
 
 # Holds flags to alter how processing occurs
 flags = dict()
@@ -31,7 +32,8 @@ flags['fit_mode'] = 'spectra'
 # Example: 135 will only process spectrum 135 (only applies if fit_mode="spectra")
 # Example 2: 135-185 will process all spectra in the range (only applies if fit_mode="spectra")
 # Example 3: "forward" will process all spectra in the forward scattering banks
-flags['spectra'] = '143-150'
+# flags['spectra'] = '143-150'
+flags['spectra'] = '143'
 
 # Binning options passed to the Rebin algorithm run on raw data after loading
 # If set to None no rebinning is performed
@@ -135,4 +137,4 @@ flags['fit_minimizer'] = 'Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08'
 # --------------------------------------------------------------------------------
 # Run fit
 # --------------------------------------------------------------------------------
-fit_tof(runs, flags)
+fit_tof(runs, flags, iterations=5, convergence_threshold=0.000001)

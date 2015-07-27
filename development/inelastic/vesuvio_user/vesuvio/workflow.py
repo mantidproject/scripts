@@ -1,45 +1,46 @@
+#pylint: disable=too-many-arguments,invalid-name,too-many-locals
 """
-Defines functions and classes to start the processing of Vesuvio data. The main entry point that most users should care
-about is fit_tof().
+Defines functions and classes to start the processing of Vesuvio data.
+The main entry point that most users should care about is fit_tof().
 """
 from vesuvio.instrument import VESUVIO
 
 from mantid import mtd
 from mantid.api import (AnalysisDataService, WorkspaceFactory, TextAxis)
-from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager, CropWorkspace,
-                              GroupWorkspaces, UnGroupWorkspace, LoadVesuvio, DeleteWorkspace,
-                              Rebin)
+from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager,
+                              CropWorkspace, GroupWorkspaces, UnGroupWorkspace,
+                              LoadVesuvio, DeleteWorkspace, Rebin)
+
+import copy
+import numpy as np
 
 
 # --------------------------------------------------------------------------------
 # Functions
 # --------------------------------------------------------------------------------
 
-def fit_tof(runs, flags):
+def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
     """
     The main entry point for user scripts fitting in TOF.
 
     :param runs: A string specifying the runs to process
     :param flags: A dictionary of flags to control the processing
-    :return: Tuple of (fitted workspace, fitted_params)
+    :param iterations: Maximum number of iterations to perform
+    :param convergence_threshold: Maximum difference in the cost
+                                  function at which the parameters are accepted
+                                  to have converged
+    :return: Tuple of (fitted workspace, fitted params, number of iterations
+             performed)
     """
-    # Transform inputs into something the algorithm can understand
-    mass_values, profiles_strs = _create_profile_strs_and_mass_list(flags['masses'])
-    background_str = _create_background_str(flags.get('background', None))
-    intensity_constraints = _create_intensity_constraint_str(flags['intensity_constraints'])
+    if iterations < 1:
+        raise ValueError('Must perform at least one iteration')
 
     # Load
     spectra = flags['spectra']
     fit_mode = flags['fit_mode']
-    tof_data = load_and_crop_data(runs, spectra, flags['ip_file'],
-                                  flags['diff_mode'], fit_mode,
-                                  flags.get('bin_parameters', None))
-
-    # The simpleapi function won't have been created so do it by hand
-    VesuvioTOFFit = _create_algorithm_function("VesuvioTOFFit", 1,
-                                               AlgorithmManager.createUnmanaged("VesuvioTOFFit"))
-    VesuvioCorrections = _create_algorithm_function("VesuvioCorrections", 1,
-                                                    AlgorithmManager.createUnmanaged("VesuvioCorrections"))
+    sample_data = load_and_crop_data(runs, spectra, flags['ip_file'],
+                                     flags['diff_mode'], fit_mode,
+                                     flags.get('bin_parameters', None))
 
     # Load container runs if provided
     container_data = None
@@ -49,13 +50,66 @@ def fit_tof(runs, flags):
                                             flags['diff_mode'], fit_mode,
                                             flags.get('bin_parameters', None))
 
-    num_spec = tof_data.getNumberHistograms()
+    last_results = None
+
+    exit_iteration = 0
+
+    for iteration in range(1, iterations+1):
+        iteration_flags = copy.deepcopy(flags)
+        iteration_flags['iteration'] = iteration
+
+        results = fit_tof_iteration(sample_data, container_data, runs, iteration_flags)
+        exit_iteration += 1
+
+        if last_results is not None and convergence_threshold is not None:
+            last_chi2 = np.array(last_results[3])
+            chi2 = np.array(results[3])
+            chi2_delta = last_chi2 = chi2
+            max_chi2_delta = np.max(chi2_delta)
+            if max_chi2_delta <= convergence_threshold:
+                last_results = results
+                break
+
+        last_results = results
+
+    return (last_results[0], last_results[2], last_results[3], exit_iteration)
+
+
+def fit_tof_iteration(sample_data, container_data, runs, flags):
+    """
+    Performs a single iterations of the time of flight corrections and fitting
+    workflow.
+
+    :param sample_data: Loaded sample data workspaces
+    :param container_data: Loaded container data workspaces
+    :param runs: A string specifying the runs to process
+    :param flags: A dictionary of flags to control the processing
+    :return: Tuple of (workspace group name, pre correction fit parameters,
+             final fit parameters, chi^2 values)
+    """
+    # Transform inputs into something the algorithm can understand
+    mass_values, profiles_strs = _create_profile_strs_and_mass_list(flags['masses'])
+    background_str = _create_background_str(flags.get('background', None))
+    intensity_constraints = _create_intensity_constraint_str(flags['intensity_constraints'])
+
+    # The simpleapi function won't have been created so do it by hand
+    VesuvioTOFFit = _create_algorithm_function("VesuvioTOFFit", 1,
+                                               AlgorithmManager.createUnmanaged("VesuvioTOFFit"))
+    VesuvioCorrections = _create_algorithm_function("VesuvioCorrections", 1,
+                                                    AlgorithmManager.createUnmanaged("VesuvioCorrections"))
+
+    num_spec = sample_data.getNumberHistograms()
     pre_correct_pars_workspace = None
     pars_workspace = None
 
     output_groups = []
+    chi2_values = []
     for index in range(num_spec):
-        suffix = _create_fit_workspace_suffix(index, tof_data, fit_mode, spectra)
+        suffix = _create_fit_workspace_suffix(index,
+                                              sample_data,
+                                              flags['fit_mode'],
+                                              flags['spectra'],
+                                              flags.get('iteration', None))
 
         # Corrections
         corrections_args = dict()
@@ -63,7 +117,7 @@ def fit_tof(runs, flags):
         # Need to do a fit first to obtain the parameter table
         pre_correction_pars_name = runs + "_params_pre_correction" + suffix
         corrections_fit_name = "__vesuvio_corrections_fit"
-        VesuvioTOFFit(InputWorkspace=tof_data,
+        VesuvioTOFFit(InputWorkspace=sample_data,
                       WorkspaceIndex=index,
                       Masses=mass_values,
                       MassProfiles=profiles_strs,
@@ -89,7 +143,7 @@ def fit_tof(runs, flags):
         if container_data is not None:
             corrections_args["ContainerWorkspace"] = container_data
 
-        VesuvioCorrections(InputWorkspace=tof_data,
+        VesuvioCorrections(InputWorkspace=sample_data,
                            OutputWorkspace=corrected_data_name,
                            LinearFitResult=linear_correction_fit_params_name,
                            WorkspaceIndex=index,
@@ -105,16 +159,17 @@ def fit_tof(runs, flags):
         # Final fit
         fit_ws_name = runs + "_data" + suffix
         pars_name = runs + "_params" + suffix
-        VesuvioTOFFit(InputWorkspace=corrected_data_name,
-                      WorkspaceIndex=0, # Corrected data always has a single histogram
-                      Masses=mass_values,
-                      MassProfiles=profiles_strs,
-                      Background=background_str,
-                      IntensityConstraints=intensity_constraints,
-                      OutputWorkspace=fit_ws_name,
-                      FitParameters=pars_name,
-                      MaxIterations=flags['max_fit_iterations'],
-                      Minimizer=flags['fit_minimizer'])
+        fit_result = VesuvioTOFFit(InputWorkspace=corrected_data_name,
+                                   WorkspaceIndex=0, # Corrected data always has a single histogram
+                                   Masses=mass_values,
+                                   MassProfiles=profiles_strs,
+                                   Background=background_str,
+                                   IntensityConstraints=intensity_constraints,
+                                   OutputWorkspace=fit_ws_name,
+                                   FitParameters=pars_name,
+                                   MaxIterations=flags['max_fit_iterations'],
+                                   Minimizer=flags['fit_minimizer'])
+        chi2_values.append(fit_result[-1])
         DeleteWorkspace(corrected_data_name)
 
         # Process parameter tables
@@ -143,13 +198,15 @@ def fit_tof(runs, flags):
         output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
 
     # Output the parameter workspaces
-    AnalysisDataService.Instance().add(runs + "_params_pre_correction", pre_correct_pars_workspace)
-    AnalysisDataService.Instance().add(runs + "_params", pars_workspace)
+    AnalysisDataService.Instance().add(runs + "_params_pre_correction" + suffix, pre_correct_pars_workspace)
+    AnalysisDataService.Instance().add(runs + "_params" + suffix, pars_workspace)
 
     if len(output_groups) > 1:
-        return output_groups
+        result_ws = output_groups
     else:
-        return output_groups[0]
+        result_ws = output_groups[0]
+
+    return (result_ws, pre_correct_pars_workspace, pars_workspace, chi2_values)
 
 
 def load_and_crop_data(runs, spectra, ip_file, diff_mode='single',
@@ -194,8 +251,10 @@ def load_and_crop_data(runs, spectra, ip_file, diff_mode='single',
               "SpectrumList": spectra, "SumSpectra": sum_spectra,
               "OutputWorkspace": output_name}
     full_range = LoadVesuvio(**kwargs)
-    tof_data = CropWorkspace(InputWorkspace=full_range, XMin=instrument.tof_range[0],
-                         XMax=instrument.tof_range[1], OutputWorkspace=output_name)
+    tof_data = CropWorkspace(InputWorkspace=full_range,
+                             XMin=instrument.tof_range[0],
+                             XMax=instrument.tof_range[1],
+                             OutputWorkspace=output_name)
 
     if rebin_params is not None:
         tof_data = Rebin(InputWorkspace=tof_data,
@@ -227,17 +286,22 @@ def _update_fit_params(params_ws, spec_idx, params_table, name):
     for idx in range(params_table.rowCount()):
         params_ws.dataX(idx)[spec_idx] = spec_idx
         params_ws.dataY(idx)[spec_idx] = params_table.column('Value')[idx]
-        params_ws.dataE(idx)[spec_idx] = error = params_table.column('Error')[idx]
+        params_ws.dataE(idx)[spec_idx] = params_table.column('Error')[idx]
 
 def _create_tof_workspace_suffix(runs, spectra):
     return runs + "_" + spectra + "_tof"
 
-def _create_fit_workspace_suffix(index, tof_data, fit_mode, spectra):
+def _create_fit_workspace_suffix(index, tof_data, fit_mode, spectra, iteration=None):
     if fit_mode == "bank":
-        return "_" + spectra + "_bank_" + str(index+1)
+        suffix =  "_" + spectra + "_bank_" + str(index+1)
     else:
         spectrum = tof_data.getSpectrum(index)
-        return "_spectrum_" + str(spectrum.getSpectrumNo())
+        suffix = "_spectrum_" + str(spectrum.getSpectrumNo())
+
+    if iteration is not None:
+        suffix += "_iteration_" + str(iteration)
+
+    return suffix
 
 def _create_profile_strs_and_mass_list(profile_flags):
     """
