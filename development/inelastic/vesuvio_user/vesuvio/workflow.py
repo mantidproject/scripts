@@ -5,7 +5,7 @@ The main entry point that most users should care about is fit_tof().
 """
 from vesuvio.instrument import VESUVIO
 
-from mantid import mtd
+from mantid import mtd, logger
 from mantid.api import (AnalysisDataService, WorkspaceFactory, TextAxis)
 from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager,
                               CropWorkspace, GroupWorkspaces, UnGroupWorkspace,
@@ -62,6 +62,7 @@ def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
         if last_results is not None:
             iteration_flags['masses'] = _update_masses_from_params(copy.deepcopy(flags['masses']), last_results[2])
 
+        print "=== Iteration {0} out of a possible {1}".format(iteration, iterations)
         results = fit_tof_iteration(sample_data, container_data, runs, iteration_flags)
         exit_iteration += 1
 
@@ -69,7 +70,7 @@ def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
             last_chi2 = np.array(last_results[3])
             chi2 = np.array(results[3])
             chi2_delta = last_chi2 - chi2
-            max_chi2_delta = np.max(chi2_delta)
+            max_chi2_delta = np.abs(np.max(chi2_delta))
             print "Cost function change: {0}".format(max_chi2_delta)
 
             if max_chi2_delta <= convergence_threshold:

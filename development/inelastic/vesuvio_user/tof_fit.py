@@ -134,7 +134,17 @@ flags['max_fit_iterations'] = 5000
 # Configuration of the minimizer to use in fitting
 flags['fit_minimizer'] = 'Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08'
 
+# Number of iterations to perform of the corrections and fitting workflow
+# Each new iteration used the previous fitted parameters as the starting parameters
+flags['iterations'] = 1
+
+# The maxmimum change in the cost function value between iterations at which the
+# parameters are assumed to have converged.
+# When this condition is met iterations will be stopped, if the value is set to
+# None then the number of iterations defined above will always be performed.
+flags['convergence'] = None
+
 # --------------------------------------------------------------------------------
 # Run fit
 # --------------------------------------------------------------------------------
-fit_tof(runs, flags, iterations=5, convergence_threshold=0.000001)
+fit_tof(runs, flags, flags['iterations'], flags['convergence'])

@@ -8,6 +8,8 @@ import ast
 import collections
 import re
 
+from mantid import logger
+
 # --------------------------------------------------------------------------------
 # Mass profile base class
 # --------------------------------------------------------------------------------
@@ -94,8 +96,7 @@ class GaussianMassProfile(MassProfile):
         elif self.intensity is not None:
             fitting_str += ",Intensity={0:f}".format(self.intensity)
 
-        print fitting_str
-
+        logger.debug("Gaussian profile fit function string: {0}".format(fitting_str))
         return fitting_str + ";"
 
     def create_constraint_str(self, param_prefix=""):
@@ -211,8 +212,7 @@ class GramCharlierMassProfile(MassProfile):
                     if coeff > 0:
                         fitting_str += ",C_{0}={1:f}".format(i, coeff)
 
-        print fitting_str
-
+        logger.debug("Gram Charlier profile fit function string: {0}".format(fitting_str))
         return fitting_str + ";"
 
     def create_constraint_str(self, param_prefix=""):
@@ -299,7 +299,7 @@ def create_from_str(func_str, mass):
         :param mass: The value of the mass for the profile
     """
     known_types = [GaussianMassProfile, GramCharlierMassProfile]
-    print func_str
+    logger.debug("Profile factory string: {0}".format(func_str))
     errors = dict()
     for cls in known_types:
         try:
