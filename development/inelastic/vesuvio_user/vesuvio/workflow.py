@@ -70,8 +70,10 @@ def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
             chi2 = np.array(results[3])
             chi2_delta = last_chi2 - chi2
             max_chi2_delta = np.max(chi2_delta)
+            print "Cost function change: {0}".format(max_chi2_delta)
+
             if max_chi2_delta <= convergence_threshold:
-                print "Stopped at iteration %s due to minimal change in cost function: %f" % (exit_iteration, max_chi2_delta)
+                print "Stopped at iteration {0} due to minimal change in cost function".format(exit_iteration)
                 last_results = results
                 break
 
@@ -293,7 +295,9 @@ def _update_masses_from_params(old_masses, param_ws):
     """
     for mass in old_masses:
         for param in mass.keys():
-            if param.lower() not in ['value', 'function', 'hermite_coeffs', 'k_free', 'sears_flag']:
+            if param.lower() not in ['value', 'function', 'hermite_coeffs', 'k_free', 'sears_flag', 'width']:
+                del mass[param]
+            elif param.lower() == 'width' and not isinstance(mass[param], list):
                 del mass[param]
 
     masses = []
@@ -315,7 +319,10 @@ def _update_masses_from_params(old_masses, param_ws):
                 continue
 
             param_name = param_re.group(2).lower()
-            masses[spec_idx][mass_idx][param_name] = param_ws.dataY(idx)[spec_idx]
+            if param_name == 'width' and isinstance(masses[spec_idx][mass_idx].get(param_name, None), list):
+                masses[spec_idx][mass_idx][param_name][1] = param_ws.dataY(idx)[spec_idx]
+            else:
+                masses[spec_idx][mass_idx][param_name] = param_ws.dataY(idx)[spec_idx]
 
     return masses
 

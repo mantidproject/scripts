@@ -1,3 +1,4 @@
+#pylint: disable=too-many-arguments
 """Holds classes that define the mass profiles.
 
 This is all essentially about parsing the user input and putting it into a form
@@ -15,9 +16,10 @@ class MassProfile(object):
 
     cfunction = None
 
-    def __init__(self, width, mass):
+    def __init__(self, width, mass, intensity=None):
         self.width = width
         self.mass = mass
+        self.intensity = intensity
 
     def create_fit_function_str(self, param_vals=None, param_prefix=""):
         raise NotImplementedError("MassProfile: Subclasses should overrode create_fitting_str")
@@ -59,15 +61,14 @@ class GaussianMassProfile(MassProfile):
         if not func_str.startswith(profile_prefix):
             raise TypeError("Gaussian function string should start with 'function=Gaussian,'")
 
+        params = {'mass':mass}
         func_str = func_str[len(profile_prefix):]
-        # The only remaining property should be the width
-        if func_str.startswith("width="):
-            # Trim off width= prefix
-            width = ast.literal_eval(func_str[6:])
-        else:
-            raise TypeError("Unexpected value in function string. Expected width= following function")
+        for func_param in func_str.split(','):
+            param = func_param.split('=')
+            name = param[0]
+            params[name] = ast.literal_eval(param[1])
 
-        return GaussianMassProfile(width, mass)
+        return GaussianMassProfile(**params)
 
     def create_fit_function_str(self, param_vals=None, param_prefix=""):
         """Creates a string used by the Fit algorithm for this profile
@@ -90,6 +91,10 @@ class GaussianMassProfile(MassProfile):
             param_name = "Intensity"
             intensity_str = "{0}={1:f}".format(param_name, param_vals[param_prefix + param_name])
             fitting_str += "," + intensity_str
+        elif self.intensity is not None:
+            fitting_str += ",Intensity={0:f}".format(self.intensity)
+
+        print fitting_str
 
         return fitting_str + ";"
 
@@ -112,12 +117,14 @@ class GramCharlierMassProfile(MassProfile):
 
     cfunction = "GramCharlierComptonProfile"
 
-    def __init__(self, width, mass, hermite_coeffs, k_free, sears_flag):
+    def __init__(self, width, mass, hermite_coeffs, k_free, sears_flag, hermite_coeff_vals=None, fsecoeff=None):
         super(GramCharlierMassProfile, self).__init__(width, mass)
 
         self.hermite_co = hermite_coeffs
         self.k_free = k_free
         self.sears_flag = sears_flag
+        self.hermite_coeff_vals = hermite_coeff_vals
+        self.fsecoeff = fsecoeff
 
     @classmethod
     def from_str(cls, func_str, mass):
@@ -132,6 +139,7 @@ class GramCharlierMassProfile(MassProfile):
                      ("hermite_coeffs", cls._parse_list),
                      ("k_free", cls._parse_bool_flag),
                      ("sears_flag", cls._parse_bool_flag)]
+
         # Possible key names:
         parsed_values = []
         for key, parser in key_names:
@@ -140,8 +148,27 @@ class GramCharlierMassProfile(MassProfile):
             except ValueError, exc:
                 raise TypeError(str(exc))
 
-        return GramCharlierMassProfile(parsed_values[0], mass, parsed_values[1],
-                                       parsed_values[2], parsed_values[3])
+        params = {
+            'width': parsed_values[0],
+            'mass': mass,
+            'hermite_coeffs': parsed_values[1],
+            'k_free': parsed_values[2],
+            'sears_flag': parsed_values[3]
+        }
+
+        hermite_coeff_val_regex = re.compile("[Cc]_([0-9]+)=([0-9.]+)")
+        hermite_vals = {}
+        for hermite_val in hermite_coeff_val_regex.findall(func_str):
+            hermite_vals[hermite_val[0].upper()] = ast.literal_eval(hermite_val[1])
+        if len(hermite_vals) > 0:
+            params['hermite_coeff_vals'] = hermite_vals
+
+        fsecoeff_regex = re.compile("fsecoeff=([0-9.]+)")
+        fsecoeff_match = fsecoeff_regex.match(func_str)
+        if fsecoeff_match:
+            params['fsecoeff'] = ast.literal_eval(fsecoeff_match.group(1))
+
+        return GramCharlierMassProfile(**params)
 
     def create_fit_function_str(self, param_vals=None, param_prefix=""):
         """Creates a string used by the Fit algorithm for this profile
@@ -171,11 +198,20 @@ class GramCharlierMassProfile(MassProfile):
                                                                                  def_width)
         if vals_provided:
             par_names = ["FSECoeff"]
-            for i,c in enumerate(self.hermite_co):
-                if c > 0:
+            for i, coeff in enumerate(self.hermite_co):
+                if coeff > 0:
                     par_names.append("C_{0}".format(2*i))
             for par_name in par_names:
                 fitting_str += ",{0}={1:f}".format(par_name, param_vals[param_prefix + par_name])
+        else:
+            if self.fsecoeff is not None:
+                fitting_str += "FSECoeff={0}".format(self.fsecoeff)
+            if self.hermite_coeff_vals is not None:
+                for i, coeff in self.hermite_coeff_vals.items():
+                    if coeff > 0:
+                        fitting_str += ",C_{0}={1:f}".format(i, coeff)
+
+        print fitting_str
 
         return fitting_str + ";"
 
@@ -188,8 +224,8 @@ class GramCharlierMassProfile(MassProfile):
         if constraints != "":
             constraints += ","
         # All coefficients should be greater than zero
-        for i, c in enumerate(self.hermite_co):
-            if c > 0:
+        for i, coeff in enumerate(self.hermite_co):
+            if coeff > 0:
                 constraints += "{0}C_{1} > 0.0,".format(param_prefix,2*i)
         return constraints.rstrip(",")
 
@@ -221,14 +257,14 @@ class GramCharlierMassProfile(MassProfile):
         :param prop_name: The string on the lhs of the equality
         :return: The parsed list
         """
-        prop_re = re.compile(prop_name + r"=(\[(?:\w(?:,)?(?:\s)?)+\])")
+        prop_re = re.compile(prop_name + r"=(\[(?:[\w.](?:,)?(?:\s)?)+\])")
         match = prop_re.search(func_str)
         if match:
             value = ast.literal_eval(match.group(1))
             if not isinstance(value, list):
                 raise ValueError("Unexpected format for {0} value. Expected e.g. {0}=[1,0,1]".format(prop_name))
         else:
-            raise ValueError("Cannot find {0}= in function_str".format(prop_name))
+            raise ValueError("Cannot find {0}= in function_str ({1})".format(prop_name, func_str))
 
         return value
 
@@ -263,7 +299,7 @@ def create_from_str(func_str, mass):
         :param mass: The value of the mass for the profile
     """
     known_types = [GaussianMassProfile, GramCharlierMassProfile]
-
+    print func_str
     errors = dict()
     for cls in known_types:
         try:
