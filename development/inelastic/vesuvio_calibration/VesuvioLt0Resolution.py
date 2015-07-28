@@ -9,6 +9,7 @@ import numpy as np
 BACKSCATTERING = range(3, 135)
 FORWARDSCATTERING = range(135, 199)
 
+# Uranium peak details taken from: 10.1016/j.nima.2010.09.079
 U_PEAKS = [
 #    Er      dEr    vr          t      dTr
 #    meV     meV    m/usec      usec   usec
@@ -55,9 +56,11 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         t0_peak_params = mtd[self.getPropertyValue("ParametersT0")]
         l0_peak_params = mtd[self.getPropertyValue("ParametersL0")]
 
-        back_fit_params = self._calculate(BACKSCATTERING, t0_peak_params, 11.005)
-        forward_fit_params = self._calculate(FORWARDSCATTERING, l0_peak_params, 11.005)
+        #TODO: Take l0 from instrument
+        back_fit_params = self._calculate(BACKSCATTERING, t0_peak_params, [11.005] * len(BACKSCATTERING))
+        forward_fit_params = self._calculate(FORWARDSCATTERING, l0_peak_params, [11.005] * len(FORWARDSCATTERING))
 
+        # Rename the headers and discard the cost function values
         back_params = CreateEmptyTableWorkspace(OutputWorkspace=self.getPropertyValue("BackParameters"))
         forward_params = CreateEmptyTableWorkspace(OutputWorkspace=self.getPropertyValue("ForwardParameters"))
         self._add_output_columns(back_params, back_fit_params)
@@ -66,6 +69,7 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         self.setProperty("BackParameters", back_params)
         self.setProperty("ForwardParameters", forward_params)
 
+        # Calculate mean of each value
         back_l_data = back_params.column('L')
         back_t0_data = back_params.column('t0')
         forward_l_data = forward_params.column('L')
@@ -79,14 +83,24 @@ class VesuvioLt0Resolution(PythonAlgorithm):
 #----------------------------------------------------------------------------------------
 
     def _calculate(self, detectors, calibration_params, l0_dist):
+        """
+        Calculates resolution for given detectors.
+
+        @param detectors List of detector numbers
+        @param calibration_params Parameters from calibration fits
+        @param l0_dist List of L0 values for detectors
+        @return Workspace containing resolution parameters per detector
+        """
+        # Create a workspace of the three peaks against 1/v1^2
         wks = WorkspaceFactory.Instance().create('Workspace2D', len(detectors), 3, 3)
+
         for detector in detectors:
             det_index = detector - detectors[0]
 
             x_data = []
             for peak in range(3):
                 peak_position = calibration_params.getItem(peak).column('f1.PeakCentre')[det_index]
-                x_data.append(1.0/(l0_dist/peak_position )**2)
+                x_data.append(1.0/(l0_dist[det_index]/peak_position)**2)
 
                 params = calibration_params.getItem(peak)
                 sigma = params.column('f1.Sigma')[det_index]
@@ -100,6 +114,7 @@ class VesuvioLt0Resolution(PythonAlgorithm):
 
         AnalysisDataService.Instance().addOrReplace('__bank_data', wks)
 
+        # Perform a linear fit of each spectra
         fit = AlgorithmManager.Instance().create('PlotPeakByLogValue')
         fit.initialize()
         fit.setChild(True)
@@ -109,25 +124,27 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         fit.execute()
 
         DeleteWorkspace('__bank_data')
-
         params = fit.getProperty('OutputWorkspace').value
+
+        # Process fit parameters
         for index, detector in enumerate(detectors):
             params.setCell(index, 0, detector)
 
-            t0 = params.cell(index, 1)
+            t0_val = params.cell(index, 1)
             l_dist = params.cell(index, 3)
 
-            if t0 > 0:
-                t0 = np.sqrt(t0)
+            # Set negative values to zero, otherwise take square root
+            if t0_val > 0:
+                t0_val = np.sqrt(t0_val)
             else:
-                t0 = 0
+                t0_val = 0
 
             if l_dist > 0:
                 l_dist = np.sqrt(l_dist)
             else:
                 l_dist = 0
 
-            params.setCell(index, 1, t0)
+            params.setCell(index, 1, t0_val)
             params.setCell(index, 3, l_dist)
 
         return params
@@ -135,6 +152,12 @@ class VesuvioLt0Resolution(PythonAlgorithm):
 #----------------------------------------------------------------------------------------
 
     def _add_output_columns(self, table, fit_table):
+        """
+        Move the columns from the fit parameter workspace to the output workspace.
+
+        @param table Output table workspace
+        @param fit_table Fit parameter table workspace
+        """
         table.addColumn('float', 'Detector')
         table.addColumn('float', 't0')
         table.addColumn('float', 't0_Err')
@@ -143,7 +166,11 @@ class VesuvioLt0Resolution(PythonAlgorithm):
 
         for row_idx in range(fit_table.rowCount()):
             old_row = fit_table.row(row_idx)
-            table.addRow([old_row['axis-1'], old_row['A0'], old_row['A0_Err'], old_row['A1'], old_row['A1_Err']])
+            table.addRow([old_row['axis-1'],
+                          old_row['A0'],
+                          old_row['A0_Err'],
+                          old_row['A1'],
+                          old_row['A1_Err']])
 
 #----------------------------------------------------------------------------------------
 
