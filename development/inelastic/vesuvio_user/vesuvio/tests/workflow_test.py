@@ -120,6 +120,13 @@ class FitTofTest(unittest.TestCase):
             flags['background'] = None
         flags['ip_file'] = 'IP0004_10.par'
         flags['diff_mode'] = 'single'
+        flags['gamma_correct'] = True
+        flags['ms_flags'] = dict()
+        flags['ms_flags']['SampleWidth'] = 10.0
+        flags['ms_flags']['SampleHeight'] = 10.0
+        flags['ms_flags']['SampleDepth'] = 0.5
+        flags['ms_flags']['SampleDensity'] = 241
+        flags['fit_minimizer'] = 'Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08'
 
         return flags
 

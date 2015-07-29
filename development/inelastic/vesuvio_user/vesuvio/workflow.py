@@ -28,6 +28,8 @@ def fit_tof(runs, flags):
     background_str = _create_background_str(flags.get('background', None))
     intensity_constraints = _create_intensity_constraint_str(flags['intensity_constraints'])
 
+    max_fit_iterations = flags.get('max_fit_iterations', 5000)
+
     # Load
     spectra = flags['spectra']
     fit_mode = flags['fit_mode']
@@ -43,7 +45,7 @@ def fit_tof(runs, flags):
 
     # Load container runs if provided
     container_data = None
-    if flags['container_runs'] is not None:
+    if flags.get('container_runs', None) is not None:
         container_data = load_and_crop_data(flags['container_runs'], spectra,
                                             flags['ip_file'],
                                             flags['diff_mode'], fit_mode,
@@ -71,7 +73,7 @@ def fit_tof(runs, flags):
                       IntensityConstraints=intensity_constraints,
                       OutputWorkspace=corrections_fit_name,
                       FitParameters=pre_correction_pars_name,
-                      MaxIterations=flags['max_fit_iterations'],
+                      MaxIterations=max_fit_iterations,
                       Minimizer=flags['fit_minimizer'])
         DeleteWorkspace(corrections_fit_name)
         corrections_args['FitParameters'] = pre_correction_pars_name
@@ -82,7 +84,7 @@ def fit_tof(runs, flags):
         corrected_data_name = runs + "_tof_corrected" + suffix
         linear_correction_fit_params_name = runs + "_correction_fit_scale" + suffix
 
-        if flags['output_verbose_corrections']:
+        if flags.get('output_verbose_corrections', False):
             corrections_args["CorrectionWorkspaces"] = runs + "_correction" + suffix
             corrections_args["CorrectedWorkspaces"] = runs + "_corrected" + suffix
 
@@ -93,7 +95,7 @@ def fit_tof(runs, flags):
                            OutputWorkspace=corrected_data_name,
                            LinearFitResult=linear_correction_fit_params_name,
                            WorkspaceIndex=index,
-                           GammaBackground=flags['gamma_correct'],
+                           GammaBackground=flags.get('gamma_correct', False),
                            Masses=mass_values,
                            MassProfiles=profiles_strs,
                            IntensityConstraints=intensity_constraints,
@@ -113,7 +115,7 @@ def fit_tof(runs, flags):
                       IntensityConstraints=intensity_constraints,
                       OutputWorkspace=fit_ws_name,
                       FitParameters=pars_name,
-                      MaxIterations=flags['max_fit_iterations'],
+                      MaxIterations=max_fit_iterations,
                       Minimizer=flags['fit_minimizer'])
         DeleteWorkspace(corrected_data_name)
 
@@ -134,7 +136,7 @@ def fit_tof(runs, flags):
         # Note the ordering of operations here gives the order in the WorkspaceGroup
         group_name = runs + suffix
         output_workspaces = [fit_ws_name, linear_correction_fit_params_name]
-        if flags['output_verbose_corrections']:
+        if flags.get('output_verbose_corrections', False):
             output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
             output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
             UnGroupWorkspace(corrections_args["CorrectionWorkspaces"])
@@ -143,8 +145,8 @@ def fit_tof(runs, flags):
         output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
 
     # Output the parameter workspaces
-    AnalysisDataService.Instance().add(runs + "_params_pre_correction", pre_correct_pars_workspace)
-    AnalysisDataService.Instance().add(runs + "_params", pars_workspace)
+    AnalysisDataService.Instance().addOrReplace(runs + "_params_pre_correction", pre_correct_pars_workspace)
+    AnalysisDataService.Instance().addOrReplace(runs + "_params", pars_workspace)
 
     if len(output_groups) > 1:
         return output_groups
