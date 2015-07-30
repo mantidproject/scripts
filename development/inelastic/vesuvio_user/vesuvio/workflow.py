@@ -216,9 +216,9 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
 
         output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
 
-    # Output the parameter workspaces
-    AnalysisDataService.Instance().add(runs + "_params_pre_correction" + suffix, pre_correct_pars_workspace)
-    AnalysisDataService.Instance().add(runs + "_params" + suffix, pars_workspace)
+        # Output the parameter workspaces
+        AnalysisDataService.Instance().add(runs + "_params_pre_correction" + suffix, pre_correct_pars_workspace)
+        AnalysisDataService.Instance().add(runs + "_params" + suffix, pars_workspace)
 
     if len(output_groups) > 1:
         result_ws = output_groups
