@@ -13,8 +13,8 @@ class FitTofTest(unittest.TestCase):
         runs = "15039-15045"
 
         fit_results = fit_tof(runs, flags)
-        self.assertTrue(isinstance(fit_results, mantid.api.WorkspaceGroup))
-        self.assertEqual(2, fit_results.size())
+        self.assertTrue(isinstance(fit_results, tuple))
+        self.assertEqual(4, len(fit_results))
 
         fitted_ws = fit_results[0]
         self.assertEqual(7, fitted_ws.getNumberHistograms())
@@ -34,7 +34,8 @@ class FitTofTest(unittest.TestCase):
         runs = "15039-15045"
 
         fit_results = fit_tof(runs, flags)
-        self.assertTrue(isinstance(fit_results, mantid.api.WorkspaceGroup))
+        self.assertTrue(isinstance(fit_results, tuple))
+        self.assertEqual(4, len(fit_results))
 
         fitted_ws = fit_results[0]
         self.assertEqual(8, fitted_ws.getNumberHistograms())
@@ -56,10 +57,14 @@ class FitTofTest(unittest.TestCase):
         runs = "15039-15045"
 
         fit_results = fit_tof(runs, flags)
-        self.assertTrue(isinstance(fit_results, list))
-        self.assertEquals(8, len(fit_results))
+        self.assertTrue(isinstance(fit_results, tuple))
+        self.assertEquals(4, len(fit_results))
 
-        bank1 = fit_results[0]
+        fitted_banks = fit_results[0]
+        self.assertTrue(isinstance(fitted_banks, WorkspaceGroup))
+        self.assertEqual(8, fitted_banks.size())
+
+        bank1 = fitted_banks[0]
         bank1_data = bank1[0]
         self.assertAlmostEqual(50.0, bank1_data.readX(0)[0])
         self.assertAlmostEqual(562.0, bank1_data.readX(0)[-1])
@@ -67,7 +72,7 @@ class FitTofTest(unittest.TestCase):
         self.assertAlmostEqual(0.000107272755986595, bank1_data.readY(1)[0])
         self.assertAlmostEqual(0.000585633970072128, bank1_data.readY(1)[-1])
 
-        bank8 = fit_results[-1]
+        bank8 = fitted_banks[-1]
         bank8_data = bank8[0]
         self.assertAlmostEqual(50.0, bank8_data.readX(0)[0])
         self.assertAlmostEqual(562.0, bank8_data.readX(0)[-1])
@@ -83,9 +88,13 @@ class FitTofTest(unittest.TestCase):
 
         fit_results = fit_tof(runs, flags)
         self.assertTrue(isinstance(fit_results, list))
-        self.assertEquals(8, len(fit_results))
+        self.assertEquals(4, len(fit_results))
 
-        spec143 = fit_results[0]
+        fitted_spec = fit_results[0]
+        self.assertTrue(isinstance(fitted_spec, WorkspaceGroup))
+        self.assertEqual(8, fitted_spec.size())
+
+        spec143 = fitted_spec[0]
         spec143_data = spec143[0]
         self.assertAlmostEqual(50.0, spec143_data.readX(0)[0])
         self.assertAlmostEqual(562.0, spec143_data.readX(0)[-1])
@@ -93,7 +102,7 @@ class FitTofTest(unittest.TestCase):
         self.assertAlmostEqual(2.37897941103748e-06, spec143_data.readY(1)[0])
         self.assertAlmostEqual(3.58226563303213e-05, spec143_data.readY(1)[-1])
 
-        spec150 = fit_results[-1]
+        spec150 = fitted_spec[-1]
         spec150_data = spec150[0]
         self.assertAlmostEqual(50.0, spec150_data.readX(0)[0])
         self.assertAlmostEqual(562.0, spec150_data.readX(0)[-1])
@@ -120,6 +129,13 @@ class FitTofTest(unittest.TestCase):
             flags['background'] = None
         flags['ip_file'] = 'IP0004_10.par'
         flags['diff_mode'] = 'single'
+        flags['gamma_correct'] = True
+        flags['ms_flags'] = dict()
+        flags['ms_flags']['SampleWidth'] = 10.0
+        flags['ms_flags']['SampleHeight'] = 10.0
+        flags['ms_flags']['SampleDepth'] = 0.5
+        flags['ms_flags']['SampleDensity'] = 241
+        flags['fit_minimizer'] = 'Levenberg-Marquardt,AbsError=1e-08,RelError=1e-08'
 
         return flags
 

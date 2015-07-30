@@ -5,7 +5,7 @@ The main entry point that most users should care about is fit_tof().
 """
 from vesuvio.instrument import VESUVIO
 
-from mantid import mtd, logger
+from mantid import mtd
 from mantid.api import (AnalysisDataService, WorkspaceFactory, TextAxis)
 from mantid.simpleapi import (_create_algorithm_function, AlgorithmManager,
                               CropWorkspace, GroupWorkspaces, UnGroupWorkspace,
@@ -45,7 +45,7 @@ def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
 
     # Load container runs if provided
     container_data = None
-    if flags['container_runs'] is not None:
+    if flags.get('container_runs', None) is not None:
         container_data = load_and_crop_data(flags['container_runs'], spectra,
                                             flags['ip_file'],
                                             flags['diff_mode'], fit_mode,
@@ -115,6 +115,7 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
     num_spec = sample_data.getNumberHistograms()
     pre_correct_pars_workspace = None
     pars_workspace = None
+    max_fit_iterations = flags.get('max_fit_iterations', 5000)
 
     output_groups = []
     chi2_values = []
@@ -144,7 +145,7 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
                       IntensityConstraints=intensity_constraints,
                       OutputWorkspace=corrections_fit_name,
                       FitParameters=pre_correction_pars_name,
-                      MaxIterations=flags['max_fit_iterations'],
+                      MaxIterations=max_fit_iterations,
                       Minimizer=flags['fit_minimizer'])
         DeleteWorkspace(corrections_fit_name)
         corrections_args['FitParameters'] = pre_correction_pars_name
@@ -155,7 +156,7 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
         corrected_data_name = runs + "_tof_corrected" + suffix
         linear_correction_fit_params_name = runs + "_correction_fit_scale" + suffix
 
-        if flags['output_verbose_corrections']:
+        if flags.get('output_verbose_corrections', False):
             corrections_args["CorrectionWorkspaces"] = runs + "_correction" + suffix
             corrections_args["CorrectedWorkspaces"] = runs + "_corrected" + suffix
 
@@ -166,7 +167,7 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
                            OutputWorkspace=corrected_data_name,
                            LinearFitResult=linear_correction_fit_params_name,
                            WorkspaceIndex=index,
-                           GammaBackground=flags['gamma_correct'],
+                           GammaBackground=flags.get('gamma_correct', False),
                            Masses=mass_values,
                            MassProfiles=profiles,
                            IntensityConstraints=intensity_constraints,
@@ -186,7 +187,7 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
                                    IntensityConstraints=intensity_constraints,
                                    OutputWorkspace=fit_ws_name,
                                    FitParameters=pars_name,
-                                   MaxIterations=flags['max_fit_iterations'],
+                                   MaxIterations=max_fit_iterations,
                                    Minimizer=flags['fit_minimizer'])
         chi2_values.append(fit_result[-1])
         DeleteWorkspace(corrected_data_name)
@@ -208,7 +209,7 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
         # Note the ordering of operations here gives the order in the WorkspaceGroup
         group_name = runs + suffix
         output_workspaces = [fit_ws_name, linear_correction_fit_params_name]
-        if flags['output_verbose_corrections']:
+        if flags.get('output_verbose_corrections', False):
             output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
             output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
             UnGroupWorkspace(corrections_args["CorrectionWorkspaces"])
@@ -217,8 +218,8 @@ def fit_tof_iteration(sample_data, container_data, runs, flags):
         output_groups.append(GroupWorkspaces(InputWorkspaces=output_workspaces, OutputWorkspace=group_name))
 
         # Output the parameter workspaces
-        AnalysisDataService.Instance().add(runs + "_params_pre_correction" + suffix, pre_correct_pars_workspace)
-        AnalysisDataService.Instance().add(runs + "_params" + suffix, pars_workspace)
+        AnalysisDataService.Instance().addOrReplace(runs + "_params_pre_correction" + suffix, pre_correct_pars_workspace)
+        AnalysisDataService.Instance().addOrReplace(runs + "_params" + suffix, pars_workspace)
 
     if len(output_groups) > 1:
         result_ws = output_groups
