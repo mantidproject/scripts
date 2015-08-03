@@ -32,6 +32,13 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         self.declareProperty(WorkspaceGroupProperty("ParametersL0", "", Direction.Input),
                              doc="Peak parameters fitted for L0 in EVSCalibrationAnalysis")
 
+        # Optional parameter file
+        self.declareProperty(FileProperty("InstrumentParFile", "", action=FileAction.OptionalLoad,
+                                          extensions=["dat", "par"]),
+                             doc="An optional IP file. If provided the values are used to correct "
+                                 "the default instrument values and attach the t0 values to each "
+                                 "detector")
+
         # Output parameter tables
         self.declareProperty(ITableWorkspaceProperty("ForwardParameters", "", Direction.Output),
                              doc="Resolution values for forward scattering")
@@ -56,9 +63,22 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         t0_peak_params = mtd[self.getPropertyValue("ParametersT0")]
         l0_peak_params = mtd[self.getPropertyValue("ParametersL0")]
 
-        #TODO: Take l0 from instrument
-        back_fit_params = self._calculate(BACKSCATTERING, t0_peak_params, [11.005] * len(BACKSCATTERING))
-        forward_fit_params = self._calculate(FORWARDSCATTERING, l0_peak_params, [11.005] * len(FORWARDSCATTERING))
+        evs_ws = LoadEmptyVesuvio(InstrumentParFile=self.getPropertyValue("InstrumentParFile"))
+
+        # Calculate source to sample distance
+        evs = evs_ws.getInstrument()
+        source_pos = evs.getSource().getPos()
+        sample_pos = evs.getSample().getPos()
+        l0_dist = source_pos.distance(sample_pos)
+
+        # For forward scattering only L1 is used as gamma rays are detected
+        forward_l = [l0_dist] * len(FORWARDSCATTERING)
+        # For backscattering total flight path is used as neutrons are detected
+        back_l0 = [l0_dist + self._get_l1(evs_ws, det_no) for det_no in BACKSCATTERING]
+
+        # Calculate resolution
+        back_fit_params = self._calculate(BACKSCATTERING, t0_peak_params, back_l0)
+        forward_fit_params = self._calculate(FORWARDSCATTERING, l0_peak_params, forward_l)
 
         # Rename the headers and discard the cost function values
         back_params = CreateEmptyTableWorkspace(OutputWorkspace=self.getPropertyValue("BackParameters"))
@@ -82,13 +102,29 @@ class VesuvioLt0Resolution(PythonAlgorithm):
 
 #----------------------------------------------------------------------------------------
 
-    def _calculate(self, detectors, calibration_params, l0_dist):
+    def _get_l1(self, evs_ws, det_no):
+        """
+        Gets the L1 distance for a given detector.
+
+        @param evs_ws Workspace containg the VESUVIO instrument
+        @param det_no The detector number
+        @return The L1 distance
+        """
+        evs = evs_ws.getInstrument()
+        sample_pos = evs.getSample().getPos()
+        det_pos = evs_ws.getDetector(det_no).getPos()
+        dist = sample_pos.distance(det_pos)
+        return dist
+
+#----------------------------------------------------------------------------------------
+
+    def _calculate(self, detectors, calibration_params, distance):
         """
         Calculates resolution for given detectors.
 
         @param detectors List of detector numbers
         @param calibration_params Parameters from calibration fits
-        @param l0_dist List of L0 values for detectors
+        @param distance List of distances for detectors (L for backscattering, L1 for forward scattering)
         @return Workspace containing resolution parameters per detector
         """
         # Create a workspace of the three peaks against 1/v1^2
@@ -100,7 +136,7 @@ class VesuvioLt0Resolution(PythonAlgorithm):
             x_data = []
             for peak in range(3):
                 peak_position = calibration_params.getItem(peak).column('f1.PeakCentre')[det_index]
-                x_data.append(1.0/(l0_dist[det_index]/peak_position)**2)
+                x_data.append(1.0/(distance[det_index]/peak_position)**2)
 
                 params = calibration_params.getItem(peak)
                 sigma = params.column('f1.Sigma')[det_index]
