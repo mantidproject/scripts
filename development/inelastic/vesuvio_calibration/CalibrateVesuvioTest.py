@@ -1,3 +1,5 @@
+#pylint: disable=too-many-instance-attributes,too-many-public-methods,invalid-name,too-many-arguments
+
 import unittest
 import numpy as np
 import scipy.constants
@@ -12,6 +14,15 @@ from CalibrateVesuvio import (calculate_r_theta, FRONTSCATTERING_RANGE, DETECTOR
                               U_MASS, U_PEAK_ENERGIES)
 
 class EVSCalibrationTest(unittest.TestCase):
+
+    _run_range = None
+    _spec_list = None
+    _mode = None
+    _function = None
+    _background = None
+    _energy_estimates = None
+    _mass = None
+    _d_spacings = None
 
     def load_ip_file(self):
         param_names = ['spectrum', 'theta', 't0', 'L0', 'L1']
@@ -76,6 +87,8 @@ class EVSCalibrationTest(unittest.TestCase):
 
 class EVSCalibrationAnalysisTests(EVSCalibrationTest):
 
+    _output_workspace = None
+
     def setUp(self):
         self._calc_L0 = False
         self._parameter_file = FileFinder.getFullPath("IP0005.par")
@@ -88,7 +101,7 @@ class EVSCalibrationAnalysisTests(EVSCalibrationTest):
 
         params_table = self.run_evs_calibration_analysis()
         self.assert_theta_parameters_match_expected(params_table)
-    
+
     def test_lead(self):
         self._setup_lead_test()
         self._output_workspace = "lead_analysis_test"
@@ -111,7 +124,7 @@ class EVSCalibrationAnalysisTests(EVSCalibrationTest):
 
         params_table = self.run_evs_calibration_analysis()
         self.assert_theta_parameters_match_expected(params_table)
-    
+
     def test_lead_with_uranium(self):
         self._setup_lead_test()
         self._calc_L0 = True
@@ -136,8 +149,8 @@ class EVSCalibrationAnalysisTests(EVSCalibrationTest):
         np.testing.assert_allclose(actual_thetas, thetas, rtol=rel_tolerance)
 
     def run_evs_calibration_analysis(self):
-        EVSCalibrationAnalysis(self._output_workspace, Samples=self._run_range, Background=self._background, 
-                               InstrumentParameterFile=self._parameter_file, Mass=self._mass, DSpacings=self._d_spacings, 
+        EVSCalibrationAnalysis(self._output_workspace, Samples=self._run_range, Background=self._background,
+                               InstrumentParameterFile=self._parameter_file, Mass=self._mass, DSpacings=self._d_spacings,
                                Iterations=self._iterations, CalculateL0=self._calc_L0)
 
         last_fit_iteration = self._output_workspace + '_Iteration_%d' % (self._iterations-1)
@@ -145,7 +158,9 @@ class EVSCalibrationAnalysisTests(EVSCalibrationTest):
 
 
 class EVSCalibrationFitTests(EVSCalibrationTest):
-    
+
+    _output_workspace = None
+
     def setUp(self):
         self._function = 'Voigt'
         self._parameter_file = FileFinder.getFullPath("IP0005.par")
@@ -211,14 +226,16 @@ class EVSCalibrationFitTests(EVSCalibrationTest):
         expected_values = self.calculate_energy_peak_positions()
         params_table = self.run_evs_calibration_fit()
         self.assert_fitted_positions_match_expected(expected_values, params_table, rel_tolerance=0.01, ignore_zero=True)
-        
+
     #------------------------------------------------------------------
     # Misc Helpers functions
     #------------------------------------------------------------------
 
-    def assert_fitted_positions_match_expected(self, expected_positions, params_table, rel_tolerance=1e-7, abs_tolerance=0, ignore_zero=False):
+    def assert_fitted_positions_match_expected(self, expected_positions, params_table,
+                                               rel_tolerance=1e-7, abs_tolerance=0,
+                                               ignore_zero=False):
         """
-        Check that each of the fitted peak positions match the expected 
+        Check that each of the fitted peak positions match the expected
         positions in time of flight calculated from the parameter file
         within a small tolerance.
         """
@@ -228,12 +245,12 @@ class EVSCalibrationFitTests(EVSCalibrationTest):
 
         column_names = self.find_all_peak_positions(params_table)
 
-        for name, expected_position in zip(column_names, expected_positions):        
+        for name, expected_position in zip(column_names, expected_positions):
             position = np.array(params_table.column(name))
-            
+
             if ignore_zero:
                 expected_position, position = self.mask_bad_detector_readings(expected_position, position)
-            
+
             self.assertFalse(np.isnan(position).any())
             self.assertFalse(np.isinf(position).any())
             np.set_printoptions(threshold=np.nan)
@@ -267,7 +284,7 @@ class EVSCalibrationFitTests(EVSCalibrationTest):
         return column_names
 
     def calculate_energy_peak_positions(self):
-        """ 
+        """
         Using the calibrated values to calculate the expected
         position of the L0/L1/E1 peak in time of flight.
         """
@@ -292,7 +309,7 @@ class EVSCalibrationFitTests(EVSCalibrationTest):
         return tof
 
     def calculate_theta_peak_positions(self):
-        """ 
+        """
         Using the calibrated values of theta calculate the expected
         peak position in time of flight.
         """
