@@ -5,6 +5,7 @@ from mantid.api import *
 from mantid.simpleapi import *
 
 import numpy as np
+import scipy.stats as stats
 
 BACKSCATTERING = range(3, 135)
 FORWARDSCATTERING = range(135, 199)
@@ -21,6 +22,8 @@ U_PEAKS = [
 #----------------------------------------------------------------------------------------
 
 class VesuvioLt0Resolution(PythonAlgorithm):
+
+    _output_table = None
 
     def summary(self):
         return "Calculates the resolution of the total flight path and t0 for VESUVIO."
@@ -45,17 +48,9 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         self.declareProperty(ITableWorkspaceProperty("BackParameters", "", Direction.Output),
                              doc="Resolution parameters for backscattering")
 
-        # Mean total flight path (L)
-        self.declareProperty("MeanForwardL", 0.0, direction=Direction.Output,
-                             doc="Mean total flight path length for forward scattering (m)")
-        self.declareProperty("MeanBackL", 0.0, direction=Direction.Output,
-                             doc="Mean total flight path length for backscattering (m)")
-
-        # Mean t0
-        self.declareProperty("MeanForwardT0", 0.0, direction=Direction.Output,
-                             doc="Mean t0 for forward scattering (uSec)")
-        self.declareProperty("MeanBackT0", 0.0, direction=Direction.Output,
-                             doc="Mean t0 for backscattering (uSec)")
+        # Output value table
+        self.declareProperty(ITableWorkspaceProperty("OutputWorkspace", "", Direction.Output),
+                             doc="Mean resolution parameters")
 
 #----------------------------------------------------------------------------------------
 
@@ -76,6 +71,8 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         # For backscattering total flight path is used as neutrons are detected
         back_l0 = [l0_dist + self._get_l1(evs_ws, det_no) for det_no in BACKSCATTERING]
 
+        DeleteWorkspace(evs_ws)
+
         # Calculate resolution
         back_fit_params = self._calculate(BACKSCATTERING, t0_peak_params, back_l0)
         forward_fit_params = self._calculate(FORWARDSCATTERING, l0_peak_params, forward_l)
@@ -89,16 +86,48 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         self.setProperty("BackParameters", back_params)
         self.setProperty("ForwardParameters", forward_params)
 
-        # Calculate mean of each value
-        back_l_data = back_params.column('L')
-        back_t0_data = back_params.column('t0')
-        forward_l_data = forward_params.column('L')
-        forward_t0_data = forward_params.column('t0')
+        # Get data from param tables
+        max_float = np.finfo(float).max
+        back_l_data = np.clip(back_params.column('L'), 0, max_float)
+        back_t0_data = np.clip(back_params.column('t0'), 0, max_float)
+        forward_l_data = np.clip(forward_params.column('L'), 0, max_float)
+        forward_t0_data = np.clip(forward_params.column('t0'), 0, max_float)
 
-        self.setProperty("MeanBackL", np.mean(back_l_data[back_l_data != 0]))
-        self.setProperty("MeanBackT0", np.mean(back_t0_data[back_t0_data != 0]))
-        self.setProperty("MeanForwardL", np.mean(forward_l_data[forward_l_data != 0]))
-        self.setProperty("MeanForwardT0", np.mean(forward_t0_data[forward_t0_data != 0]))
+        self._output_table = CreateEmptyTableWorkspace(OutputWorkspace=self.getPropertyValue("OutputWorkspace"))
+
+        self._output_table.addColumn('str', 'ResolutionParameter')
+        self._output_table.addColumn('float', 'Mean')
+        self._output_table.addColumn('float', 'StdDev')
+        self._output_table.addColumn('float', 'StdErr')
+        self._output_table.addColumn('float', 'WeightedMean')
+        self._output_table.addColumn('float', 'WeightedErr')
+
+        self._add_param_table_row('Backscattering L', back_l_data)
+        self._add_param_table_row('Backscattering t0', back_t0_data)
+        self._add_param_table_row('Forward scattering L', forward_l_data)
+        self._add_param_table_row('Forward scattering t0', forward_t0_data)
+
+        self.setProperty("OutputWorkspace", self._output_table)
+
+#----------------------------------------------------------------------------------------
+
+    def _add_param_table_row(self, name, data):
+        """
+        Adds a parameter row to the output table.
+
+        @param name Name of the parameter
+        @param data Data values
+        """
+        mean = np.mean(data)
+        weights = 1.0 / np.abs(np.repeat(mean, data.size) - data)
+        weighted_data = data * weights / np.sum(weights)
+
+        self._output_table.addRow([name,
+                                   mean,
+                                   np.std(data),
+                                   stats.sem(data),
+                                   np.average(data, weights=weights),
+                                   stats.sem(weighted_data)])
 
 #----------------------------------------------------------------------------------------
 
