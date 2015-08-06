@@ -265,17 +265,14 @@ class EVSCalibrationFit(PythonAlgorithm):
     """
     self._load_files(self._sample_run_numbers, self._sample)
 
-    xmin, xmax = self._ws_crop_range
-    CropWorkspace(self._sample, XMin=xmin, XMax=xmax, OutputWorkspace=self._sample)
-
     if len(self._bkg_run_numbers) > 0:
       self._load_files(self._bkg_run_numbers, self._background)
-
       RebinToWorkspace(WorkspaceToRebin=self._background, WorkspaceToMatch=self._sample, OutputWorkspace=self._background)
-      CropWorkspace(self._background, XMin=xmin, XMax=xmax, OutputWorkspace=self._background)
       Divide(self._sample, self._background, OutputWorkspace=self._sample)
-
       DeleteWorkspace(self._background)
+
+    xmin, xmax = self._ws_crop_range
+    CropWorkspace(self._sample, XMin=xmin, XMax=xmax, OutputWorkspace=self._sample)
 
     ReplaceSpecialValues(self._sample, NaNValue=0, NaNError=0, InfinityValue=0, InfinityError=0, OutputWorkspace=self._sample)
 
