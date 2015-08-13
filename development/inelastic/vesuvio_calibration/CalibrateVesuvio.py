@@ -160,7 +160,6 @@ class EVSCalibrationFit(PythonAlgorithm):
     self.declareProperty(FloatArrayProperty('DSpacings', [], greaterThanZero, Direction.Input),
       doc="List of d-spacings used to estimate the positions of bragg peaks in TOF.")
 
-
     self.declareProperty(FloatArrayProperty('Energy', [ENERGY_ESTIMATE], FloatArrayMandatoryValidator(), Direction.Input),
       doc='List of estimated expected energies for peaks. Optional: the default is %f' % ENERGY_ESTIMATE)
 
@@ -388,6 +387,7 @@ class EVSCalibrationFit(PythonAlgorithm):
         #find inital parameters given the estimate position
         peak_table = '__' + self._sample + '_peaks_table_%d_%d' % (i,j)
         find_peak_params = self._get_find_peak_parameters(spec_number, [peak_centre])
+        find_peak_params['PeakPositionTolerance'] = 200
         FindPeaks(InputWorkspace=self._sample, WorkspaceIndex=j, PeaksList=peak_table, **find_peak_params)
 
         #extract data from table
@@ -444,7 +444,8 @@ class EVSCalibrationFit(PythonAlgorithm):
     """
       Get find peak parameters specific to if we're fitting bragg peaks or not.
 
-      @param spec_num - the current spectrum number being fitted
+      @param spec_number - the current spectrum number being fitted
+      @param peak_centre - list of peak centre positions
       @return dictionary of parameters for find peaks
     """
     find_peak_params = {}
