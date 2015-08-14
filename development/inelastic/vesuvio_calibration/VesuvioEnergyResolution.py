@@ -168,38 +168,60 @@ class VesuvioEnergyResolution(PythonAlgorithm):
 
     def _calculate_de1(self, parameters, out_ws):
         """
-        Calculates delta-E1 for Lorentzian and Gaussion components.
+        Calculates delta-E1 for Lorentzian and Gaussian components.
 
         @param parameters Fit parameters
         @param out_ws Table workspace to add results to
         """
         spectrum_nos = parameters.column('Spectrum')
-        positions = parameters.column('f1.LorentzPos')
-        widths = parameters.column('f1.LorentzFWHM')
+        positions_lorentz = parameters.column('f1.LorentzPos')
+        widths_lorentz = parameters.column('f1.LorentzFWHM')
+        widths_gauss = parameters.column('f1.GaussianFWHM')
 
-        for (spec, pos, fwhm) in zip(spectrum_nos, positions, widths):
-            # Ignore any unfitted data
-            if pos == 0.0 or fwhm == 0.0:
-                out_ws.addRow([spec, np.nan, np.nan])
-                continue
+        for idx, spec in enumerate(spectrum_nos):
+            pos_lorentz = positions_lorentz[idx]
+            fwhm_lorentz = widths_lorentz[idx]
+            pos_gauss = positions_lorentz[idx]
+            fwhm_gauss = widths_gauss[idx]
 
             l1_dist = self._get_l1(spec-1)
 
-            # Calculate energy at the peak position
-            d_time = pos / 1e+6 # us to s
-            neutron_v1 = (self._l0_dist + l1_dist) / d_time # ms-1
-            peak_e = 0.5 * scipy.constants.m_n * neutron_v1**2 # Joule
-            peak_e /= scipy.constants.value('electron volt') / 1e+3 # Joule to meV
+            # Lorentzian component
+            if pos_lorentz == 0.0 or fwhm_lorentz == 0.0:
+                delta_e1_lorentz = np.nan
+            else:
+                delta_e1_lorentz = self. _convert_to_energy(l1_dist, pos_lorentz, fwhm_lorentz)
 
-            # Calculate HWHM of peak in meV
-            delta_e1_lorentz = peak_e * fwhm / pos
+            # Gaussian component
+            if pos_gauss == 0.0 or fwhm_gauss == 0.0:
+                delta_e1_gauss = np.nan
+            else:
+                delta_e1_gauss = self. _convert_to_energy(l1_dist, pos_gauss, fwhm_gauss)
 
-            # (for FWHM)
-            #delta_e1_lorentz = peak_e * (2 * fwhm) / pos
+            #TODO: Gaussian component
 
-            #TODO: Gaussion component
+            out_ws.addRow([spec, delta_e1_lorentz, delta_e1_gauss])
 
-            out_ws.addRow([spec, delta_e1_lorentz, 0])
+#----------------------------------------------------------------------------------------
+
+    def _convert_to_energy(self, l1_dist, position, fwhm):
+        """
+        Converts a peak width to energy.
+
+        @param l1_dist Distance from sample to detector (m)
+        @param position Peak position in time of flight (us)
+        @param fwhm FWHM in time of flight (us)
+        """
+        # Calculate energy at the peak position
+        d_time = position / 1e+6 # us to s
+        neutron_v1 = (self._l0_dist + l1_dist) / d_time # ms-1
+        peak_e = 0.5 * scipy.constants.m_n * neutron_v1**2 # Joule
+        peak_e /= scipy.constants.value('electron volt') / 1e+3 # Joule to meV
+
+        # Calculate HWHM of peak in meV
+        energy = peak_e * fwhm / position
+
+        return energy
 
 #----------------------------------------------------------------------------------------
 
