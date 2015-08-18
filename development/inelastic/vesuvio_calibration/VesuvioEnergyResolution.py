@@ -4,11 +4,12 @@ from mantid.kernel import *
 from mantid.api import *
 from mantid.simpleapi import *
 
+import math
 import numpy as np
-import scipy.constants
+import scipy.constants as sc
 import scipy.stats as stats
 
-NEUTRON_MASS_AMU = scipy.constants.value('neutron mass in u')
+NEUTRON_MASS_AMU = sc.value('neutron mass in u')
 
 BACKSCATTERING = range(3, 135)
 FORWARDSCATTERING = range(135, 199)
@@ -35,6 +36,19 @@ class VesuvioEnergyResolution(PythonAlgorithm):
 
         self.declareProperty(StringArrayProperty("Background", Direction.Input),
                              doc="Run numbers to use as a background.")
+
+        # Resolution params
+        self.declareProperty("DeltaTheta", 0.0,
+                             doc="Resolution in the scattering angle")
+
+        self.declareProperty("DeltaL0", 0.0,
+                             doc="Resolution in the incident flight path length")
+
+        self.declareProperty("DeltaL1", 0.0,
+                             doc="Resolution in the final flight path length")
+
+        self.declareProperty("DeltaT0", 0.0,
+                             doc="Resolution in the pulse offset time")
 
         # Optional parameter file
         self.declareProperty(FileProperty("InstrumentParFile", "", action=FileAction.OptionalLoad,
@@ -153,14 +167,15 @@ class VesuvioEnergyResolution(PythonAlgorithm):
 
 #----------------------------------------------------------------------------------------
 
-    def _get_l1(self, det_no):
+    def _get_l1(self, spec_no):
         """
-        Gets the L1 distance for a given detector.
+        Gets the L1 distance for a given spectrum number.
 
         @param det_no The detector number
         @return The L1 distance
         """
-        det_pos = self._evs_ws.getDetector(det_no).getPos()
+        ws_idx = self._evs_ws.getIndexFromSpectrumNumber(spec_no)
+        det_pos = self._evs_ws.getDetector(ws_idx).getPos()
         dist = self._sample_pos.distance(det_pos)
         return dist
 
@@ -174,31 +189,34 @@ class VesuvioEnergyResolution(PythonAlgorithm):
         @param out_ws Table workspace to add results to
         """
         spectrum_nos = parameters.column('Spectrum')
-        positions_lorentz = parameters.column('f1.LorentzPos')
+        positions = parameters.column('f1.LorentzPos')
         widths_lorentz = parameters.column('f1.LorentzFWHM')
         widths_gauss = parameters.column('f1.GaussianFWHM')
 
-        for idx, spec in enumerate(spectrum_nos):
-            pos_lorentz = positions_lorentz[idx]
-            fwhm_lorentz = widths_lorentz[idx]
-            pos_gauss = positions_lorentz[idx]
-            fwhm_gauss = widths_gauss[idx]
+        delta_theta = self.getProperty("DeltaTheta").value
+        delta_L0 = self.getProperty("DeltaL0").value
+        delta_L1 = self.getProperty("DeltaL1").value
+        delta_t0 = self.getProperty("DeltaT0").value
 
+        for spec, pos, fwhm_lorentz, fwhm_gauss in zip(spectrum_nos, positions, widths_lorentz, widths_gauss):
             l1_dist = self._get_l1(spec-1)
 
             # Lorentzian component
-            if pos_lorentz == 0.0 or fwhm_lorentz == 0.0:
+            if pos == 0.0 or fwhm_lorentz == 0.0:
                 delta_e1_lorentz = np.nan
             else:
-                delta_e1_lorentz = self. _convert_to_energy(l1_dist, pos_lorentz, fwhm_lorentz)
+                delta_e1_lorentz = self._convert_to_energy(l1_dist, pos, fwhm_lorentz)
 
             # Gaussian component
-            if pos_gauss == 0.0 or fwhm_gauss == 0.0:
+            if pos == 0.0 or fwhm_gauss == 0.0:
                 delta_e1_gauss = np.nan
             else:
-                delta_e1_gauss = self. _convert_to_energy(l1_dist, pos_gauss, fwhm_gauss)
-
-            #TODO: Gaussian component
+                delta_e1_gauss = self._convert_to_energy(l1_dist, pos, fwhm_gauss)
+                v = delta_e1_gauss**2 - delta_theta**2 - delta_L0**2 - delta_L1**2 - delta_t0**2
+                if v < 0:
+                    delta_e1_gauss = np.nan
+                else:
+                    delta_e1_gauss = math.sqrt(v)
 
             out_ws.addRow([spec, delta_e1_lorentz, delta_e1_gauss])
 
@@ -213,10 +231,10 @@ class VesuvioEnergyResolution(PythonAlgorithm):
         @param fwhm FWHM in time of flight (us)
         """
         # Calculate energy at the peak position
-        d_time = position / 1e+6 # us to s
+        d_time = position / sc.micro # us to s
         neutron_v1 = (self._l0_dist + l1_dist) / d_time # ms-1
-        peak_e = 0.5 * scipy.constants.m_n * neutron_v1**2 # Joule
-        peak_e /= scipy.constants.value('electron volt') / 1e+3 # Joule to meV
+        peak_e = 0.5 * sc.m_n * neutron_v1**2 # Joule
+        peak_e /= sc.value('electron volt') / sc.milli # Joule to meV
 
         # Calculate HWHM of peak in meV
         energy = peak_e * fwhm / position
