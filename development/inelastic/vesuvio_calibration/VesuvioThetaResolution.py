@@ -171,13 +171,12 @@ class VesuvioThetaResolution(PythonAlgorithm):
                               math.sqrt((sigma / peak_centre)**2 \
                                         - ((delta_L0**2 + delta_L1**2) / (self._l0_dist + l1_dist)**2) \
                                         - (delta_t0**2 / peak_centre**2))
-                delta_theta = math.degrees(delta_theta)
             elif spec_no in FORWARDSCATTERING:
                 delta_theta = math.tan(theta) * (sigma / peak_centre)
             else:
                 raise RuntimeError()
 
-            delta_thetas.append(delta_theta)
+            delta_thetas.append(np.degrees(delta_theta))
 
         delta_thetas = np.array(delta_thetas)
         delta_thetas_avg = np.mean(delta_thetas)
