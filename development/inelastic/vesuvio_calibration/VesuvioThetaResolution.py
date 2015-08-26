@@ -93,9 +93,13 @@ class VesuvioThetaResolution(PythonAlgorithm):
         forward_params = self._create_output_table(self.getPropertyValue("ForwardParameters"))
 
         for spec_no in BACKSCATTERING:
-            back_params.addRow([spec_no, self._calc_delta_theta(spec_no)])
+            row = [spec_no]
+            row.extend(self._calc_delta_theta(spec_no))
+            back_params.addRow(row)
         for spec_no in FORWARDSCATTERING:
-            forward_params.addRow([spec_no, self._calc_delta_theta(spec_no)])
+            row = [spec_no]
+            row.extend(self._calc_delta_theta(spec_no))
+            forward_params.addRow(row)
 
         DeleteWorkspace(self._evs_ws)
 
@@ -105,6 +109,8 @@ class VesuvioThetaResolution(PythonAlgorithm):
         # Get data from param tables
         back_theta_data = np.array(back_params.column('dTheta'))
         forward_theta_data = np.array(forward_params.column('dTheta'))
+        back_dw_data = np.array(back_params.column('dW'))
+        forward_dw_data = np.array(forward_params.column('dW'))
 
         self._output_table = CreateEmptyTableWorkspace(OutputWorkspace=self.getPropertyValue("OutputWorkspace"))
 
@@ -117,6 +123,8 @@ class VesuvioThetaResolution(PythonAlgorithm):
 
         self._add_param_table_row('Backscattering dTheta', back_theta_data)
         self._add_param_table_row('Forward scattering dTheta', forward_theta_data)
+        self._add_param_table_row('Backscattering dW', back_dw_data)
+        self._add_param_table_row('Forward scattering dW', forward_dw_data)
 
         self.setProperty("OutputWorkspace", self._output_table)
 
@@ -161,6 +169,7 @@ class VesuvioThetaResolution(PythonAlgorithm):
         l1_dist = self._get_l1(spec_no)
 
         delta_thetas = []
+        delta_w = []
         for sigma_name, peak_centre_name in zip(sigma_col_names, peak_centre_col_names):
             sigma = self._fit_params.cell(sigma_name, spec_col_idx)
             peak_centre = self._fit_params.cell(peak_centre_name, spec_col_idx)
@@ -176,13 +185,17 @@ class VesuvioThetaResolution(PythonAlgorithm):
             else:
                 raise RuntimeError()
 
-            delta_thetas.append(np.degrees(delta_theta))
+            delta_thetas.append(np.degrees(abs(delta_theta)))
+            delta_w.append(abs(delta_theta) * l1_dist * 100)
 
         delta_thetas = np.array(delta_thetas)
         delta_thetas_avg = np.mean(delta_thetas)
         logger.debug('Spectrum {0}: dThetas={1}, mean={2}'.format(spec_no, delta_thetas, delta_thetas_avg))
 
-        return delta_thetas_avg
+        delta_w = np.array(delta_w)
+        delta_w_avg = np.mean(delta_w)
+
+        return [delta_thetas_avg, delta_w_avg]
 
 #----------------------------------------------------------------------------------------
 
@@ -224,6 +237,7 @@ class VesuvioThetaResolution(PythonAlgorithm):
         table = CreateEmptyTableWorkspace(OutputWorkspace=name)
         table.addColumn('int', 'Spectrum')
         table.addColumn('float', 'dTheta')
+        table.addColumn('float', 'dW')
         return table
 
 #----------------------------------------------------------------------------------------
