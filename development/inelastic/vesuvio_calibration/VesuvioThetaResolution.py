@@ -109,8 +109,8 @@ class VesuvioThetaResolution(PythonAlgorithm):
         # Get data from param tables
         back_theta_data = np.array(back_params.column('dTheta'))
         forward_theta_data = np.array(forward_params.column('dTheta'))
-        back_dw_data = np.array(back_params.column('dW'))
-        forward_dw_data = np.array(forward_params.column('dW'))
+        back_dw_data = np.array(back_params.column('EffectiveDetWidth'))
+        forward_dw_data = np.array(forward_params.column('EffectiveDetWidth'))
 
         self._output_table = CreateEmptyTableWorkspace(OutputWorkspace=self.getPropertyValue("OutputWorkspace"))
 
@@ -236,8 +236,10 @@ class VesuvioThetaResolution(PythonAlgorithm):
         """
         table = CreateEmptyTableWorkspace(OutputWorkspace=name)
         table.addColumn('int', 'Spectrum')
+        # Resolution of scattering angle in degrees
         table.addColumn('float', 'dTheta')
-        table.addColumn('float', 'dW')
+        # Effective detector width at L1
+        table.addColumn('float', 'EffectiveDetWidth')
         return table
 
 #----------------------------------------------------------------------------------------
