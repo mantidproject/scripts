@@ -51,7 +51,7 @@ class VesuvioEnergyResolution(PythonAlgorithm):
                              doc="Resolution in the pulse offset time")
 
         # Optional parameter file
-        self.declareProperty(FileProperty("InstrumentParFile", "", action=FileAction.OptionalLoad,
+        self.declareProperty(FileProperty("InstrumentParFile", "", action=FileAction.Load,
                                           extensions=["dat", "par"]),
                              doc="An optional IP file. If provided the values are used to correct "
                                  "the default instrument values and attach the t0 values to each "
@@ -110,10 +110,12 @@ class VesuvioEnergyResolution(PythonAlgorithm):
                                       de1_gauss[:FORWARDSCATTERING[0]])
             self._add_param_table_row('{0} Backscattering dE1_Lorentz'.format(mode),
                                       de1_lorentz[:FORWARDSCATTERING[0]])
-            self._add_param_table_row('{0} Forward scattering dE1_Gauss'.format(mode),
-                                      de1_gauss[FORWARDSCATTERING[0]:])
-            self._add_param_table_row('{0} Forward scattering dE1_Lorentz'.format(mode),
-                                      de1_lorentz[FORWARDSCATTERING[0]:])
+
+            if mode == 'SingleDifference':
+                self._add_param_table_row('{0} Forward scattering dE1_Gauss'.format(mode),
+                                          de1_gauss[FORWARDSCATTERING[0]:])
+                self._add_param_table_row('{0} Forward scattering dE1_Lorentz'.format(mode),
+                                          de1_lorentz[FORWARDSCATTERING[0]:])
 
         res_grp = GroupWorkspaces(InputWorkspaces=res_workspaces,
                                   OutputWorkspace=self.getPropertyValue('ResolutionGroup'))
@@ -212,11 +214,11 @@ class VesuvioEnergyResolution(PythonAlgorithm):
                 delta_e1_gauss = np.nan
             else:
                 delta_e1_gauss = self._convert_to_energy(l1_dist, pos, fwhm_gauss)
-                v = delta_e1_gauss**2 - delta_theta**2 - delta_L0**2 - delta_L1**2 - delta_t0**2
-                if v < 0:
+                vel = delta_e1_gauss**2 - delta_theta**2 - delta_L0**2 - delta_L1**2 - delta_t0**2
+                if vel < 0:
                     delta_e1_gauss = np.nan
                 else:
-                    delta_e1_gauss = math.sqrt(v)
+                    delta_e1_gauss = math.sqrt(vel) / 1.775
 
             out_ws.addRow([spec, delta_e1_lorentz, delta_e1_gauss])
 
@@ -231,10 +233,9 @@ class VesuvioEnergyResolution(PythonAlgorithm):
         @param fwhm FWHM in time of flight (us)
         """
         # Calculate energy at the peak position
-        d_time = position / sc.micro # us to s
+        d_time = position * sc.micro # us to s
         neutron_v1 = (self._l0_dist + l1_dist) / d_time # ms-1
-        peak_e = 0.5 * sc.m_n * neutron_v1**2 # Joule
-        peak_e /= sc.value('electron volt') / sc.milli # Joule to meV
+        peak_e = 5.2276e-6 * neutron_v1**2
 
         # Calculate HWHM of peak in meV
         energy = peak_e * fwhm / position

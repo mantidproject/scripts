@@ -37,7 +37,7 @@ class VesuvioThetaResolution(PythonAlgorithm):
                              doc="List of dSpacings")
 
         # Optional parameter file
-        self.declareProperty(FileProperty("InstrumentParFile", "", action=FileAction.OptionalLoad,
+        self.declareProperty(FileProperty("InstrumentParFile", "", action=FileAction.Load,
                                           extensions=["dat", "par"]),
                              doc="An optional IP file. If provided the values are used to correct "
                                  "the default instrument values and attach the t0 values to each "
