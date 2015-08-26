@@ -6,7 +6,7 @@ from mantid.api import ITableWorkspace
 from mantid.simpleapi import *
 
 
-class EVSCalibrationTest(unittest.TestCase):
+class VesuvioLt0ResolutionTest(unittest.TestCase):
 
     def setUp(self):
         self._t0_params = Load(Filename='cal_Iteration_0_t0_Peak_Parameters.nxs',
@@ -45,7 +45,13 @@ class EVSCalibrationTest(unittest.TestCase):
                                                    ParametersL0=self._l0_params)
         self._validate_result_shape(forward, back, mean)
 
-        #TODO
+        # Validate mean values
+        mean_values = mean.column('Mean')
+        TOLERANCE = 7
+        self.assertAlmostEqual(mean_values[0], 0.0298270, places=TOLERANCE)
+        self.assertAlmostEqual(mean_values[1], 0.2581127, places=TOLERANCE)
+        self.assertAlmostEqual(mean_values[2], 0.0206698, places=TOLERANCE)
+        self.assertAlmostEqual(mean_values[3], 0.2972636, places=TOLERANCE)
 
 
     def test_run_with_par_file(self):
@@ -57,7 +63,13 @@ class EVSCalibrationTest(unittest.TestCase):
                                                    InstrumentParFile='IP0005.par')
         self._validate_result_shape(forward, back, mean)
 
-        #TODO
+        # Validate mean values
+        mean_values = mean.column('Mean')
+        TOLERANCE = 7
+        self.assertAlmostEqual(mean_values[0], 0.0298101, places=TOLERANCE)
+        self.assertAlmostEqual(mean_values[1], 0.2581127, places=TOLERANCE)
+        self.assertAlmostEqual(mean_values[2], 0.0206698, places=TOLERANCE)
+        self.assertAlmostEqual(mean_values[3], 0.2972636, places=TOLERANCE)
 
 
 if __name__ == '__main__':
