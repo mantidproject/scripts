@@ -8,7 +8,13 @@ import numpy as np
 import scipy.stats as stats
 
 BACKSCATTERING = range(3, 135)
-FORWARDSCATTERING = range(135, 199)
+FRONTSCATTERING = range(135, 199)
+
+U_FRONTSCATTERING_SAMPLE = ['14025']
+U_FRONTSCATTERING_BACKGROUND = ['12570']
+
+U_BACKSCATTERING_SAMPLE = ['12570']
+U_BACKSCATTERING_BACKGROUND = ['12571']
 
 # Uranium peak details taken from: 10.1016/j.nima.2010.09.079
 U_PEAKS = [
@@ -18,6 +24,9 @@ U_PEAKS = [
     [20874., 91.7,  63190.0e-6, 173.8 ,0.38],
     [6672.,  52.4,  35725.0e-6, 307.7 ,1.21]
 ]
+
+#U mass in amu
+U_MASS=238.0289
 
 #----------------------------------------------------------------------------------------
 
@@ -29,16 +38,10 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         return "Calculates the resolution of the total flight path and t0 for VESUVIO."
 
     def PyInit(self):
-        # Input parameter tables
-        self.declareProperty(WorkspaceGroupProperty("ParametersT0", "", Direction.Input),
-                             doc="Peak parameters fitted for t0 in EVSCalibrationAnalysis")
-        self.declareProperty(WorkspaceGroupProperty("ParametersL0", "", Direction.Input),
-                             doc="Peak parameters fitted for L0 in EVSCalibrationAnalysis")
-
         # Optional parameter file
-        self.declareProperty(FileProperty("InstrumentParFile", "", action=FileAction.OptionalLoad,
+        self.declareProperty(FileProperty("InstrumentParFile", "", action=FileAction.Load,
                                           extensions=["dat", "par"]),
-                             doc="An optional IP file. If provided the values are used to correct "
+                             doc="A parameter file. If provided the values are used to correct "
                                  "the default instrument values and attach the t0 values to each "
                                  "detector")
 
@@ -55,10 +58,38 @@ class VesuvioLt0Resolution(PythonAlgorithm):
 #----------------------------------------------------------------------------------------
 
     def PyExec(self):
-        t0_peak_params = mtd[self.getPropertyValue("ParametersT0")]
-        l0_peak_params = mtd[self.getPropertyValue("ParametersL0")]
+        par_filename = self.getPropertyValue("InstrumentParFile")
 
-        evs_ws = LoadEmptyVesuvio(InstrumentParFile=self.getPropertyValue("InstrumentParFile"))
+        alg = AlgorithmManager.create("EVSCalibrationFit")
+        alg.initialize()
+        alg.setRethrows(True)
+        alg.setProperty('Samples', U_FRONTSCATTERING_SAMPLE)
+        alg.setProperty('Background', U_FRONTSCATTERING_BACKGROUND)
+        alg.setProperty('SpectrumRange', [FRONTSCATTERING[0], FRONTSCATTERING[-1]])
+        alg.setProperty('Mass', U_MASS)
+        alg.setProperty('Energy', [p[0] for p in U_PEAKS])
+        alg.setProperty('InstrumentParameterFile', par_filename)
+        alg.setProperty('OutputWorkspace', '__l0_fit')
+        alg.setProperty('CreateOutput', False)
+        alg.execute()
+
+        alg = AlgorithmManager.create("EVSCalibrationFit")
+        alg.initialize()
+        alg.setRethrows(True)
+        alg.setProperty('Samples', U_BACKSCATTERING_SAMPLE)
+        alg.setProperty('Background', U_BACKSCATTERING_BACKGROUND)
+        alg.setProperty('SpectrumRange', [BACKSCATTERING[0], BACKSCATTERING[-1]])
+        alg.setProperty('Mass', U_MASS)
+        alg.setProperty('Energy', [p[0] for p in U_PEAKS])
+        alg.setProperty('InstrumentParameterFile', par_filename)
+        alg.setProperty('OutputWorkspace', '__t0_fit')
+        alg.setProperty('CreateOutput', False)
+        alg.execute()
+
+        t0_peak_params = mtd['__t0_fit_Peak_Parameters']
+        l0_peak_params = mtd['__l0_fit_Peak_Parameters']
+
+        evs_ws = LoadEmptyVesuvio(InstrumentParFile=par_filename)
 
         # Calculate source to sample distance
         evs = evs_ws.getInstrument()
@@ -67,7 +98,7 @@ class VesuvioLt0Resolution(PythonAlgorithm):
         l0_dist = source_pos.distance(sample_pos)
 
         # For forward scattering only L1 is used as gamma rays are detected
-        forward_l = [l0_dist] * len(FORWARDSCATTERING)
+        forward_l = [l0_dist] * len(FRONTSCATTERING)
         # For backscattering total flight path is used as neutrons are detected
         back_l0 = [l0_dist + self._get_l1(evs_ws, det_no) for det_no in BACKSCATTERING]
 
@@ -75,7 +106,7 @@ class VesuvioLt0Resolution(PythonAlgorithm):
 
         # Calculate resolution
         back_fit_params = self._calculate(BACKSCATTERING, t0_peak_params, back_l0)
-        forward_fit_params = self._calculate(FORWARDSCATTERING, l0_peak_params, forward_l)
+        forward_fit_params = self._calculate(FRONTSCATTERING, l0_peak_params, forward_l)
 
         # Rename the headers and discard the cost function values
         back_params = CreateEmptyTableWorkspace(OutputWorkspace=self.getPropertyValue("BackParameters"))
