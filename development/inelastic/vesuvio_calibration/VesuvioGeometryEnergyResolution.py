@@ -110,13 +110,19 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         data.update(self._process_l1())
         data.update(self._process_l_t0())
 
-        #TODO
-        self._delta_L0 = 0.0
+        # Average of L0 for front scattering detectors (incident flight path
+        # resolution is identical for both banks)
+        front_dL0_sample = data['dL/dL0'][len(BACKSCATTERING):]
+        self._delta_L0 = self._weighted_mean(front_dL0_sample)
         logger.information('dL0 weighted mean = {0}'.format(self._delta_L0))
 
-        #TODO
-        self._delta_L1 = 0.0
+        back_dL_sample = data['dL/dL0'][:len(BACKSCATTERING)]
+        back_dL1 = np.sqrt(back_dL_sample**2 - self._delta_L0**2)
+        self._delta_L1 = self._weighted_mean(back_dL1)
         logger.information('dL1 weighted mean = {0}'.format(self._delta_L1))
+
+        self._add_param_table_row('Back dL1', back_dL1)
+        data['Back dL0'] = back_dL1.resize(len(BACKSCATTERING) + len(FRONTSCATTERING))
 
         self._delta_t0 = self._weighted_mean(data['dt0'])
         logger.information('dt0 weighted mean = {0}'.format(self._delta_t0))
@@ -156,12 +162,12 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
 
         @return Dictionary of resolution data.
         """
-        resolution, l1_res, theta_res = VesuvioL1ThetaResolution(PARFile=self._ipf_filename)
+        resolution, l1_res, theta_res = VesuvioL1ThetaResolution(PARFile=self._ipf_filename, NumEvents=500)
         DeleteWorkspace(l1_res)
         DeleteWorkspace(theta_res)
 
-        data = {'dL1': resolution.dataY(1)}
-        self._add_param_table_row('dL1', data['dL1'])
+        data = {'Front dL1': resolution.dataY(1)}
+        self._add_param_table_row('Front dL1', data['dL1'])
 
         return data
 
@@ -169,7 +175,8 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
 
     def _process_l_t0(self):
         """
-        Caluclates delta L and delta t0.
+        Caluclates delta L for backscattering or delta L0 for forward
+        scattering and delta t0.
 
         @return Dictionary of resolution data.
         """
@@ -216,17 +223,17 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         max_float = np.finfo(float).max
         back_l_data = np.clip(back_params.column('A1'), 0, max_float)
         back_t0_data = np.clip(back_params.column('A0'), 0, max_float)
-        forward_l_data = np.clip(forward_params.column('A1'), 0, max_float)
+        forward_l0_data = np.clip(forward_params.column('A1'), 0, max_float)
         forward_t0_data = np.clip(forward_params.column('A0'), 0, max_float)
 
         self._add_param_table_row('Back dL', back_l_data)
-        self._add_param_table_row('Forward dL', forward_l_data)
+        self._add_param_table_row('Forward dL0', forward_l0_data)
         self._add_param_table_row('Back t0', back_t0_data)
         self._add_param_table_row('Forward t0', forward_t0_data)
 
         data = {
             'dt0': np.hstack(np.array([back_t0_data, forward_t0_data])),
-            'dL0': np.hstack(np.array([back_l_data, forward_l_data]))
+            'dL/dL0': np.hstack(np.array([back_l_data, forward_l0_data]))
         }
 
         return data
