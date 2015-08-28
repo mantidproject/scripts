@@ -13,7 +13,10 @@ class VesuvioGeometryEnergyResolutionTest(unittest.TestCase):
 
 
     def _execute_resolution_algorithm(self, **argv):
-        default_args = {'InstrumentParFile': 'IP0005.par'}
+        default_args = {
+            'InstrumentParFile': 'IP0005.par',
+            'MonteCarloEvents': 1000
+        }
         default_args.update(argv)
         output, mean = VesuvioGeometryEnergyResolution(**default_args)
         return (mean, output)
@@ -26,10 +29,10 @@ class VesuvioGeometryEnergyResolutionTest(unittest.TestCase):
 
         self.assertTrue(isinstance(mean, ITableWorkspace))
         self.assertEqual(mean.columnCount(), 6)
-        self.assertEqual(mean.rowCount(), 18)
+        self.assertEqual(mean.rowCount(), 24)
 
         self.assertTrue(isinstance(resolution, ITableWorkspace))
-        self.assertEqual(resolution.columnCount(), 13)
+        self.assertEqual(resolution.columnCount(), 17)
         self.assertEqual(resolution.rowCount(), 196)
 
 

@@ -47,7 +47,8 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
     _delta_L0 = None
     _delta_L1 = None
     _delta_t0 = None
-    _delta_theta = None
+    _delta_theta_ana = None
+    _delta_theta_mc = None
     _output_table = None
 
 #------------------------------------------------------------------------------
@@ -69,6 +70,9 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         self.declareProperty(FloatArrayProperty("DSpacings", "1.489,1.750,2.475,2.858",
                                                 direction=Direction.Input),
                              doc="List of dSpacings")
+
+        self.declareProperty("MonteCarloEvents", 1000000,
+                             doc="Number of events to use in Monte Carlo calculations")
 
         # Optional parameter file
         self.declareProperty(FileProperty("InstrumentParFile", "", action=FileAction.Load,
@@ -109,32 +113,45 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
 
         # Calculate resolutions
         data = {}
+
+        # Calculate dL1
         data.update(self._process_l1())
+
+        # Calculate weighted mean of dTheta for Monte Carlo values
+        self._delta_theta_mc = self._weighted_mean(data['dTheta MC (deg)'])
+
+        # Calculate dL and dt0
         data.update(self._process_l_t0())
 
         # Average of L0 for front scattering detectors (incident flight path
         # resolution is identical for both banks)
-        front_dL0_sample = data['dL/dL0'][len(BACKSCATTERING):]
+        front_dL0_sample = data['SD dL/dL0 (cm)'][len(BACKSCATTERING):]
         self._delta_L0 = self._weighted_mean(front_dL0_sample) * sc.centi
         logger.notice('dL0 weighted mean = {0}'.format(self._delta_L0))
 
-        back_dL_sample = data['dL/dL0'][:len(BACKSCATTERING)]
+        # Calculate weighted mean of dL1
+        back_dL_sample = data['SD dL/dL0 (cm)'][:len(BACKSCATTERING)]
         back_dL1 = np.sqrt(back_dL_sample**2 - self._delta_L0**2)
-        self._delta_L1 = self._weighted_mean(back_dL1[np.isfinite(back_dL1)]) * sc.centi
+        self._delta_L1 = self._weighted_mean(back_dL1) * sc.centi
         logger.notice('dL1 weighted mean = {0}'.format(self._delta_L1))
 
-        self._add_param_table_row('Back dL1', back_dL1)
+        # Output dL1
+        self._add_param_table_row('SD Back dL1 (cm)', back_dL1)
         back_dL1.resize(len(BACKSCATTERING) + len(FRONTSCATTERING))
-        data['Back dL0'] = back_dL1
+        data['SD Back dL1 (cm)'] = back_dL1
 
-        self._delta_t0 = self._weighted_mean(data['dt0'])
+        # Calculate weighted mean of dt0
+        self._delta_t0 = self._weighted_mean(data['SD dt0 (usec)'])
         logger.notice('dt0 weighted mean = {0}'.format(self._delta_t0))
 
+        # Calculate dTheta and effective width
         data.update(self._process_theta_dw())
 
-        self._delta_theta = self._weighted_mean(data['dTheta'])
-        logger.notice('dTheta weighted mean = {0}'.format(self._delta_theta))
+        # Calculate weighted mean of dTheta for analytical values
+        self._delta_theta_ana = self._weighted_mean(data['SD dTheta ANA (deg)'])
+        logger.notice('dTheta analytical weighted mean = {0}'.format(self._delta_theta_ana))
 
+        # Calculate dE1_Gauss and dE1_Lorentz
         data.update(self._process_de1())
 
         # Create the table with all parameters
@@ -154,6 +171,7 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
             row.extend([data[n][data_table.rowCount()] for n in param_names])
             data_table.addRow(row)
 
+        # Output workspaces
         self.setProperty("OutputWorkspace", self._output_table)
         self.setProperty("Resolution", data_table)
 
@@ -165,12 +183,18 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
 
         @return Dictionary of resolution data.
         """
-        resolution, l1_res, theta_res = VesuvioL1ThetaResolution(PARFile=self._ipf_filename, NumEvents=500)
+        resolution, l1_res, theta_res = VesuvioL1ThetaResolution(PARFile=self._ipf_filename,
+                                                                 NumEvents=self.getProperty('MonteCarloEvents').value)
         DeleteWorkspace(l1_res)
         DeleteWorkspace(theta_res)
 
-        data = {'Front dL1': resolution.dataY(1)}
-        self._add_param_table_row('Front dL1', data['Front dL1'])
+        data = {
+            'Front dL1 (cm)': resolution.dataY(1),
+            'dTheta MC (deg)': resolution.dataY(3)
+        }
+        self._add_param_table_row('Front dL1 (cm)', data['Front dL1 (cm)'])
+        self._add_param_table_row('Back dTheta MC (deg)', data['dTheta MC (deg)'][:len(BACKSCATTERING)])
+        self._add_param_table_row('Front dTheta MC (deg)', data['dTheta MC (deg)'][len(BACKSCATTERING):])
 
         DeleteWorkspace(resolution)
 
@@ -233,14 +257,14 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         forward_l0_data = np.clip(forward_params.column('A1'), 0, max_float)
         forward_t0_data = np.clip(forward_params.column('A0'), 0, max_float)
 
-        self._add_param_table_row('Back dL', back_l_data)
-        self._add_param_table_row('Forward dL0', forward_l0_data)
-        self._add_param_table_row('Back dt0', back_t0_data)
-        self._add_param_table_row('Forward dt0', forward_t0_data)
+        self._add_param_table_row('SD Back dL (cm)', back_l_data)
+        self._add_param_table_row('SD Forward dL0 (cm)', forward_l0_data)
+        self._add_param_table_row('SD Back dt0 (usec)', back_t0_data)
+        self._add_param_table_row('SD Forward dt0 (usec)', forward_t0_data)
 
         data = {
-            'dt0': np.hstack(np.array([back_t0_data, forward_t0_data])),
-            'dL/dL0': np.hstack(np.array([back_l_data, forward_l0_data]))
+            'SD dt0 (usec)': np.hstack(np.array([back_t0_data, forward_t0_data])),
+            'SD dL/dL0 (cm)': np.hstack(np.array([back_l_data, forward_l0_data]))
         }
 
         return data
@@ -361,14 +385,14 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         forward_theta_data = np.array(forward_theta_data)
         forward_dw_data = np.array(forward_dw_data)
 
-        self._add_param_table_row('Back dTheta', back_theta_data)
-        self._add_param_table_row('Forward dTheta', forward_theta_data)
-        self._add_param_table_row('Back Effective Width', back_dw_data)
-        self._add_param_table_row('Forward Effective Width', forward_dw_data)
+        self._add_param_table_row('SD Back dTheta ANA (deg)', back_theta_data)
+        self._add_param_table_row('SD Forward dTheta ANA (deg)', forward_theta_data)
+        self._add_param_table_row('SD Back Effective Width (cm)', back_dw_data)
+        self._add_param_table_row('SD Forward Effective Width (cm)', forward_dw_data)
 
         data = {
-            'dTheta': np.hstack(np.array([back_theta_data, forward_theta_data])),
-            'Effective Width': np.hstack(np.array([back_dw_data, forward_dw_data]))
+            'SD dTheta ANA (deg)': np.hstack(np.array([back_theta_data, forward_theta_data])),
+            'SD Effective Width (cm)': np.hstack(np.array([back_dw_data, forward_dw_data]))
         }
 
         return data
@@ -399,10 +423,10 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
             theta = self._get_theta(spec_no)
 
             if spec_no in BACKSCATTERING:
-                delta_theta = 2 * math.tan(theta / 2) * \
-                              math.sqrt((sigma / peak_centre)**2 \
-                                        - ((self._delta_L0**2 + self._delta_L1**2) / (self._l0_dist + l1_dist)**2) \
-                                        - (self._delta_t0**2 / peak_centre**2))
+                delta_theta = math.tan(theta) * \
+                              np.sqrt((sigma / peak_centre)**2 \
+                                      - ((self._delta_L0**2 + self._delta_L1**2) / (self._l0_dist + l1_dist)**2) \
+                                      - (self._delta_t0**2 / peak_centre**2))
             elif spec_no in FRONTSCATTERING:
                 delta_theta = math.tan(theta) * (sigma / peak_centre)
             else:
@@ -424,7 +448,7 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
 
     def _process_de1(self):
         """
-        Caluclates delta E1 for Lorentzian and Gaussian components.
+        Calculates delta E1 for Lorentzian and Gaussian components.
 
         @return Dictionary of resolution data.
         """
@@ -433,25 +457,36 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         for mode in MODES:
             self._energy_res_fit(mode)
 
-            de1_gauss, de1_lorentz = self._calculate_de1(mtd['{0}_Peaks_Peak_0_Parameters'.format(mode)])
+            de1_gauss_ana, de1_gauss_mc, de1_lorentz = self._calculate_de1(mtd['{0}_Peaks_Peak_0_Parameters'.format(mode)])
 
             short_mode = ''.join([c for c in mode if c.isupper()])
-            data['%s dE1_Gauss' % short_mode] = de1_gauss
-            data['%s dE1_Lorentz' % short_mode] = de1_lorentz
+            data['%s dE1_Gauss ANA (meV)' % short_mode] = de1_gauss_ana
+            data['%s dE1_Gauss MC (meV)' % short_mode] = de1_gauss_mc
+            data['%s dE1_Lorentz (meV)' % short_mode] = de1_lorentz
 
-            de1_gauss = de1_gauss[np.isfinite(de1_gauss)]
-            de1_lorentz = de1_lorentz[np.isfinite(de1_lorentz)]
+            de1_gauss_mc_front = de1_gauss_mc[len(BACKSCATTERING):]
+            de1_gauss_mc_back = de1_gauss_mc[:len(BACKSCATTERING)]
 
-            self._add_param_table_row('%s Back dE1_Gauss' % short_mode,
-                                      de1_gauss[:FRONTSCATTERING[0]])
-            self._add_param_table_row('%s Back dE1_Lorentz' % short_mode,
-                                      de1_lorentz[:FRONTSCATTERING[0]])
+            de1_gauss_ana_front = de1_gauss_ana[len(BACKSCATTERING):]
+            de1_gauss_ana_back = de1_gauss_ana[:len(BACKSCATTERING)]
+
+            de1_lorentz_front = de1_lorentz[len(BACKSCATTERING):]
+            de1_lorentz_back = de1_lorentz[:len(BACKSCATTERING)]
+
+            self._add_param_table_row('%s Back dE1_Gauss ANA (meV)' % short_mode,
+                                      de1_gauss_ana_back)
+            self._add_param_table_row('%s Back dE1_Gauss MC (meV)' % short_mode,
+                                      de1_gauss_mc_back)
+            self._add_param_table_row('%s Back dE1_Lorentz (meV)' % short_mode,
+                                      de1_lorentz_back)
 
             if mode == 'SingleDifference':
-                self._add_param_table_row('%s Forward dE1_Gauss' % short_mode,
-                                          de1_gauss[FRONTSCATTERING[0]:])
-                self._add_param_table_row('%s Forward dE1_Lorentz' % short_mode,
-                                          de1_lorentz[FRONTSCATTERING[0]:])
+                self._add_param_table_row('%s Forward dE1_Gauss ANA (meV)' % short_mode,
+                                          de1_gauss_ana_front)
+                self._add_param_table_row('%s Forward dE1_Gauss MC (meV)' % short_mode,
+                                          de1_gauss_mc_front)
+                self._add_param_table_row('%s Forward dE1_Lorentz (meV)' % short_mode,
+                                          de1_lorentz_front)
 
         return data
 
@@ -482,17 +517,19 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
 
     def _calculate_de1(self, parameters):
         """
-        Calculates delta-E1 for Lorentzian and Gaussian components.
+        Calculates delta-E1 for Lorentzian and Gaussian components, using both
+        the analytical and Monte Carlo obtained values for dTheta.
 
         @param parameters Fit parameters
-        @return Tuple of (dE1_Gauss, dE1_Lorentz)
+        @return Tuple of (dE1_Gauss Analytical, dE1_Gauss Monte Carlo, dE1_Lorentz)
         """
         spectrum_nos = parameters.column('Spectrum')
         positions = parameters.column('f1.LorentzPos')
         widths_lorentz = parameters.column('f1.LorentzFWHM')
         widths_gauss = parameters.column('f1.GaussianFWHM')
 
-        de1_gauss = []
+        de1_gauss_ana = []
+        de1_gauss_mc = []
         de1_lorentz = []
 
         for spec, pos, fwhm_lorentz, fwhm_gauss in zip(spectrum_nos, positions, widths_lorentz, widths_gauss):
@@ -506,19 +543,23 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
 
             # Gaussian component
             if pos == 0.0 or fwhm_gauss == 0.0:
-                delta_e1_gauss = np.nan
+                delta_e1_gauss_ana = np.nan
+                delta_e1_gauss_mc = np.nan
             else:
                 delta_e1_gauss = self._convert_to_energy(l1_dist, pos, fwhm_gauss)
-                vel = delta_e1_gauss**2 - self._delta_theta**2 - self._delta_L0**2 - self._delta_L1**2 - self._delta_t0**2
-                if vel < 0:
-                    delta_e1_gauss = np.nan
-                else:
-                    delta_e1_gauss = math.sqrt(vel) / 1.775
+                sub_val = self._delta_L0**2 + self._delta_L1**2 + self._delta_t0**2
 
-            de1_gauss.append(delta_e1_gauss)
+                vel_ana = delta_e1_gauss**2 - self._delta_theta_ana**2 - sub_val
+                vel_mc = delta_e1_gauss**2 - self._delta_theta_mc**2 - sub_val
+
+                delta_e1_gauss_ana = np.nan if vel_ana < 0 else math.sqrt(vel_ana) / 1.775
+                delta_e1_gauss_mc = np.nan if vel_mc < 0 else math.sqrt(vel_mc) / 1.775
+
+            de1_gauss_ana.append(delta_e1_gauss_ana)
+            de1_gauss_mc.append(delta_e1_gauss_mc)
             de1_lorentz.append(delta_e1_lorentz)
 
-        return (np.array(de1_gauss), np.array(de1_lorentz))
+        return (np.array(de1_gauss_ana), np.array(de1_gauss_mc), np.array(de1_lorentz))
 
 #------------------------------------------------------------------------------
 
@@ -577,6 +618,7 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         @param name Name of the parameter
         @param data Data values
         """
+        data = data[np.isfinite(data)]
         mean = np.mean(data)
         weights = 1.0 / np.abs(np.repeat(mean, data.size) - data)
         weighted_data = data * weights / np.sum(weights)
@@ -605,6 +647,7 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         @param data Numpy array of data
         @return Weighted mean
         """
+        data = data[np.isfinite(data)]
         mean = np.mean(data)
         weights = 1.0 / np.abs(np.repeat(mean, data.size) - data)
         return np.average(data, weights=weights)
