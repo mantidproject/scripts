@@ -11,6 +11,8 @@ import scipy.stats as stats
 
 #==============================================================================
 
+LOG_FIT = False
+
 MODES = ['SingleDifference', 'DoubleDifference', 'ThickDifference']
 BACKSCATTERING = range(3, 135)
 FRONTSCATTERING = range(135, 199)
@@ -113,24 +115,25 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         # Average of L0 for front scattering detectors (incident flight path
         # resolution is identical for both banks)
         front_dL0_sample = data['dL/dL0'][len(BACKSCATTERING):]
-        self._delta_L0 = self._weighted_mean(front_dL0_sample)
-        logger.information('dL0 weighted mean = {0}'.format(self._delta_L0))
+        self._delta_L0 = self._weighted_mean(front_dL0_sample) * sc.centi
+        logger.notice('dL0 weighted mean = {0}'.format(self._delta_L0))
 
         back_dL_sample = data['dL/dL0'][:len(BACKSCATTERING)]
         back_dL1 = np.sqrt(back_dL_sample**2 - self._delta_L0**2)
-        self._delta_L1 = self._weighted_mean(back_dL1)
-        logger.information('dL1 weighted mean = {0}'.format(self._delta_L1))
+        self._delta_L1 = self._weighted_mean(back_dL1[np.isfinite(back_dL1)]) * sc.centi
+        logger.notice('dL1 weighted mean = {0}'.format(self._delta_L1))
 
         self._add_param_table_row('Back dL1', back_dL1)
-        data['Back dL0'] = back_dL1.resize(len(BACKSCATTERING) + len(FRONTSCATTERING))
+        back_dL1.resize(len(BACKSCATTERING) + len(FRONTSCATTERING))
+        data['Back dL0'] = back_dL1
 
         self._delta_t0 = self._weighted_mean(data['dt0'])
-        logger.information('dt0 weighted mean = {0}'.format(self._delta_t0))
+        logger.notice('dt0 weighted mean = {0}'.format(self._delta_t0))
 
         data.update(self._process_theta_dw())
 
         self._delta_theta = self._weighted_mean(data['dTheta'])
-        logger.information('dTheta weighted mean = {0}'.format(self._delta_theta))
+        logger.notice('dTheta weighted mean = {0}'.format(self._delta_theta))
 
         data.update(self._process_de1())
 
@@ -167,7 +170,9 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         DeleteWorkspace(theta_res)
 
         data = {'Front dL1': resolution.dataY(1)}
-        self._add_param_table_row('Front dL1', data['dL1'])
+        self._add_param_table_row('Front dL1', data['Front dL1'])
+
+        DeleteWorkspace(resolution)
 
         return data
 
@@ -184,6 +189,7 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         alg = AlgorithmManager.create("EVSCalibrationFit")
         alg.initialize()
         alg.setRethrows(True)
+        alg.setLogging(LOG_FIT)
         alg.setProperty('Samples', U_FRONTSCATTERING_SAMPLE)
         alg.setProperty('Background', U_FRONTSCATTERING_BACKGROUND)
         alg.setProperty('SpectrumRange', [FRONTSCATTERING[0], FRONTSCATTERING[-1]])
@@ -197,6 +203,7 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         alg = AlgorithmManager.create("EVSCalibrationFit")
         alg.initialize()
         alg.setRethrows(True)
+        alg.setLogging(LOG_FIT)
         alg.setProperty('Samples', U_BACKSCATTERING_SAMPLE)
         alg.setProperty('Background', U_BACKSCATTERING_BACKGROUND)
         alg.setProperty('SpectrumRange', [BACKSCATTERING[0], BACKSCATTERING[-1]])
@@ -228,8 +235,8 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
 
         self._add_param_table_row('Back dL', back_l_data)
         self._add_param_table_row('Forward dL0', forward_l0_data)
-        self._add_param_table_row('Back t0', back_t0_data)
-        self._add_param_table_row('Forward t0', forward_t0_data)
+        self._add_param_table_row('Back dt0', back_t0_data)
+        self._add_param_table_row('Forward dt0', forward_t0_data)
 
         data = {
             'dt0': np.hstack(np.array([back_t0_data, forward_t0_data])),
@@ -321,6 +328,7 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         alg = AlgorithmManager.create("EVSCalibrationFit")
         alg.initialize()
         alg.setRethrows(True)
+        alg.setLogging(LOG_FIT)
         alg.setProperty('Samples', self.getPropertyValue('Samples'))
         alg.setProperty('Background', self.getPropertyValue('Background'))
         alg.setProperty('Function', 'Gaussian')
@@ -360,7 +368,7 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
 
         data = {
             'dTheta': np.hstack(np.array([back_theta_data, forward_theta_data])),
-            'EffectiveDetWidth': np.hstack(np.array([back_dw_data, forward_dw_data]))
+            'Effective Width': np.hstack(np.array([back_dw_data, forward_dw_data]))
         }
 
         return data
@@ -428,8 +436,8 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
             de1_gauss, de1_lorentz = self._calculate_de1(mtd['{0}_Peaks_Peak_0_Parameters'.format(mode)])
 
             short_mode = ''.join([c for c in mode if c.isupper()])
-            data['dE1_%s_Gauss' % short_mode] = de1_gauss
-            data['dE1_%s_Lorentz' % short_mode] = de1_lorentz
+            data['%s dE1_Gauss' % short_mode] = de1_gauss
+            data['%s dE1_Lorentz' % short_mode] = de1_lorentz
 
             de1_gauss = de1_gauss[np.isfinite(de1_gauss)]
             de1_lorentz = de1_lorentz[np.isfinite(de1_lorentz)]
@@ -460,6 +468,7 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         alg = AlgorithmManager.create('EVSCalibrationFit')
         alg.initialize()
         alg.setRethrows(True)
+        alg.setLogging(LOG_FIT)
         alg.setProperty('Samples', self.getPropertyValue('Samples'))
         alg.setProperty('Background', self.getPropertyValue('Background'))
         alg.setProperty('Mode', mode)
@@ -572,12 +581,20 @@ class VesuvioGeometryEnergyResolution(PythonAlgorithm):
         weights = 1.0 / np.abs(np.repeat(mean, data.size) - data)
         weighted_data = data * weights / np.sum(weights)
 
+        # In the event that a fit went wrong and all weights sum to zero
+        try:
+            weighted_mean = np.average(data, weights=weights)
+            weighted_error = stats.sem(weighted_data)
+        except ZeroDivisionError:
+            weighted_mean = np.nan
+            weighted_error = np.nan
+
         self._output_table.addRow([name,
                                    mean,
                                    np.std(data),
                                    stats.sem(data),
-                                   np.average(data, weights=weights),
-                                   stats.sem(weighted_data)])
+                                   weighted_mean,
+                                   weighted_error])
 
 #------------------------------------------------------------------------------
 

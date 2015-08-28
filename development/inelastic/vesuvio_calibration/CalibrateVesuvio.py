@@ -303,7 +303,7 @@ class EVSCalibrationFit(PythonAlgorithm):
         spec_number = self._spec_list[0]+i
         peak_table = self._sample + '_peaks_table_%d' % spec_number
         find_peak_params = self._get_find_peak_parameters(spec_number, peak_estimates_list)
-        logger.notice(str(i) + '   ' + str(find_peak_params))
+        logger.information(str(i) + '   ' + str(find_peak_params))
         FindPeaks(InputWorkspace=self._sample, WorkspaceIndex=i, PeaksList=peak_table, **find_peak_params)
 
         #get parameters from the peaks table
