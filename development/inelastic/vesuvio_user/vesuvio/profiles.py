@@ -46,6 +46,44 @@ class MassProfile(object):
         else:
             return ""
 
+    @classmethod
+    def _parse_list(cls, func_str, prop_name):
+        """
+        Parse a list from a string containing 'prop_name=[]'
+
+        :param prop_name: The string on the lhs of the equality
+        :return: The parsed list
+        """
+        prop_re = re.compile(prop_name + r"=(\[(?:[\w.](?:,)?(?:\s)?)+\])")
+        match = prop_re.search(func_str)
+        if match:
+            value = ast.literal_eval(match.group(1))
+            if not isinstance(value, list):
+                raise ValueError("Unexpected format for {0} value. Expected e.g. {0}=[1,0,1]".format(prop_name))
+        else:
+            raise ValueError("Cannot find {0}= in function_str ({1})".format(prop_name, func_str))
+
+        return value
+
+    @classmethod
+    def _parse_bool_flag(cls, func_str, prop_name):
+        """
+        Parse an integer from a string containing 'prop_name=1'
+
+        :param prop_name: The string on the lhs of the equality
+        :return: The parsed value
+        """
+        prop_re = re.compile(prop_name + r"=([0,1])")
+        match = prop_re.search(func_str)
+        if match:
+            value = ast.literal_eval(match.group(1))
+            if not isinstance(value, int):
+                raise ValueError("Unexpected format for {0} value. Expected e.g. {0}=1".format(prop_name))
+        else:
+            raise ValueError("Cannot find {0}= in function_str".format(prop_name))
+
+        return value
+
 # --------------------------------------------------------------------------------
 # Gaussian profile
 # --------------------------------------------------------------------------------
@@ -63,13 +101,22 @@ class GaussianMassProfile(MassProfile):
         if not func_str.startswith(profile_prefix):
             raise TypeError("Gaussian function string should start with 'function=Gaussian,'")
 
-        params = {'mass':mass}
-        func_str = func_str[len(profile_prefix):]
-        for func_param in func_str.split(','):
-            param = func_param.split('=')
-            name = param[0]
-            params[name] = ast.literal_eval(param[1])
+        key_names = [("width", cls._parse_list)]
 
+        # Possible key names:
+        parsed_values = []
+        for key, parser in key_names:
+            try:
+                parsed_values.append(parser(func_str, key))
+            except ValueError, exc:
+                raise TypeError(str(exc))
+
+        params = {
+            'width': parsed_values[0],
+            'mass': mass
+        }
+
+        print params
         return GaussianMassProfile(**params)
 
     def create_fit_function_str(self, param_vals=None, param_prefix=""):
@@ -248,44 +295,6 @@ class GramCharlierMassProfile(MassProfile):
             ties += "{0}={1}".format(param_name, tied_value)
 
         return ties
-
-    @classmethod
-    def _parse_list(cls, func_str, prop_name):
-        """
-        Parse a list from a string containing 'prop_name=[]'
-
-        :param prop_name: The string on the lhs of the equality
-        :return: The parsed list
-        """
-        prop_re = re.compile(prop_name + r"=(\[(?:[\w.](?:,)?(?:\s)?)+\])")
-        match = prop_re.search(func_str)
-        if match:
-            value = ast.literal_eval(match.group(1))
-            if not isinstance(value, list):
-                raise ValueError("Unexpected format for {0} value. Expected e.g. {0}=[1,0,1]".format(prop_name))
-        else:
-            raise ValueError("Cannot find {0}= in function_str ({1})".format(prop_name, func_str))
-
-        return value
-
-    @classmethod
-    def _parse_bool_flag(cls, func_str, prop_name):
-        """
-        Parse an integer from a string containing 'prop_name=1'
-
-        :param prop_name: The string on the lhs of the equality
-        :return: The parsed value
-        """
-        prop_re = re.compile(prop_name + r"=([0,1])")
-        match = prop_re.search(func_str)
-        if match:
-            value = ast.literal_eval(match.group(1))
-            if not isinstance(value, int):
-                raise ValueError("Unexpected format for {0} value. Expected e.g. {0}=1".format(prop_name))
-        else:
-            raise ValueError("Cannot find {0}= in function_str".format(prop_name))
-
-        return value
 
 
 # --------------------------------------------------------------------------------
