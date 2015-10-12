@@ -116,7 +116,6 @@ class GaussianMassProfile(MassProfile):
             'mass': mass
         }
 
-        print params
         return GaussianMassProfile(**params)
 
     def create_fit_function_str(self, param_vals=None, param_prefix=""):
