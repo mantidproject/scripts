@@ -61,7 +61,24 @@ class MassProfile(object):
             if not isinstance(value, list):
                 raise ValueError("Unexpected format for {0} value. Expected e.g. {0}=[1,0,1]".format(prop_name))
         else:
-            raise ValueError("Cannot find {0}= in function_str ({1})".format(prop_name, func_str))
+            raise ValueError("Cannot find {0}= in function_str (list) ({1})".format(prop_name, func_str))
+
+        return value
+
+    @classmethod
+    def _parse_float(cls, func_str, prop_name):
+        """
+        :param prop_name: The string on the lhs of the equality
+        :return: The parsed float
+        """
+        prop_re = re.compile(prop_name + r"=?(:\d+\.?\d*|\d*\.?\d+)")
+        match = prop_re.search(func_str)
+        if match:
+            value = float(ast.literal_eval(match.group(1)))
+            if not isinstance(value, float):
+                raise ValueError("Unexpected format for {0} value. Expected e.g. {0}=0".format(prop_name))
+        else:
+            raise ValueError("Cannot find {0}= in function_str (float) ({1})".format(prop_name, func_str))
 
         return value
 
@@ -101,18 +118,13 @@ class GaussianMassProfile(MassProfile):
         if not func_str.startswith(profile_prefix):
             raise TypeError("Gaussian function string should start with 'function=Gaussian,'")
 
-        key_names = [("width", cls._parse_list)]
-
-        # Possible key names:
-        parsed_values = []
-        for key, parser in key_names:
-            try:
-                parsed_values.append(parser(func_str, key))
-            except ValueError, exc:
-                raise TypeError(str(exc))
+        try:
+            width = cls._parse_list(func_str, "width")
+        except ValueError, exc:
+            width = cls._parse_float(func_str, "width")
 
         params = {
-            'width': parsed_values[0],
+            'width': width,
             'mass': mass
         }
 
