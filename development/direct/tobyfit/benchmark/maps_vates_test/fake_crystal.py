@@ -12,20 +12,21 @@ sys.path.insert(0, DATA_ETC)
     
 # --------------------------------------------------------------------------------------------------------------------------
 
-def run_comparision(ws1, ws2, rel_errs):
-    nbins = 10
+def run_comparision(name, ws1, ws2, rel_errs, keep_mtx=True):
+    nbins = 41
     if not hasattr(rel_errs, '__len__'):
         rel_errs = [rel_errs] * 4
     for i in range(4):
         print "Binning dimension %d to %d bins" % (i, nbins)
         as_matrix = to_matrix_ws(ws1,i, nbins)
-        ws1_matrix = RenameWorkspace(as_matrix, OutputWorkspace='ws1_matrix_' + str(i))
+        ws1_matrix = RenameWorkspace(as_matrix, OutputWorkspace='ws1_matrix_' + name + '_' + str(i))
         del as_matrix
         as_matrix = to_matrix_ws(ws2,i, nbins)
-        ws2_matrix = RenameWorkspace(as_matrix, OutputWorkspace='ws2_matrix_' + str(i))
+        ws2_matrix = RenameWorkspace(as_matrix, OutputWorkspace='ws2_matrix_' + name  + '_' + str(i))
         status = CompareWorkspaces(ws1_matrix, ws2_matrix, Tolerance=rel_errs[i],ToleranceRelErr=True)
-        #DeleteWorkspace(ws1_matrix)
-        #DeleteWorkspace(ws2_matrix)
+        if not keep_mtx:
+            DeleteWorkspace(ws1_matrix)
+            DeleteWorkspace(ws2_matrix)
         print 'Dimension %d signals equal (within rel. error of %.3f) = %r'% (i, rel_errs[i], status[0])
 
 def to_matrix_ws(ws, non_integrated, nbins):
@@ -73,6 +74,7 @@ else:
     spe = RenameWorkspace(output_ws)
 
     # Preparations to match TobyFit
+    #   - clear mask flags
     #   - use the same .par file positions
     #   - convert the data to point data so that we get the same MD boundaries (I suspect ConvertToMD should do this)
     #   - move the moderator instrument component back to it's IDF position for the the resolution calculation
@@ -93,41 +95,68 @@ ClearMaskFlag(spe)
 #============================================================
 params = {}
 params['ei'] = 50
-params['alatt'] = 5.
-params['blatt'] = 5.
-params['clatt'] = 5.
 params['uvec'] = [0,0,1]
 params['vvec'] = [1,0,0]
 params['psi'] = 0.0
 params['omega'] = 0.0
-params['alpha'] = 0.0
-params['beta'] = 0.0
-params['gamma'] = 0.0
 params['resolution_params'] = 'MCLoopMin=10,MCLoopMax=10,MCType=1,ForegroundOnly=1'
-
-# ============ Single Q coordinate =================
 params['foreground_model'] = 'QCoordinate'
 
-# === H ===
-print 'Comparing cubic lattice, Q_H'
-params['foreground_params'] = 'Coord=H'
-fake_cubic_h_mt = tobyfit.run_simulation(spe, **params)
-# Load tobyfit comparison
-fake_cubic_h_tf = LoadSQW(os.path.join(THIS_DIR, 'fake_cubic_h.sqw'), Q3DFrames='Q_lab')
-run_comparision(fake_cubic_h_tf, fake_cubic_h_mt, rel_errs=1e-3)
+def compare_with_tobyfit(spe, params, crystal_system):
+    # === H ===
+    print 'Comparing %s lattice, Q_H' % crystal_system
+    params['foreground_params'] = 'Coord=H'
+    fake_name = 'fake_' + crystal_system
+    simul = tobyfit.run_simulation(fake_name + '_h_mt', spe, **params)
+    # Load tobyfit comparison
+    filename = fake_name + '_h.sqw'
+    sqw = LoadSQW(os.path.join(THIS_DIR, filename), Q3DFrames='Q_lab', OutputWorkspace=filename)
+    run_comparision('h',sqw, simul, rel_errs=1e-3)
 
-# === K ===
-print 'Comparing cubic lattice, Q_K'
-params['foreground_params'] = 'Coord=K'
-fake_cubic_k_mt =  tobyfit.run_simulation(spe, **params)
-# Load tobyfit comparison
-fake_cubic_k_tf = LoadSQW(os.path.join(THIS_DIR, 'fake_cubic_k.sqw'), Q3DFrames='Q_lab')
-run_comparision(fake_cubic_k_tf, fake_cubic_k_mt, rel_errs=[1e-3,1e-3,1e-2,1e-3])
+    # === K ===
+    print 'Comparing %s lattice, Q_H' % crystal_system
+    params['foreground_params'] = 'Coord=K'
+    fake_name = 'fake_' + crystal_system
+    simul =  tobyfit.run_simulation(fake_name + '_k_mt', spe, **params)
+    # Load tobyfit comparison
+    filename = fake_name + '_k.sqw'
+    sqw = LoadSQW(os.path.join(THIS_DIR, filename), Q3DFrames='Q_lab', OutputWorkspace=filename)
+    run_comparision('k', sqw, simul, rel_errs=[1e-3,1e-3,1e-2,1e-3])
 
-# === L ===
-print 'Comparing cubic lattice, Q_L'
-params['foreground_params'] = 'Coord=L'
-fake_cubic_l_mt =  tobyfit.run_simulation(spe, **params)
-# Load tobyfit comparison
-fake_cubic_l_tf = LoadSQW(os.path.join(THIS_DIR, 'fake_cubic_l.sqw'), Q3DFrames='Q_lab')
-run_comparision(fake_cubic_l_tf, fake_cubic_l_mt, rel_errs=1e-3)
+    # === L ===
+    print 'Comparing %s lattice, Q_H' % crystal_system
+    params['foreground_params'] = 'Coord=L'
+    fake_name = 'fake_' + crystal_system
+    simul = tobyfit.run_simulation(fake_name + '_l_mt', spe, **params)
+    # Load tobyfit comparison
+    filename = fake_name + '_l.sqw'
+    sqw = LoadSQW(os.path.join(THIS_DIR, filename), Q3DFrames='Q_lab', OutputWorkspace=filename)
+    run_comparision('l',sqw, simul, rel_errs=1e-3)
+#end
+
+# ================ CUBIC =================
+params['alatt'] = 5.
+params['blatt'] = 5.
+params['clatt'] = 5.
+params['alpha'] = 90.0
+params['beta'] = 90.0
+params['gamma'] = 90.0
+compare_with_tobyfit(spe, params, 'cubic')
+
+# ============== TETRAGONAL =================
+params['alatt'] = 3.
+params['blatt'] = 3.
+params['clatt'] = 10.
+params['alpha'] = 90.0
+params['beta'] = 90.0
+params['gamma'] = 90.0
+compare_with_tobyfit(spe, params, 'tetragonal')
+
+# ============== HEXAGONAL =================
+params['alatt'] = 3.
+params['blatt'] = 3.
+params['clatt'] = 10.
+params['alpha'] = 90.0
+params['beta'] = 90.0
+params['gamma'] = 120.0
+compare_with_tobyfit(spe, params, 'hexagonal')

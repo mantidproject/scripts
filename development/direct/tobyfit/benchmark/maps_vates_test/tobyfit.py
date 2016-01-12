@@ -5,9 +5,9 @@ from mantid.simpleapi import *
 
 RESOLUTION_MODEL = 'TobyFitResolutionModel'
 
-def run_simulation(spe, **params):
+def run_simulation(fake_name, spe, **params):
     # Use the name of the variable that this function is assigned to as the output name
-    output_workspace = _funcreturns.lhs_info()[1][0]
+    output_workspace = fake_name
 
     # Required log entries, can be taken from real ones by placing an instrument parameter of the same
     # name pointing to the log name
@@ -18,16 +18,16 @@ def run_simulation(spe, **params):
     alatt = params['alatt']
     blatt = params['blatt']
     clatt = params['clatt']
+    alpha = params['alpha']
+    beta = params['beta']
+    gamma = params['gamma']
     uvec =  params['uvec']
     vvec = params['vvec']
-    SetUB(Workspace=spe,a=alatt,b=blatt,c=clatt,u=uvec,v=vvec)
+    SetUB(Workspace=spe,a=alatt,b=blatt,c=clatt,alpha=alpha, beta=beta,gamma=gamma,u=uvec,v=vvec)
 
     # Sample rotation. Simulate 1 run at zero degrees psi
     psi = params['psi']
     omega = params['omega']
-    alpha = params['alpha']
-    beta = params['beta']
-    gamma = params['gamma']
     AddSampleLog(Workspace=spe,LogName='psi',LogText=str(psi),LogType='Number',NumberType='Double')
     SetGoniometer(Workspace=spe,Axis0="psi,0,1,0,1")
 
