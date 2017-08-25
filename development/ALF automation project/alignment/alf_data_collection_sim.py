@@ -3,13 +3,11 @@ from genie_python import genie_simulate as gs
 
 # TODO inst prefix
 prefix = "NDLT882:MOT:GONIO:"
-gonio_rupper = prefix + "RLOWER:SP"
-gonio_rlower = prefix + "RUPPER:SP"
-gonio_theta = prefix + "THETA:SP"
 
 
 class AlfDataCollectionSim:
     def __init__(self):
+        print "Starting in simulation mode"
         self.api = gs.API()
         self.dae = gs.Dae()
         self.gonio_pv = "TE:NDLT882:SIMPLE:VALUE1:SP"

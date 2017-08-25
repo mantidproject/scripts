@@ -1,14 +1,10 @@
-# from genie_python import genie as g
 from genie_python import genie as g
-import time
 
-# TODO inst prefix
 
 
 class AlfDataCollection:
     def __init__(self):
         self.gonio_pv = "IN:ALF:CS:SB:Rrot"
-        pass
 
     def rotate_and_collect_data(self, angle, duration):
         print "Rotating to " + str(angle) + " deg..."

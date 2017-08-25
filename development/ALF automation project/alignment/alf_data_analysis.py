@@ -131,11 +131,10 @@ class AlfDataAnalysis(object):
 
                 # Find UB Matrix and use it to predict peaks
                 num_new_peaks = num_all_peaks - self.num_last_peaks
-                if all_peaks_ws.getNumberPeaks() > 1 and num_new_peaks > 0:
+                if num_all_peaks > 1 and num_new_peaks > 0:
                     FindUBUsingLatticeParameters(PeaksWorkspace=all_peaks_ws, a=self.lattice_a, b=self.lattice_b,
                                                  c=self.lattice_c, alpha=self.lattice_alpha, beta=self.lattice_beta,
                                                  gamma=self.lattice_gamma, Tolerance=0.2)
-                    # PredictPeaks(InputWorkspace=all_peaks_ws, OutputWorkspace="Peaks_Predicted")  # TODO useful?
                     current_matrix = all_peaks_ws.sample().getOrientedLattice().getUB()
 
                     # Print tracking stuff
@@ -149,22 +148,21 @@ class AlfDataAnalysis(object):
                     avg /= 9
                     print "New Peaks:\t" + str(num_new_peaks)
                     print "Delta avg:\t" + str(avg)
-                    if num_all_peaks > 1:
-                        self.last_matrix = AnalysisDataService[all_peaks].sample().getOrientedLattice().getUB()
-                        self.num_last_peaks = num_all_peaks
+                    self.last_matrix = all_peaks_ws.sample().getOrientedLattice().getUB()
+                    self.num_last_peaks = num_all_peaks
 
-                        if num_all_peaks == 2:
-                            # TODO predict next peak
-                            pass
-                        if num_all_peaks > 2:
-                            script_path = sys.path[0]
-                            SaveNexus(all_peaks_ws, script_path + "\Out\Peaks_" + current_run + ".nxs")
-                            self.found_ub = True
+                    if num_all_peaks == 2:
+                        # TODO predict_peak()
+                        pass
+                    if num_all_peaks > 2:
+                        script_path = sys.path[0]
+                        SaveNexus(all_peaks_ws, script_path + "\Out\Peaks_" + current_run + ".nxs")
+                        self.found_ub = True
 
             self.do_next_run = True
 
         time.sleep(5)
 
     def predict_peak(self):
-        # TODO
+        # TODO predict
         pass
